@@ -1,0 +1,5 @@
+{
+  "typescript.validate.enable": true,
+  "typescript.disableAutomaticTypeAcquisition": false,
+  "typescript.tsserver.experimental.enableProjectDiagnostics": true,
+}

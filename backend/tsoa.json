@@ -1,0 +1,54 @@
+{
+  "entryFile": "src/index.ts",
+  "noImplicitAdditionalProperties": "throw-on-extras",
+  "controllerPathGlobs": ["src/controllers/tsoa/**/*.ts"],
+  "spec": {
+    "outputDirectory": "../common/src/schema",
+    "specVersion": 3,
+    "basePath": "/api",
+    "description": "Discura API - Discord Bot Management Platform",
+    "name": "Discura API",
+    "securityDefinitions": {
+      "jwt": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header"
+      }
+    },
+    "tags": [
+      {
+        "name": "Auth",
+        "description": "Authentication related endpoints"
+      },
+      {
+        "name": "Bots",
+        "description": "Discord bot management endpoints"
+      },
+      {
+        "name": "LLM",
+        "description": "Large Language Model integration endpoints"
+      },
+      {
+        "name": "Tools",
+        "description": "Bot tool/function calling endpoints"
+      },
+      {
+        "name": "Knowledge",
+        "description": "Bot knowledge base management endpoints"
+      }
+    ],
+    "yaml": true,
+    "outputFormat": "both"
+  },
+  "routes": {
+    "routesDir": "build",
+    "middleware": "express",
+    "authenticationModule": "./src/middlewares/authentication.ts"
+  },
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@common/*": ["../common/src/*"]
+    }
+  }
+}

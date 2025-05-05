@@ -1,0 +1,383 @@
+import { v4 as uuidv4 } from 'uuid';
+import { BotDetailResponseDto, BotResponseDto } from '@common/types/api';
+import { BotStatus, LLMProvider } from '@common/types';
+import { IMAGE_PROVIDER, DEFAULTS } from '@common/constants';
+import { db } from '../../services/database/database.factory';
+import { logger } from '../../utils/logger';
+
+/**
+ * Bot data from the database
+ */
+export interface BotData {
+  id: string;
+  user_id: string;
+  name: string;
+  application_id: string;
+  discord_token: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Bot configuration data from the database
+ */
+export interface BotConfigurationData {
+  bot_id: string;
+  system_prompt: string;
+  personality: string;
+  backstory: string;
+  traits: string; // JSON string
+  llm_provider: string;
+  llm_model: string;
+  api_key: string;
+  image_generation_enabled: number;
+  image_provider: string;
+  image_api_key?: string;
+  image_model?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Bot configuration DTO for local use
+ */
+export interface BotConfigurationDto {
+  systemPrompt: string;
+  personality: string;
+  traits: string[];
+  backstory: string;
+  llmProvider: string;
+  llmModel: string;
+  apiKey: string;
+  imageGeneration: {
+    enabled: boolean;
+    provider: string;
+    apiKey?: string;
+    model?: string;
+  };
+  toolsEnabled?: boolean;
+  tools?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    parameters?: Array<{
+      name: string;
+      type: string;
+      description: string;
+      required: boolean;
+    }>;
+  }>;
+  knowledge?: Array<{
+    id: string;
+    name: string;
+    content: string;
+    type: string;
+    source?: string;
+  }>;
+}
+
+/**
+ * Bot model with additional methods
+ */
+export class Bot {
+  id: string;
+  user: string;
+  name: string;
+  applicationId: string;
+  discordToken: string;
+  status: BotStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  configuration?: BotConfigurationDto;
+  
+  constructor(data: BotData, configData?: BotConfigurationData | null) {
+    this.id = data.id;
+    this.user = data.user_id;
+    this.name = data.name;
+    this.applicationId = data.application_id;
+    this.discordToken = data.discord_token;
+    this.status = data.status as BotStatus;
+    this.createdAt = new Date(data.created_at);
+    this.updatedAt = new Date(data.updated_at);
+    
+    if (configData) {
+      this.configuration = {
+        systemPrompt: configData.system_prompt,
+        personality: configData.personality,
+        backstory: configData.backstory,
+        traits: JSON.parse(configData.traits),
+        llmProvider: configData.llm_provider,
+        llmModel: configData.llm_model,
+        apiKey: configData.api_key,
+        imageGeneration: {
+          enabled: configData.image_generation_enabled === 1,
+          provider: configData.image_provider,
+          apiKey: configData.image_api_key,
+          model: configData.image_model
+        },
+        toolsEnabled: false,
+        tools: [],
+        knowledge: []
+      };
+    }
+  }
+  
+  /**
+   * Convert to a simplified DTO for list responses
+   */
+  toDTO(): BotResponseDto {
+    // Ensure we have non-null values for required fields
+    const safeConfiguration = this.configuration || {
+      systemPrompt: DEFAULTS.BOT.SYSTEM_PROMPT,
+      personality: DEFAULTS.BOT.PERSONALITY,
+      backstory: '',
+      traits: DEFAULTS.BOT.TRAITS,
+      llmProvider: DEFAULTS.BOT.LLM_PROVIDER,
+      llmModel: DEFAULTS.BOT.LLM_MODEL,
+      apiKey: '',
+      imageGeneration: {
+        enabled: false,
+        provider: IMAGE_PROVIDER.OPENAI
+      },
+      toolsEnabled: false,
+      tools: [],
+      knowledge: []
+    };
+    
+    return {
+      id: this.id,
+      userId: this.user,
+      name: this.name,
+      status: this.status,
+      applicationId: this.applicationId,
+      intents: [], // Add empty intents array
+      configuration: {
+        systemPrompt: safeConfiguration.systemPrompt,
+        personality: safeConfiguration.personality,
+        backstory: safeConfiguration.backstory || '',
+        traits: safeConfiguration.traits || [],
+        llmProvider: safeConfiguration.llmProvider,
+        llmModel: safeConfiguration.llmModel,
+        knowledge: safeConfiguration.knowledge || [],
+        imageGeneration: {
+          enabled: safeConfiguration.imageGeneration?.enabled || false,
+          provider: safeConfiguration.imageGeneration?.provider || IMAGE_PROVIDER.OPENAI,
+          model: safeConfiguration.imageGeneration?.enabled ? safeConfiguration.imageGeneration?.model : undefined
+        },
+        toolsEnabled: safeConfiguration.toolsEnabled || false,
+        tools: (safeConfiguration.tools || []).map(tool => ({
+          id: tool.id,
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.parameters || []
+        }))
+      },
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString()
+    };
+  }
+  
+  /**
+   * Convert to a detailed DTO with full configuration
+   */
+  toDetailDTO(): BotResponseDto {
+    return this.toDTO();
+  }
+}
+
+/**
+ * Adapter for bot model operations
+ * Provides an interface between the application and the database
+ */
+export class BotAdapter {
+  /**
+   * Find a bot by ID
+   */
+  static async findById(id: string): Promise<Bot | null> {
+    try {
+      // Get bot data
+      const botData = await db.get<BotData>(
+        'SELECT * FROM bots WHERE id = ?',
+        [id]
+      );
+      
+      if (!botData) {
+        return null;
+      }
+      
+      // Get configuration data
+      const configData = await db.get<BotConfigurationData>(
+        'SELECT * FROM bot_configurations WHERE bot_id = ?',
+        [id]
+      );
+      
+      return new Bot(botData, configData);
+    } catch (error) {
+      logger.error('Error finding bot by ID:', error);
+      return null;
+    }
+  }
+  
+  /**
+   * Find all bots for a user
+   */
+  static async findByUserId(userId: string): Promise<Bot[]> {
+    try {
+      // Get all bots for the user
+      const botDataList = await db.query<BotData>(
+        'SELECT * FROM bots WHERE user_id = ? ORDER BY created_at DESC',
+        [userId]
+      );
+      
+      if (botDataList.length === 0) {
+        return [];
+      }
+      
+      // Get all configurations for these bots
+      const botIds = botDataList.map(bot => bot.id);
+      const placeholders = botIds.map(() => '?').join(',');
+      
+      const configDataList = await db.query<BotConfigurationData>(
+        `SELECT * FROM bot_configurations WHERE bot_id IN (${placeholders})`,
+        botIds
+      );
+      
+      // Map to create bot instances with their configurations
+      return botDataList.map(botData => {
+        const configData = configDataList.find(config => config.bot_id === botData.id);
+        return new Bot(botData, configData);
+      });
+    } catch (error) {
+      logger.error('Error finding bots by user ID:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * Create a new bot
+   */
+  static async create(data: {
+    userId: string;
+    name: string;
+    applicationId: string;
+    discordToken: string;
+  }): Promise<Bot> {
+    try {
+      const now = new Date().toISOString();
+      const id = uuidv4();
+      
+      // Insert bot data
+      await db.insert('bots', {
+        id,
+        user_id: data.userId,
+        name: data.name,
+        application_id: data.applicationId,
+        discord_token: data.discordToken,
+        status: BotStatus.OFFLINE,
+        created_at: now,
+        updated_at: now
+      });
+      
+      const createdBot = await BotAdapter.findById(id);
+      
+      if (!createdBot) {
+        throw new Error('Failed to create bot');
+      }
+      
+      return createdBot;
+    } catch (error) {
+      logger.error('Error creating bot:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Update a bot
+   */
+  static async update(id: string, data: Partial<{
+    name: string;
+    discord_token: string;
+    status: BotStatus;
+  }>): Promise<boolean> {
+    try {
+      const updateData = {
+        ...data,
+        updated_at: new Date().toISOString()
+      };
+      
+      const result = await db.update('bots', updateData, 'id = ?', [id]);
+      return result > 0;
+    } catch (error) {
+      logger.error('Error updating bot:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Update or create bot configuration
+   */
+  static async updateConfiguration(botId: string, config: BotConfigurationDto): Promise<boolean> {
+    try {
+      const now = new Date().toISOString();
+      
+      // Check if configuration exists
+      const existingConfig = await db.get<BotConfigurationData>(
+        'SELECT * FROM bot_configurations WHERE bot_id = ?',
+        [botId]
+      );
+      
+      const configData = {
+        system_prompt: config.systemPrompt,
+        personality: config.personality,
+        backstory: config.backstory || '',
+        traits: JSON.stringify(config.traits || []),
+        llm_provider: config.llmProvider,
+        llm_model: config.llmModel,
+        api_key: config.apiKey || '',
+        image_generation_enabled: config.imageGeneration?.enabled ? 1 : 0,
+        image_provider: config.imageGeneration?.provider || '',
+        image_api_key: config.imageGeneration?.apiKey,
+        image_model: config.imageGeneration?.model,
+        updated_at: now
+      };
+      
+      if (existingConfig) {
+        // Update existing configuration
+        await db.update('bot_configurations', configData, 'bot_id = ?', [botId]);
+      } else {
+        // Insert new configuration
+        await db.insert('bot_configurations', {
+          bot_id: botId,
+          ...configData,
+          created_at: now
+        });
+      }
+      
+      return true;
+    } catch (error) {
+      logger.error('Error updating bot configuration:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Update bot status
+   */
+  static async updateStatus(id: string, status: BotStatus): Promise<boolean> {
+    return BotAdapter.update(id, { status });
+  }
+  
+  /**
+   * Delete a bot
+   */
+  static async delete(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete('bots', 'id = ?', [id]);
+      return result > 0;
+    } catch (error) {
+      logger.error('Error deleting bot:', error);
+      return false;
+    }
+  }
+}

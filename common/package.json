@@ -1,0 +1,42 @@
+{
+  "name": "common",
+  "version": "1.0.0",
+  "description": "Shared types and utilities for Discura",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types/index.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./constants": {
+      "import": "./dist/constants.js",
+      "types": "./dist/constants.d.ts"
+    },
+    "./types/routes": {
+      "import": "./dist/types/routes.js",
+      "types": "./dist/types/routes.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "sync-types": "node scripts/sync-types.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/yamljs": "^0.2.34",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "yamljs": "^0.3.0"
+  }
+}

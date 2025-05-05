@@ -1,0 +1,36 @@
+{
+    "name": "discura-monorepo",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Discura - Discord Bot Management Platform",
+    "scripts": {
+        "check": "cd common && npx tsc --noEmit; cd ../backend && npx tsc --noEmit; cd ../frontend && npx tsc --noEmit",
+        "init": "node init.js",
+        "dev": "npm run init && concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+        "dev:backend": "cd backend && npm run dev",
+        "dev:frontend": "cd frontend && npm run dev",
+        "build:types": "npm run build:types:common && npm run build:types:backend && npm run build:types:frontend",
+        "build:types:common": "cd common && npx tsc --emitDeclarationOnly",
+        "build:types:backend": "cd backend && npx tsc --emitDeclarationOnly",
+        "build:types:frontend": "cd frontend && npx tsc --emitDeclarationOnly && npx tsc -p tsconfig.node.json --emitDeclarationOnly",
+        "install:all": "npm install && npm run install:workspaces",
+        "install:workspaces": "cd common && npm install && cd ../backend && npm install && cd ../frontend && npm install",
+        "setup": "npm run install:all && npm run init"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.0",
+        "rimraf": "^5.0.0",
+        "typescript": "^5.0.0"
+    },
+    "engines": {
+        "node": ">=16.0.0"
+    },
+    "workspaces": [
+        "common",
+        "backend",
+        "frontend"
+    ],
+    "dependencies": {
+        "mkdirp": "^3.0.1"
+    }
+}

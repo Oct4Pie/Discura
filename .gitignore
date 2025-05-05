@@ -1,0 +1,90 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.pnp/
+.pnp.js
+
+# Production builds
+build/
+dist/
+out/
+*.tsbuildinfo
+
+# Environment variables and secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE-specific files
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Logs
+logs
+*.log
+combined.log
+error.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+# Uncomment below if you don't want to version the databases
+# data/discura.db
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Temporary files
+.DS_Store
+Thumbs.db
+.tmp/
+.temp/
+*.swp
+*.swo
+*.bak
+*.backup
+*~
+
+# Build artifacts
+backend/build/
+frontend/dist/
+common/dist/
+common/lib/
+*.tsbuildinfo
+package-lock.json
+
+# Generated files
+common/src/schema/swagger.json
+common/src/schema/swagger.yaml
+common/src/schema/types.d.ts
+common/src/schema/types.d.ts.map
+common/src/schema/types.js
+common/src/schema/types.js.map
+common/src/schema/types.ts
+common/src/types/api.d.ts
+common/src/types/api.d.ts.map
+common/src/types/api.js
+common/src/types/api.js.map
+vite.config.d.ts
+vite.config.d.ts.map
+vite.config.js
+vite.config.js.map
+
+# Misc
+.cache/
+.roo/
