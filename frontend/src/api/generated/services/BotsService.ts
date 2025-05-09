@@ -22,7 +22,7 @@ export class BotsService {
     public static getUserBots(): CancelablePromise<BotsResponseDto> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/bots',
+            url: '/undefined',
         });
     }
     /**
@@ -39,7 +39,7 @@ export class BotsService {
     ): CancelablePromise<BotResponseDto> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/bots',
+            url: '/undefined',
             body: requestBody,
             mediaType: 'application/json',
         });
@@ -59,7 +59,7 @@ export class BotsService {
     }> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/bots/{id}',
+            url: '/undefined/{id}',
             path: {
                 'id': id,
             },
@@ -80,7 +80,7 @@ export class BotsService {
     ): CancelablePromise<BotResponseDto> {
         return __request(OpenAPI, {
             method: 'PUT',
-            url: '/api/bots/{id}',
+            url: '/undefined/{id}',
             path: {
                 'id': id,
             },
@@ -102,7 +102,7 @@ export class BotsService {
     ): CancelablePromise<MessageResponseDto> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/bots/{id}',
+            url: '/undefined/{id}',
             path: {
                 'id': id,
             },
@@ -121,7 +121,7 @@ export class BotsService {
     ): CancelablePromise<BotResponseDto> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/bots/{id}/start',
+            url: '/undefined/{id}/start',
             path: {
                 'id': id,
             },
@@ -140,7 +140,7 @@ export class BotsService {
     ): CancelablePromise<BotResponseDto> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/bots/{id}/stop',
+            url: '/undefined/{id}/stop',
             path: {
                 'id': id,
             },
@@ -162,7 +162,7 @@ export class BotsService {
     }> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/bots/{id}/invite',
+            url: '/undefined/{id}/invite',
             path: {
                 'id': id,
             },

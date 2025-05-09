@@ -18,8 +18,11 @@
         "setup": "npm run install:all && npm run init"
     },
     "devDependencies": {
+        "@types/module-alias": "^2.0.4",
         "concurrently": "^8.2.0",
+        "madge": "^8.0.0",
         "rimraf": "^5.0.0",
+        "tsconfig-paths": "^4.2.0",
         "typescript": "^5.0.0"
     },
     "engines": {

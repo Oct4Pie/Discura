@@ -22,6 +22,7 @@ export type { LLMCompletionResponseUsage } from './models/LLMCompletionResponseU
 export type { LLMModelData } from './models/LLMModelData';
 export type { LLMModelsResponseDto } from './models/LLMModelsResponseDto';
 export type { MessageResponseDto } from './models/MessageResponseDto';
+export type { Record_string_any_ } from './models/Record_string_any_';
 export type { UpdateBotRequest } from './models/UpdateBotRequest';
 export type { UserProfileResponseDto } from './models/UserProfileResponseDto';
 export type { UserResponseDto } from './models/UserResponseDto';

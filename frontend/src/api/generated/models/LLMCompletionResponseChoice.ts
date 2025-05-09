@@ -3,6 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { LLMCompletionMessage } from './LLMCompletionMessage';
+/**
+ * LLM Completion Response Choice
+ */
 export type LLMCompletionResponseChoice = {
     index: number;
     message: LLMCompletionMessage;

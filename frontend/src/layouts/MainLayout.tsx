@@ -23,21 +23,24 @@ import {
     MenuItem,
     Toolbar,
     Tooltip,
-    Typography
+    Typography,
+    useTheme
 } from '@mui/material';
 import { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { UserResponseDto } from '@common/types/api'; // Updated import to use path alias
+import { UserResponseDto } from '@discura/common/types/api'; // Updated to use common package
 
 // Width of the drawer
 const drawerWidth = 240;
 
 const MainLayout = () => {
   const { user, logout } = useAuthStore();
+  const theme = useTheme();
   // Type assertion for user
   const typedUser = user as UserResponseDto | null;
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
 
@@ -61,24 +64,53 @@ const MainLayout = () => {
     await logout();
     navigate('/login');
   };
+  
+  // Check if a route is active
+  const isRouteActive = (path: string) => {
+    return location.pathname === path || 
+           (path !== '/' && location.pathname.startsWith(path));
+  };
 
   // Drawer content
   const drawer = (
-    <Box>
+    <Box sx={{
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      bgcolor: 'background.paper',
+    }}>
       <Toolbar sx={{ 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
         padding: 2
       }}>
-        <Typography variant="h6" component="div" color="primary" fontWeight={700}>
+        <Typography variant="h5" component="div" color="primary" fontWeight={700}>
           Discura
         </Typography>
       </Toolbar>
       <Divider />
-      <List>
+      <List sx={{ flexGrow: 1 }}>
         <ListItem disablePadding>
-          <ListItemButton onClick={() => navigate('/')}>
+          <ListItemButton 
+            onClick={() => navigate('/')}
+            selected={isRouteActive('/')}
+            sx={{
+              borderRadius: '0 24px 24px 0',
+              mx: 1,
+              my: 0.5,
+              '&.Mui-selected': {
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                '&:hover': {
+                  bgcolor: 'primary.dark',
+                },
+                '& .MuiListItemIcon-root': {
+                  color: 'primary.contrastText',
+                }
+              }
+            }}
+          >
             <ListItemIcon>
               <DashboardIcon />
             </ListItemIcon>
@@ -86,7 +118,25 @@ const MainLayout = () => {
           </ListItemButton>
         </ListItem>
         <ListItem disablePadding>
-          <ListItemButton onClick={() => navigate('/bots')}>
+          <ListItemButton 
+            onClick={() => navigate('/bots')}
+            selected={isRouteActive('/bots') && !isRouteActive('/bots/create')}
+            sx={{
+              borderRadius: '0 24px 24px 0',
+              mx: 1,
+              my: 0.5,
+              '&.Mui-selected': {
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                '&:hover': {
+                  bgcolor: 'primary.dark',
+                },
+                '& .MuiListItemIcon-root': {
+                  color: 'primary.contrastText',
+                }
+              }
+            }}
+          >
             <ListItemIcon>
               <BotIcon />
             </ListItemIcon>
@@ -94,7 +144,25 @@ const MainLayout = () => {
           </ListItemButton>
         </ListItem>
         <ListItem disablePadding>
-          <ListItemButton onClick={() => navigate('/bots/create')}>
+          <ListItemButton 
+            onClick={() => navigate('/bots/create')}
+            selected={isRouteActive('/bots/create')}
+            sx={{
+              borderRadius: '0 24px 24px 0',
+              mx: 1,
+              my: 0.5,
+              '&.Mui-selected': {
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                '&:hover': {
+                  bgcolor: 'primary.dark',
+                },
+                '& .MuiListItemIcon-root': {
+                  color: 'primary.contrastText',
+                }
+              }
+            }}
+          >
             <ListItemIcon>
               <AddIcon />
             </ListItemIcon>
@@ -102,10 +170,28 @@ const MainLayout = () => {
           </ListItemButton>
         </ListItem>
       </List>
-      <Divider />
+      <Divider sx={{ mt: 'auto' }} />
       <List>
         <ListItem disablePadding>
-          <ListItemButton onClick={() => navigate('/settings')}>
+          <ListItemButton 
+            onClick={() => navigate('/settings')}
+            selected={isRouteActive('/settings')}
+            sx={{
+              borderRadius: '0 24px 24px 0',
+              mx: 1,
+              my: 0.5,
+              '&.Mui-selected': {
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                '&:hover': {
+                  bgcolor: 'primary.dark',
+                },
+                '& .MuiListItemIcon-root': {
+                  color: 'primary.contrastText',
+                }
+              }
+            }}
+          >
             <ListItemIcon>
               <SettingsIcon />
             </ListItemIcon>
@@ -122,15 +208,18 @@ const MainLayout = () => {
     : '/discord-avatar-placeholder.png';
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* App Bar */}
       <AppBar
         position="fixed"
         color="default"
-        elevation={1}
+        elevation={0}
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
+          backdropFilter: 'blur(8px)',
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          borderBottom: `1px solid ${theme.palette.divider}`,
         }}
       >
         <Toolbar>
@@ -169,7 +258,11 @@ const MainLayout = () => {
                 <Avatar 
                   alt={typedUser?.username || 'User'} 
                   src={userAvatar} 
-                  sx={{ width: 32, height: 32 }}
+                  sx={{ 
+                    width: 38, 
+                    height: 38,
+                    border: `2px solid ${theme.palette.primary.main}`,
+                  }}
                 >
                   {typedUser?.username ? typedUser.username.charAt(0).toUpperCase() : <AccountCircle />}
                 </Avatar>
@@ -211,7 +304,11 @@ const MainLayout = () => {
         ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: 'block', sm: 'none' },
-          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          '& .MuiDrawer-paper': { 
+            boxSizing: 'border-box', 
+            width: drawerWidth,
+            boxShadow: theme.shadows[5],
+          },
         }}
       >
         {drawer}
@@ -222,7 +319,12 @@ const MainLayout = () => {
         variant="permanent"
         sx={{
           display: { xs: 'none', sm: 'block' },
-          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          '& .MuiDrawer-paper': { 
+            boxSizing: 'border-box', 
+            width: drawerWidth,
+            boxShadow: '4px 0 10px rgba(0, 0, 0, 0.05)',
+            border: 'none',
+          },
         }}
         open
       >
@@ -234,14 +336,20 @@ const MainLayout = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 2, md: 4 },
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           minHeight: '100vh',
-          backgroundColor: '#F5F5F5',
+          backgroundColor: theme.palette.background.default,
         }}
       >
         <Toolbar />
-        <Container maxWidth="lg">
+        <Container 
+          maxWidth="lg" 
+          sx={{ 
+            pb: 6,
+            height: '100%',
+          }}
+        >
           <Outlet />
         </Container>
       </Box>

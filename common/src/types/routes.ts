@@ -74,5 +74,7 @@ export const CONTROLLER_ROUTES = {
   AUTH: ROUTES.AUTH,
   BOTS: ROUTES.BOTS,
   LLM: ROUTES.LLM,
+  // Fix: Change the Knowledge route to use a path without parameters
+  // This will work better with the TSOA controller implementation
   KNOWLEDGE: `${ROUTES.BOTS}/{botId}/${ROUTES.KNOWLEDGE}`
 };

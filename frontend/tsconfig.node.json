@@ -6,9 +6,9 @@
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "types": ["node"],
-    "declaration": true, // Add declaration output
-    "emitDeclarationOnly": true, // Only emit .d.ts files
-    "outDir": "./dist" // Output directory for declarations
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./dist"
   },
   "include": ["vite.config.ts"]
 }

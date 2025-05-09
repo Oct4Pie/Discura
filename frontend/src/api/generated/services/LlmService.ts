@@ -20,7 +20,10 @@ export class LlmService {
     public static getModels(): CancelablePromise<LLMModelsResponseDto> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/llm/models',
+            url: '/undefined/models',
+            errors: {
+                500: `Server Error`,
+            },
         });
     }
     /**
@@ -40,9 +43,13 @@ export class LlmService {
     ): CancelablePromise<LLMCompletionResponseDto> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/llm/chat/completions',
+            url: '/undefined/chat/completions',
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                400: `Invalid Request`,
+                500: `Server Error`,
+            },
         });
     }
 }

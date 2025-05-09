@@ -1,42 +1,76 @@
 {
-  "name": "common",
+  "name": "@discura/common",
   "version": "1.0.0",
   "description": "Shared types and utilities for Discura",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "type": "module",
+  "type": "commonjs",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
+      "import": "./dist/index",
+      "require": "./dist/index",
       "types": "./dist/index.d.ts"
     },
     "./types": {
-      "import": "./dist/types/index.js",
+      "import": "./dist/types/index",
+      "require": "./dist/types/index",
       "types": "./dist/types/index.d.ts"
     },
     "./constants": {
-      "import": "./dist/constants.js",
+      "import": "./dist/constants",
+      "require": "./dist/constants",
       "types": "./dist/constants.d.ts"
     },
     "./types/routes": {
-      "import": "./dist/types/routes.js",
+      "import": "./dist/types/routes",
+      "require": "./dist/types/routes",
       "types": "./dist/types/routes.d.ts"
+    },
+    "./types/api": {
+      "import": "./dist/types/api",
+      "require": "./dist/types/api",
+      "types": "./dist/types/api.d.ts"
+    },
+    "./schema/types": {
+      "import": "./dist/schema/types",
+      "require": "./dist/schema/types",
+      "types": "./dist/schema/types.d.ts"
+    },
+    "./types/auth": {
+      "import": "./dist/types/auth",
+      "require": "./dist/types/auth",
+      "types": "./dist/types/auth.d.ts"
     }
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "node scripts/bootstrap-types.js && tsc && node scripts/sync-types.js",
+    "build:full": "npm run clean && cd .. && ./generate-api-types.sh",
+    "prebuild": "if [ ! -d \"./src/schema\" ] || [ ! -d \"./src/routes\" ]; then cd .. && ./generate-api-types.sh; else node scripts/bootstrap-types.js; fi",
+    "dev": "npm run prebuild && tsc --watch",
     "sync-types": "node scripts/sync-types.js",
+    "bootstrap-types": "node scripts/bootstrap-types.js",
+    "clean": "rimraf dist src/schema src/routes",
+    "prepare": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/node": "^22.15.16",
     "@types/yamljs": "^0.2.34",
-    "typescript": "^5.8.3"
+    "glob": "^11.0.2",
+    "typescript": "^5.8.3",
+    "rimraf": "^5.0.1"
   },
   "dependencies": {
+    "@types/express": "^5.0.1",
+    "tsoa": "^6.6.0",
     "yamljs": "^0.3.0"
-  }
+  },
+  "files": [
+    "dist",
+    "src/schema",
+    "src/routes"
+  ]
 }

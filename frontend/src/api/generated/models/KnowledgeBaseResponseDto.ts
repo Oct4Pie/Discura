@@ -3,6 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { KnowledgeItemDto } from './KnowledgeItemDto';
+/**
+ * Knowledge Base Response Data
+ */
 export type KnowledgeBaseResponseDto = {
     botId: string;
     items: Array<KnowledgeItemDto>;

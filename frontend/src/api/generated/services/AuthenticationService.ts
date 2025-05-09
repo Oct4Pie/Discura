@@ -2,40 +2,52 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ErrorResponseDto } from '../models/ErrorResponseDto';
 import type { MessageResponseDto } from '../models/MessageResponseDto';
 import type { UserProfileResponseDto } from '../models/UserProfileResponseDto';
+import type { UserResponseDto } from '../models/UserResponseDto';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class AuthenticationService {
     /**
-     * Get the authenticated user's profile
-     * @returns UserProfileResponseDto Ok
+     * @returns any Ok
      * @throws ApiError
      */
-    public static getUserProfile(): CancelablePromise<UserProfileResponseDto> {
+    public static login(): CancelablePromise<(UserResponseDto | ErrorResponseDto)> {
         return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/auth/profile',
-            errors: {
-                401: `Unauthorized`,
-                404: `User not found`,
-                500: `Server Error`,
-            },
+            method: 'POST',
+            url: '/undefined/login',
         });
     }
     /**
-     * Log out the current user
-     * @returns MessageResponseDto Ok
+     * @returns any Ok
      * @throws ApiError
      */
-    public static logout(): CancelablePromise<MessageResponseDto> {
+    public static register(): CancelablePromise<(UserResponseDto | ErrorResponseDto)> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/auth/logout',
-            errors: {
-                500: `Server Error`,
-            },
+            url: '/undefined/register',
+        });
+    }
+    /**
+     * @returns any Ok
+     * @throws ApiError
+     */
+    public static getProfile(): CancelablePromise<(UserProfileResponseDto | ErrorResponseDto)> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/undefined/profile',
+        });
+    }
+    /**
+     * @returns any Ok
+     * @throws ApiError
+     */
+    public static logout(): CancelablePromise<(MessageResponseDto | ErrorResponseDto)> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/undefined/logout',
         });
     }
 }

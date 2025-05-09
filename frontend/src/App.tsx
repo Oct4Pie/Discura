@@ -4,6 +4,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useAuthStore } from './stores/authStore';
 import theme from './theme';
+import { useEffect } from 'react';
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout';
@@ -35,6 +36,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
+  const { initialize, isLoading } = useAuthStore();
+  
+  // Initialize authentication state when the app loads
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />

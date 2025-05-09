@@ -2,6 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+/**
+ * LLM Completion Message
+ */
 export type LLMCompletionMessage = {
     role: string;
     content: string;

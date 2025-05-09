@@ -6,11 +6,16 @@
  */
 
 import { components } from '../api/schema';
-import { BotStatus, LLMProvider } from 'common';
-import { STORAGE_KEYS } from 'common';
+import { BotStatus } from '../api/generated/models/BotStatus';
 
-// Re-export these types for use in the frontend
-export { BotStatus, LLMProvider, STORAGE_KEYS };
+
+export const STORAGE_KEYS = {
+  AUTH_TOKEN: 'auth_token',
+  USER_PROFILE: 'user_profile'
+} as const;
+
+// Export BotStatus from the generated API
+export { BotStatus };
 
 // Alias Bot to BotResponseDto from the OpenAPI schema
 export type Bot = components['schemas']['BotResponseDto'];

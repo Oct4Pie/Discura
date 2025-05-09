@@ -2,6 +2,8 @@
 import { Request } from 'express';
 import * as jwt from 'jsonwebtoken';
 import config from '../config';
+import { JwtPayload } from '@discura/common/types/auth';
+import { logger } from '../utils/logger';
 
 export function expressAuthentication(
   request: Request,
@@ -21,8 +23,8 @@ export function expressAuthentication(
         if (err) {
           reject(err);
         } else {
-          // Add user to request
-          request.user = decoded;
+          // Add user to request - cast to any to avoid type conflicts with Express and Passport
+          (request as any).user = decoded as JwtPayload;
           resolve(decoded);
         }
       });

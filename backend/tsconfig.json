@@ -1,9 +1,10 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    "target": "ES2021",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "lib": ["ES2021"],
     "outDir": "./dist",
     "rootDir": "./src",
     "resolveJsonModule": true,
@@ -11,11 +12,23 @@
     "emitDecoratorMetadata": true,
     "baseUrl": ".",
     "paths": {
-      "@common/*": ["../common/src/*"],
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@discura/common": ["../common"],
+      "@discura/common/*": ["../common/src/*", "../common/dist/*"]
     },
-    "typeRoots": ["./node_modules/@types", "./src/types"],
-    "composite": true // Added composite flag for project references
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types",
+      "../common/dist"
+    ],
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noEmitOnError": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts"],

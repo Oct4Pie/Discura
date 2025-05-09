@@ -133,12 +133,11 @@ function generateApiTypes() {
   log('Generating API types...');
   
   try {
-    execSync('./generate-api-types.sh', { stdio: 'inherit' });
+    execSync('bash ./generate-api-types.sh', { stdio: 'inherit', shell: true });
     log('API types generated successfully', 'success');
     return true;
   } catch (error) {
-    log('Failed to generate API types', 'error');
-    log('You may need to run "npm run build-types" manually');
+    log('Failed to generate API types. Try running ./generate-api-types.sh manually.', 'error');
     return false;
   }
 }
@@ -148,17 +147,12 @@ function generateApiTypes() {
  */
 function buildCommonPackage() {
   log('Building common package...');
-  
   try {
-    process.chdir(path.join(__dirname, 'common'));
-    execSync('npm run build', { stdio: 'inherit' });
-    process.chdir(__dirname);
-    log('Common package built successfully', 'success');
+    // This step is now handled by generate-api-types.sh
+    log('Common package is built as part of the API type generation process.', 'info');
     return true;
   } catch (error) {
-    log('Failed to build common package', 'error');
-    log('You may need to run "cd common && npm run build" manually');
-    process.chdir(__dirname);
+    log('Failed to build common package (should be handled by API type generation): ' + error.message, 'error');
     return false;
   }
 }

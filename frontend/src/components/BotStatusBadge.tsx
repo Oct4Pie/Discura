@@ -1,58 +1,48 @@
-import {
-    Error as ErrorIcon,
-    Cancel as OfflineIcon,
-    CheckCircle as OnlineIcon
-} from '@mui/icons-material';
-import { Chip, ChipProps } from '@mui/material';
-import { BotStatus } from '../types';
-import { BOT_STATUS } from 'common';
+import { Badge, SxProps, Theme } from '@mui/material';
+import { BotStatus } from '../api/generated/models/BotStatus'; // Correct import from generated models
 
 interface BotStatusBadgeProps {
   status: BotStatus;
+  sx?: SxProps<Theme>;
 }
 
-// Define typed color values for MUI Chip component
-type ChipColor = ChipProps['color'];
+// Map BotStatus enum to badge color
+const statusColorMap: Record<BotStatus, 'success' | 'warning' | 'error' | 'default'> = {
+  [BotStatus.ONLINE]: 'success',
+  [BotStatus.OFFLINE]: 'default',
+  // [BotStatus.STARTING]: 'warning', // STARTING is not in the generated enum yet
+  // [BotStatus.STOPPING]: 'warning', // STOPPING is not in the generated enum yet
+  [BotStatus.ERROR]: 'error',
+};
 
-const BotStatusBadge = ({ status }: BotStatusBadgeProps) => {
-  // Get color and icon based on status
-  const getStatusConfig = () => {
-    switch (status) {
-      case BotStatus.ONLINE:
-        return { 
-          color: BOT_STATUS.COLORS.online as ChipColor, 
-          label: BOT_STATUS.LABELS.online,
-          icon: <OnlineIcon fontSize="small" />
-        };
-      case BotStatus.OFFLINE:
-        return { 
-          color: BOT_STATUS.COLORS.offline as ChipColor, 
-          label: BOT_STATUS.LABELS.offline,
-          icon: <OfflineIcon fontSize="small" />
-        };
-      case BotStatus.ERROR:
-        return { 
-          color: BOT_STATUS.COLORS.error as ChipColor, 
-          label: BOT_STATUS.LABELS.error,
-          icon: <ErrorIcon fontSize="small" />
-        };
-      default:
-        return { 
-          color: BOT_STATUS.COLORS.offline as ChipColor, 
-          label: 'Unknown',
-          icon: <OfflineIcon fontSize="small" />
-        };
-    }
-  };
+// Map BotStatus enum to display text
+const statusTextMap: Record<BotStatus, string> = {
+  [BotStatus.ONLINE]: 'Online',
+  [BotStatus.OFFLINE]: 'Offline',
+  // [BotStatus.STARTING]: 'Starting',
+  // [BotStatus.STOPPING]: 'Stopping',
+  [BotStatus.ERROR]: 'Error',
+};
 
-  const { color, label, icon } = getStatusConfig();
+const BotStatusBadge = ({ status, sx }: BotStatusBadgeProps) => {
+  const color = statusColorMap[status] || 'default';
+  const text = statusTextMap[status] || 'Unknown';
 
   return (
-    <Chip
-      size="small"
-      icon={icon}
-      label={label}
+    <Badge
       color={color}
+      badgeContent={text}
+      sx={{
+        '& .MuiBadge-badge': {
+          textTransform: 'capitalize',
+          fontWeight: 'medium',
+          padding: '0 8px',
+          height: '20px',
+          minWidth: '20px',
+          borderRadius: '10px',
+        },
+        ...sx,
+      }}
     />
   );
 };

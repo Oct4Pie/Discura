@@ -1,17 +1,7 @@
 // src/api/index.ts
 import axios from 'axios';
-import {
-  BotResponseDto,
-  BotsResponseDto,
-  CreateBotRequest,
-  UpdateBotRequest as CommonUpdateBotRequest,
-  UserProfileResponseDto,
-  LLMModelsResponseDto,
-  LLMCompletionRequestDto,
-  LLMCompletionResponseDto
-} from '@common/types/api';
-import { API_ROUTES } from '@common/types/routes';
-import { STORAGE_KEYS } from '@common/constants';
+import { components } from './schema';
+import { STORAGE_KEYS } from '../types';
 
 // Import the generated API services
 import { OpenAPI } from './generated/core/OpenAPI';
@@ -19,7 +9,8 @@ import { BotsService } from './generated/services/BotsService';
 import { AuthenticationService } from './generated/services/AuthenticationService';
 import { LlmService } from './generated/services/LlmService';
 import { KnowledgeService } from './generated/services/KnowledgeService';
-import { UpdateBotRequest as GeneratedUpdateBotRequest } from './generated/models/UpdateBotRequest';
+import { UpdateBotRequest } from './generated/models/UpdateBotRequest';
+import { CreateBotRequest } from './generated/models/CreateBotRequest';
 
 // Configure the OpenAPI client with our base URL
 OpenAPI.BASE = import.meta.env.VITE_API_URL || '';
@@ -37,7 +28,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     // Get token from local storage using constant key
-    const token = localStorage.getItem(STORAGE_KEYS.AUTH_STORAGE);
+    const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
     
     if (token) {
       try {
@@ -63,13 +54,18 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       // Clear localStorage and redirect to login
-      localStorage.removeItem(STORAGE_KEYS.AUTH_STORAGE);
+      localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
       window.location.href = '/login';
     }
     
     return Promise.reject(error);
   }
 );
+
+// Type aliases using the generated schema
+type BotResponseDto = components['schemas']['BotResponseDto'];
+type BotsResponseDto = components['schemas']['BotsResponseDto'];
+type LLMCompletionRequestDto = components['schemas']['LLMCompletionRequestDto'];
 
 // Use the generated services directly - creating type-safe wrappers
 export const botApi = {
@@ -82,9 +78,8 @@ export const botApi = {
   // Create a new bot
   createBot: (bot: CreateBotRequest) => BotsService.createBot(bot),
   
-  // Update a bot - use type assertion to handle the BotStatus enum mismatch
-  updateBot: (id: string, bot: CommonUpdateBotRequest) => 
-    BotsService.updateBot(id, bot as unknown as GeneratedUpdateBotRequest),
+  // Update a bot - using generated types directly
+  updateBot: (id: string, bot: UpdateBotRequest) => BotsService.updateBot(id, bot),
   
   // Delete a bot
   deleteBot: (id: string) => BotsService.deleteBot(id),

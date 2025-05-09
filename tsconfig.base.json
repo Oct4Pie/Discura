@@ -7,6 +7,14 @@
     "composite": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
-  }
+    "sourceMap": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "noEmitOnError": true
+  },
+  "references": [
+    { "path": "./common" },
+    { "path": "./backend" },
+    { "path": "./frontend" }
+  ]
 }

@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
-import { BotDetailResponseDto, BotResponseDto } from '@common/types/api';
-import { BotStatus, LLMProvider } from '@common/types';
-import { IMAGE_PROVIDER, DEFAULTS } from '@common/constants';
+import { BotResponseDto, BotStatus } from '@discura/common/schema/types';
+import { BotRepository } from '../../services/database/bot.repository';
+import { IMAGE_PROVIDER, DEFAULTS } from '@discura/common/constants';
 import { db } from '../../services/database/database.factory';
 import { logger } from '../../utils/logger';
 
@@ -86,7 +86,7 @@ export class Bot {
   name: string;
   applicationId: string;
   discordToken: string;
-  status: BotStatus;
+  status: BotStatus; // Updated to use the directly imported BotStatus
   createdAt: Date;
   updatedAt: Date;
   configuration?: BotConfigurationDto;
@@ -97,7 +97,7 @@ export class Bot {
     this.name = data.name;
     this.applicationId = data.application_id;
     this.discordToken = data.discord_token;
-    this.status = data.status as BotStatus;
+    this.status = data.status as BotStatus; // Cast to directly imported BotStatus
     this.createdAt = new Date(data.created_at);
     this.updatedAt = new Date(data.updated_at);
     
@@ -149,7 +149,7 @@ export class Bot {
       id: this.id,
       userId: this.user,
       name: this.name,
-      status: this.status,
+      status: this.status as any, // Use type assertion to resolve compatibility for now
       applicationId: this.applicationId,
       intents: [], // Add empty intents array
       configuration: {
@@ -274,7 +274,7 @@ export class BotAdapter {
         name: data.name,
         application_id: data.applicationId,
         discord_token: data.discordToken,
-        status: BotStatus.OFFLINE,
+        status: BotStatus.OFFLINE, // Use directly imported BotStatus
         created_at: now,
         updated_at: now
       });
@@ -298,7 +298,7 @@ export class BotAdapter {
   static async update(id: string, data: Partial<{
     name: string;
     discord_token: string;
-    status: BotStatus;
+    status: BotStatus; // Updated to use directly imported BotStatus
   }>): Promise<boolean> {
     try {
       const updateData = {
@@ -364,7 +364,7 @@ export class BotAdapter {
   /**
    * Update bot status
    */
-  static async updateStatus(id: string, status: BotStatus): Promise<boolean> {
+  static async updateStatus(id: string, status: BotStatus): Promise<boolean> { // Updated parameter type
     return BotAdapter.update(id, { status });
   }
   

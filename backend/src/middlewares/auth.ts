@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import config from '../config';
-import { UserAdapter } from '../models/user.model';
+import { UserAdapter } from '../models/adapters/user.adapter'; 
 import { logger } from '../utils/logger';
+import { JwtPayload } from '../types/express';
 
 // Middleware to check if user is authenticated with Passport
 export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
@@ -19,21 +20,27 @@ export const isAuthenticatedJWT = async (req: Request, res: Response, next: Next
     const token = req.headers.authorization?.split(' ')[1];
     
     if (!token) {
-      return res.status(401).json({ message: 'Unauthorized - No token provided' });
+        res.status(401).json({ message: 'Unauthorized - No token provided' });
+        return;
     }
     
+    // Verify token and get the basic decoded information
     const decoded = jwt.verify(token, config.jwtSecret) as { id: string };
+    
+    // Find the complete user object
     const user = await UserAdapter.findById(decoded.id);
     
     if (!user) {
-      return res.status(401).json({ message: 'Unauthorized - Invalid user' });
+        res.status(401).json({ message: 'Unauthorized - Invalid user' });
+        return;
     }
     
-    // Add user to request object
-    req.user = decoded; // Store jwt payload instead of full user object
+    // Store the full user object from the adapter to meet type requirements
+    req.user = user;
     next();
   } catch (error) {
-    logger.error('JWT authentication error:', error);
-    res.status(401).json({ message: 'Unauthorized - Invalid token' });
+      logger.error('JWT authentication error:', error);
+      res.status(401).json({ message: 'Unauthorized - Invalid token' });
+      return;
   }
 };

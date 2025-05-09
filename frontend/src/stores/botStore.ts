@@ -1,9 +1,9 @@
-import axios from 'axios';
 import { create } from 'zustand';
 import { BotStatus } from '../types';
 import { Bot } from '../types';
-import api from '../services/api';
-import { API_ROUTES } from 'common';
+import { botApi } from '../api';
+import { CreateBotRequest } from '../api/generated/models/CreateBotRequest';
+import { UpdateBotRequest } from '../api/generated/models/UpdateBotRequest';
 
 // Define the bot configuration type for updates
 interface BotConfiguration {
@@ -68,9 +68,9 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use our API service instead of axios directly
-      const response = await api.get(API_ROUTES.BOTS.BASE);
-      set({ bots: response.data.bots, isLoading: false });
+      // Use the generated API service
+      const response = await botApi.getUserBots();
+      set({ bots: response.bots, isLoading: false });
     } catch (error) {
       console.error('Error fetching bots:', error);
       set({ error: 'Failed to fetch bots', isLoading: false });
@@ -81,9 +81,9 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use our API service
-      const response = await api.get(API_ROUTES.BOTS.BY_ID(id));
-      set({ currentBot: response.data.bot, isLoading: false });
+      // Use the generated API service
+      const response = await botApi.getBotById(id);
+      set({ currentBot: response.bot, isLoading: false });
     } catch (error) {
       console.error(`Error fetching bot ${id}:`, error);
       set({ error: 'Failed to fetch bot details', isLoading: false });
@@ -94,16 +94,15 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use our API service
-      const response = await api.post(API_ROUTES.BOTS.BASE, botData);
-      const newBot = response.data.bot;
+      // Use the generated API service
+      const response = await botApi.createBot(botData as CreateBotRequest);
       
       set(state => ({
-        bots: [...state.bots, newBot],
+        bots: [...state.bots, response],
         isLoading: false
       }));
       
-      return newBot;
+      return response;
     } catch (error) {
       console.error('Error creating bot:', error);
       set({ error: 'Failed to create bot', isLoading: false });
@@ -115,17 +114,16 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use our API service
-      const response = await api.put(API_ROUTES.BOTS.BY_ID(id), botData);
-      const updatedBot = response.data.bot;
+      // Use the generated API service
+      const response = await botApi.updateBot(id, botData as UpdateBotRequest);
       
       set(state => ({
-        bots: state.bots.map((bot: Bot) => bot.id === id ? updatedBot : bot),
-        currentBot: state.currentBot?.id === id ? updatedBot : state.currentBot,
+        bots: state.bots.map((bot: Bot) => bot.id === id ? response : bot),
+        currentBot: state.currentBot?.id === id ? response : state.currentBot,
         isLoading: false
       }));
       
-      return updatedBot;
+      return response;
     } catch (error) {
       console.error(`Error updating bot ${id}:`, error);
       set({ error: 'Failed to update bot', isLoading: false });
@@ -137,8 +135,8 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use our API service
-      await api.delete(API_ROUTES.BOTS.BY_ID(id));
+      // Use the generated API service
+      await botApi.deleteBot(id);
       
       set(state => ({
         bots: state.bots.filter((bot: Bot) => bot.id !== id),
@@ -156,17 +154,16 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use our API service
-      const response = await api.post(API_ROUTES.BOTS.START(id));
-      const updatedBot = response.data.bot;
+      // Use the generated API service
+      const response = await botApi.startBot(id);
       
       set(state => ({
-        bots: state.bots.map((bot: Bot) => bot.id === id ? { ...bot, status: BotStatus.ONLINE } : bot),
-        currentBot: state.currentBot?.id === id ? updatedBot : state.currentBot,
+        bots: state.bots.map((bot: Bot) => bot.id === id ? response : bot),
+        currentBot: state.currentBot?.id === id ? response : state.currentBot,
         isLoading: false
       }));
       
-      return updatedBot;
+      return response;
     } catch (error) {
       console.error(`Error starting bot ${id}:`, error);
       set({ error: 'Failed to start bot', isLoading: false });
@@ -178,17 +175,16 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use our API service
-      const response = await api.post(API_ROUTES.BOTS.STOP(id));
-      const updatedBot = response.data.bot;
+      // Use the generated API service
+      const response = await botApi.stopBot(id);
       
       set(state => ({
-        bots: state.bots.map((bot: Bot) => bot.id === id ? { ...bot, status: BotStatus.OFFLINE } : bot),
-        currentBot: state.currentBot?.id === id ? updatedBot : state.currentBot,
+        bots: state.bots.map((bot: Bot) => bot.id === id ? response : bot),
+        currentBot: state.currentBot?.id === id ? response : state.currentBot,
         isLoading: false
       }));
       
-      return updatedBot;
+      return response;
     } catch (error) {
       console.error(`Error stopping bot ${id}:`, error);
       set({ error: 'Failed to stop bot', isLoading: false });

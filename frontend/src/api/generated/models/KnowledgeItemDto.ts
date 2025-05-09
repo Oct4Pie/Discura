@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Knowledge item DTO for API responses
+ * Knowledge Item Data
  */
 export type KnowledgeItemDto = {
     id: number;

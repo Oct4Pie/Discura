@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "es2021",
+    "module": "commonjs",
+    "lib": ["ES2021"],
+    "outDir": "./dist",
+    "rootDir": "..", // This seems odd, usually ./src or .
+    "moduleResolution": "Node16",
+    "baseUrl": ".", // Changed from /Users/m3hdi/Discura
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "paths": {
+      "common/*": ["./src/*"], // Was /Users/m3hdi/Discura/common/src/*
+      "@/*": ["../backend/src/*"] // Was /Users/m3hdi/Discura/backend/src/*
+    },
+    "noEmit": true
+  },
+  "include": [
+    "./src/controllers/**/*.ts",
+    "./src/types/**/*.ts",
+    "./src/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

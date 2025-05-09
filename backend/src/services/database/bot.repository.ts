@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { BaseRepository } from './base.repository';
 import { db } from './database.factory';
 import { logger } from '../../utils/logger';
-import { BotStatus } from '@common/types';
+import { BotStatus } from '@discura/common/types';
 
 /**
  * Bot entity representing a row in the bots table

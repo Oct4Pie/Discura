@@ -5,22 +5,10 @@
  * between frontend and backend.
  */
 
-// Remove the import that's causing conflicts with enums
-// import { BOT_STATUS, LLM_PROVIDER } from '../constants';
+// Re-export TSOA components to maintain single source of truth
+export { Controller, Body, Get, Request, Post, Route, Security, Tags } from 'tsoa';
 
-// Export domain types
-export enum BotStatus {
-  OFFLINE = 'offline',
-  ONLINE = 'online',
-  ERROR = 'error'
-}
-
-export enum LLMProvider {
-  OPENAI = 'openai',
-  ANTHROPIC = 'anthropic',
-  GOOGLE = 'google',
-  CUSTOM = 'custom'
-}
+// Local enums that are not part of the API contract, if any, would go here.
 
 export enum ImageProvider {
   OPENAI = 'openai',
@@ -28,6 +16,11 @@ export enum ImageProvider {
   MIDJOURNEY = 'midjourney'
 }
 
+// Import the types from schema/types (our single source of truth for API types)
+// Forward export all API types from schema - IMPORTANT: This must come BEFORE using any types from it
+export * from '../schema/types'; 
+
+// Define User interface
 export interface User {
   discordId: string;
   username: string;
@@ -39,12 +32,14 @@ export interface User {
   updatedAt: Date;
 }
 
+// Define the Bot interface that depends on the BotStatus from schema
 export interface Bot {
   userId: string; // Owner ID
   name: string;
   discordToken: string;
   applicationId: string;
-  status: BotStatus;
+  // Using string type instead of BotStatus enum to avoid circular dependency
+  status: string; 
   intents: string[];
   configuration: BotConfiguration;
   createdAt: Date;
@@ -56,7 +51,8 @@ export interface BotConfiguration {
   personality: string;
   traits: string[];
   backstory: string;
-  llmProvider: LLMProvider;
+  // Use string literal type instead of LLMProvider enum to avoid circular dependency
+  llmProvider: 'openai' | 'anthropic' | 'google' | 'custom';
   llmModel: string;
   apiKey: string;
   knowledge: KnowledgeBase[];
@@ -97,15 +93,8 @@ export interface ToolParameter {
 
 // Import and export route constants
 export * from './routes';
-
-// Import types generated from the schema
-import * as schemaTypes from '../schema/types';
-
-// Export the common types
-export * from './api'; // Assuming api.ts exports the necessary types
-
-// Export the schema-generated types
-export * from '../schema/types';
+// Explicitly export API_ROUTES to fix frontend import issue
+export { API_ROUTES, ROUTES, CONTROLLER_ROUTES } from './routes';
 
 // Export constants for use throughout the application
 export * from '../constants';

@@ -6,7 +6,7 @@ import {
   LLMCompletionRequestDto, 
   LLMCompletionResponseDto,
   LLMModelData
-} from '@common/types/api';
+} from '@discura/common/types/api';
 import { BotAdapter } from '../models/adapters/bot.adapter';
 
 // Interface for LLM response
@@ -118,9 +118,9 @@ export const createChatCompletion = async (
         }
       ],
       usage: {
-        prompt_tokens: calculateTokenCount(request.messages.map(m => m.content).join(' ')),
+        prompt_tokens: calculateTokenCount(request.messages.map((m: { content: string }) => m.content).join(' ')),
         completion_tokens: calculateTokenCount(completionText),
-        total_tokens: calculateTokenCount(request.messages.map(m => m.content).join(' ') + completionText)
+        total_tokens: calculateTokenCount(request.messages.map((m: { content: string }) => m.content).join(' ') + completionText)
       }
     };
   } catch (error) {

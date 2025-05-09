@@ -1,11 +1,11 @@
-import sqlite3 from 'sqlite3';
 import { Database, open } from 'sqlite';
-import fs from 'fs';
+import sqlite3 from 'sqlite3';
+import { mkdirp } from 'mkdirp';
 import path from 'path';
-import * as mkdirp from 'mkdirp';
-import config from '../../config';
+import fs from 'fs';
 import { logger } from '../../utils/logger';
-import { BOT_STATUS } from '@common/constants'; // Import bot status constants
+import { BOT_STATUS } from '@discura/common/constants'; // Import bot status constants
+import config from '../../config';
 
 /**
  * SQLiteService - Manages SQLite database operations with optimizations
@@ -47,7 +47,7 @@ export class SQLiteService {
     try {
       // Ensure data directory exists
       const dbDir = path.dirname(this.dbPath);
-      await mkdirp.mkdirp(dbDir);
+      await mkdirp(dbDir);
       
       logger.info(`Initializing SQLite database at ${this.dbPath}`);
       

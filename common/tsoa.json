@@ -1,11 +1,13 @@
 {
-  "entryFile": "src/index.ts",
+  "entryFile": "./src/index.ts",
   "noImplicitAdditionalProperties": "throw-on-extras",
-  "controllerPathGlobs": ["src/controllers/tsoa/**/*.ts"],
+  "controllerPathGlobs": [
+    "./src/controllers/**/*.ts"
+  ],
   "spec": {
-    "outputDirectory": "../common/src/schema",
+    "outputDirectory": "./src/schema",
     "specVersion": 3,
-    "basePath": "/api",
+    "basePath": "",
     "description": "Discura API - Discord Bot Management Platform",
     "name": "Discura API",
     "securityDefinitions": {
@@ -34,21 +36,38 @@
       },
       {
         "name": "Knowledge",
-        "description": "Bot knowledge base management endpoints"
+        "description": "Knowledge base management endpoints"
       }
     ],
     "yaml": true,
     "outputFormat": "both"
   },
   "routes": {
-    "routesDir": "build",
+    "routesDir": "./src/routes",
     "middleware": "express",
-    "authenticationModule": "./src/middlewares/authentication.ts"
+    "authenticationModule": "./src/auth/authentication.ts",
+    "noImplicitAdditionalProperties": "throw-on-extras"
   },
+  "modelsPathGlobs": [
+    "./src/types/api/**/*.ts",
+    "./src/types/api/tsoa-reference.ts"
+  ],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@common/*": ["../common/src/*"]
-    }
+      "@/*": [
+        "./src/*"
+      ],
+      "common/*": [
+        "./src/*"
+      ]
+    },
+    "outDir": "./build"
+  },
+  "sources": [
+    "./src/types/api/**/*.ts"
+  ],
+  "jsdoc": {
+    "enabled": true
   }
 }

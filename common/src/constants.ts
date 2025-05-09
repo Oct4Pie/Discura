@@ -1,14 +1,3 @@
-/**
- * Application Constants
- * 
- * This file serves as the single source of truth for all constant values used throughout the application.
- * Never hard-code string literals, status values, or configuration constants elsewhere in the codebase.
- * 
- * To use these constants:
- * - Import from '@common/constants' in both frontend and backend
- * - For generated files, ensure they reference these constants
- */
-
 // Bot Status Constants
 export const BOT_STATUS = {
   // Enum values (for database and API)
@@ -75,9 +64,11 @@ export const HTTP_STATUS = {
 
 // Local Storage Keys
 export const STORAGE_KEYS = {
-  AUTH_STORAGE: 'auth-storage',
-  USER_PREFERENCES: 'user-preferences',
-  THEME_MODE: 'theme-mode'
+  AUTH_STORAGE: 'auth-storage', // Used by frontend for storing auth related data
+  USER_PREFERENCES: 'user-preferences', // Used by frontend for user specific preferences
+  THEME_MODE: 'theme-mode', // Used by frontend for theme preference
+  AUTH_TOKEN: 'auth_token', // Potentially shared or for frontend local storage
+  USER_PROFILE: 'user_profile' // Potentially shared or for frontend local storage
 };
 
 // Default Values

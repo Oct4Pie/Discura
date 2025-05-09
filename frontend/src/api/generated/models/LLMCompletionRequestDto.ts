@@ -3,6 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { LLMCompletionMessage } from './LLMCompletionMessage';
+/**
+ * LLM Completion Request
+ */
 export type LLMCompletionRequestDto = {
     model: string;
     messages: Array<LLMCompletionMessage>;

@@ -1,6 +1,7 @@
 import { Client, GatewayIntentBits, Partials, PermissionsBitField, OAuth2Scopes } from 'discord.js';
-import { BotStatus } from '@common/types';
-import { DISCORD_API } from '@common/constants';
+// Import BotStatus from TSOA models (single source of truth) instead of common/types
+import { BotStatus } from '@discura/common/schema/types';
+import { DISCORD_API } from '@discura/common/constants';
 import { logger } from '../utils/logger';
 import { setupMessageHandlers } from './message.service';
 import { BotAdapter } from '../models/adapters/bot.adapter';

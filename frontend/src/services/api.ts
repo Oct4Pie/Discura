@@ -1,5 +1,5 @@
-import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { STORAGE_KEYS } from 'common';
+import axios, { AxiosError } from 'axios';
+import { STORAGE_KEYS } from '../types';
 
 // Create a configured axios instance
 const api = axios.create({
@@ -14,7 +14,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     // Use constant for local storage key
-    const token = localStorage.getItem(STORAGE_KEYS.AUTH_STORAGE);
+    const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
     
     if (token) {
       try {
@@ -38,7 +38,7 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       // Use constant for local storage key
-      localStorage.removeItem(STORAGE_KEYS.AUTH_STORAGE);
+      localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
       window.location.href = '/login';
     }
     

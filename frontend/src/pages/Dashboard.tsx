@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BotStatus } from '@common/types';
+import { BotStatus } from '@discura/common/types';
 import BotStatusBadge from '../components/BotStatusBadge';
 import { useAuthStore } from '../stores/authStore';
 import { useBotStore } from '../stores/botStore';

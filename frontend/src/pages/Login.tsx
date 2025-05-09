@@ -1,28 +1,34 @@
 import { Box, Button, Paper, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Discord as DiscordIcon } from '../components/icons/DiscordIcon';
 import { useAuthStore } from '../stores/authStore';
-import { API_ROUTES } from 'common';
 
 const Login = () => {
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/');
+      // Use replace to prevent back button from returning to login
+      navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, navigate]);
   
   // Handle Discord login
   const handleDiscordLogin = () => {
     setIsLoading(true);
-    // Redirect to Discord OAuth using the appropriate route constant
-    window.location.href = API_ROUTES.AUTH.DISCORD;
+    // Redirect to Discord OAuth using the proper API route
+    window.location.href = '/api/auth/discord';
   };
+  
+  // Don't render anything if we're authenticated (prevents flash of login screen)
+  if (isAuthenticated) {
+    return null;
+  }
   
   return (
     <Box sx={{ width: '100%', textAlign: 'center' }}>

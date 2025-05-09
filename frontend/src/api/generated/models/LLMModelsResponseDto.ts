@@ -3,6 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { LLMModelData } from './LLMModelData';
+/**
+ * LLM Models Response
+ */
 export type LLMModelsResponseDto = {
     object: string;
     data: Array<LLMModelData>;

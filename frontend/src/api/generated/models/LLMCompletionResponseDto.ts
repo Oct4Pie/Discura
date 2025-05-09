@@ -4,6 +4,9 @@
 /* eslint-disable */
 import type { LLMCompletionResponseChoice } from './LLMCompletionResponseChoice';
 import type { LLMCompletionResponseUsage } from './LLMCompletionResponseUsage';
+/**
+ * LLM Completion Response
+ */
 export type LLMCompletionResponseDto = {
     id: string;
     object: string;

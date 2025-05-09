@@ -2,6 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+/**
+ * User Response Data
+ */
 export type UserResponseDto = {
     id: string;
     discordId: string;

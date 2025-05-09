@@ -3,10 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Common Types
- *
- * This is the main entry point for all shared type definitions
- * between frontend and backend.
+ * Bot Status Enum
  */
 export enum BotStatus {
     OFFLINE = 'offline',

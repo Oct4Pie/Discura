@@ -1,7 +1,7 @@
 import passport from 'passport';
 import { Strategy as DiscordStrategy } from 'passport-discord';
 import config from '../config';
-import { UserAdapter } from '../models/adapters/user.adapter';
+import { User, UserAdapter } from '../models/adapters/user.adapter';
 import { logger } from '../utils/logger';
 
 // Extend the Discord profile type to ensure our type definitions match
@@ -40,7 +40,8 @@ export const setupPassport = () => {
       }
       
       logger.info(`Authenticated user: ${discordProfile.username}`);
-      return done(null, user);
+      // The user object from our adapter is now compatible with Express.User through our type definitions
+      return done(null, user as Express.User);
     } catch (err) {
       logger.error('Error in Discord auth strategy:', err);
       return done(err as Error, undefined);
@@ -48,7 +49,7 @@ export const setupPassport = () => {
   }));
 
   // Serialize user to the session
-  passport.serializeUser((user: any, done) => {
+  passport.serializeUser((user: Express.User, done) => {
     // Use id from the user object
     done(null, user.id); 
   });
@@ -57,8 +58,8 @@ export const setupPassport = () => {
   passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await UserAdapter.findById(id);
-      // Pass the full user object or null
-      done(null, user); 
+      // Cast the user object to Express.User to ensure type compatibility
+      done(null, user as Express.User | null);
     } catch (err) {
       done(err, null);
     }

@@ -1,10 +1,12 @@
 {
   "extends": "./tsconfig.base.json",
   "files": [],
-  "references": [],
+  "references": [
+    { "path": "./common" },
+    { "path": "./backend" },
+    { "path": "./frontend" }
+  ],
   "compilerOptions": {
-    "composite": true,
-    
+    "composite": true
   }
-  
 }

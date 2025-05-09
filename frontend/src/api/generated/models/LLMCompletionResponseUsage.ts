@@ -2,6 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+/**
+ * LLM Completion Response Usage
+ */
 export type LLMCompletionResponseUsage = {
     prompt_tokens: number;
     completion_tokens: number;

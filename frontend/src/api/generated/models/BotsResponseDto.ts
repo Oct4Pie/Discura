@@ -3,6 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { BotResponseDto } from './BotResponseDto';
+/**
+ * Bots Response Data
+ */
 export type BotsResponseDto = {
     bots: Array<BotResponseDto>;
 };

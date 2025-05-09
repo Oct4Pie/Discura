@@ -27,7 +27,8 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { BotStatus, LLMProvider, TabPanelProps } from '../types';
+import { BotStatus, LLMProvider } from '@discura/common/types';
+import {TabPanelProps} from '../types';
 import BotStatusBadge from '../components/BotStatusBadge';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useBotStore } from '../stores/botStore';

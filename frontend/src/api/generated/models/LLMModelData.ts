@@ -2,6 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+/**
+ * LLM Model Data Structure
+ */
 export type LLMModelData = {
     id: string;
     object: string;

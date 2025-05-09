@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/llm/models": {
+    "/undefined/models": {
         parameters: {
             query?: never;
             header?: never;
@@ -24,7 +24,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/llm/chat/completions": {
+    "/undefined/chat/completions": {
         parameters: {
             query?: never;
             header?: never;
@@ -47,7 +47,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/bots/{botId}/knowledge": {
+    "/undefined/{botId}/knowledge": {
         parameters: {
             query?: never;
             header?: never;
@@ -65,7 +65,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/bots/{botId}/knowledge/{itemId}": {
+    "/undefined/{botId}/knowledge/{itemId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -83,7 +83,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/bots": {
+    "/undefined": {
         parameters: {
             query?: never;
             header?: never;
@@ -107,7 +107,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/bots/{id}": {
+    "/undefined/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -133,7 +133,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/bots/{id}/start": {
+    "/undefined/{id}/start": {
         parameters: {
             query?: never;
             header?: never;
@@ -152,7 +152,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/bots/{id}/stop": {
+    "/undefined/{id}/stop": {
         parameters: {
             query?: never;
             header?: never;
@@ -171,7 +171,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/bots/{id}/invite": {
+    "/undefined/{id}/invite": {
         parameters: {
             query?: never;
             header?: never;
@@ -191,24 +191,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/profile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Get the authenticated user's profile */
-        get: operations["GetUserProfile"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auth/logout": {
+    "/undefined/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -217,7 +200,54 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Log out the current user */
+        post: operations["Login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/undefined/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["Register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/undefined/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/undefined/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
         post: operations["Logout"];
         delete?: never;
         options?: never;
@@ -229,6 +259,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description LLM Model Data Structure */
         LLMModelData: {
             id: string;
             object: string;
@@ -236,21 +267,30 @@ export interface components {
             created: number;
             owned_by: string;
         };
+        /** @description LLM Models Response */
         LLMModelsResponseDto: {
             object: string;
             data: components["schemas"]["LLMModelData"][];
         };
+        /** @description Standard Error Response DTO */
+        ErrorResponseDto: {
+            message: string;
+            error?: string;
+        };
+        /** @description LLM Completion Message */
         LLMCompletionMessage: {
             role: string;
             content: string;
             name?: string;
         };
+        /** @description LLM Completion Response Choice */
         LLMCompletionResponseChoice: {
             /** Format: double */
             index: number;
             message: components["schemas"]["LLMCompletionMessage"];
             finish_reason: string;
         };
+        /** @description LLM Completion Response Usage */
         LLMCompletionResponseUsage: {
             /** Format: double */
             prompt_tokens: number;
@@ -259,6 +299,7 @@ export interface components {
             /** Format: double */
             total_tokens: number;
         };
+        /** @description LLM Completion Response */
         LLMCompletionResponseDto: {
             id: string;
             object: string;
@@ -268,6 +309,7 @@ export interface components {
             choices: components["schemas"]["LLMCompletionResponseChoice"][];
             usage: components["schemas"]["LLMCompletionResponseUsage"];
         };
+        /** @description LLM Completion Request */
         LLMCompletionRequestDto: {
             model: string;
             messages: components["schemas"]["LLMCompletionMessage"][];
@@ -287,7 +329,7 @@ export interface components {
             frequency_penalty?: number;
             user?: string;
         };
-        /** @description Knowledge item DTO for API responses */
+        /** @description Knowledge Item Data */
         KnowledgeItemDto: {
             /** Format: double */
             id: number;
@@ -299,21 +341,25 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
+        /** @description Knowledge Base Response Data */
         KnowledgeBaseResponseDto: {
             botId: string;
             items: components["schemas"]["KnowledgeItemDto"][];
         };
+        /** @description Simple message response */
         MessageResponseDto: {
             message: string;
         };
         /**
-         * @description Common Types
-         *
-         *     This is the main entry point for all shared type definitions
-         *     between frontend and backend.
+         * @description Bot Status Enum
          * @enum {string}
          */
         BotStatus: "offline" | "online" | "error";
+        /** @description Construct a type with a set of properties K of type T */
+        "Record_string.any_": {
+            [key: string]: unknown;
+        };
+        /** @description Bot Response Data */
         BotResponseDto: {
             id: string;
             userId: string;
@@ -322,124 +368,32 @@ export interface components {
             applicationId: string;
             status: components["schemas"]["BotStatus"];
             intents: string[];
-            configuration: {
-                tools: {
-                    parameters: {
-                        required: boolean;
-                        description: string;
-                        type: string;
-                        name: string;
-                    }[];
-                    description: string;
-                    name: string;
-                    id: string;
-                }[];
-                toolsEnabled: boolean;
-                imageGeneration: {
-                    model?: string;
-                    provider: string;
-                    enabled: boolean;
-                };
-                knowledge: {
-                    source?: string;
-                    type: string;
-                    content: string;
-                    name: string;
-                    id: string;
-                }[];
-                llmModel: string;
-                llmProvider: string;
-                backstory: string;
-                traits: string[];
-                personality: string;
-                systemPrompt: string;
-            };
+            configuration: components["schemas"]["Record_string.any_"];
             createdAt: string;
             updatedAt: string;
         };
+        /** @description Bots Response Data */
         BotsResponseDto: {
             bots: components["schemas"]["BotResponseDto"][];
         };
+        /** @description Create Bot Request */
         CreateBotRequest: {
             name: string;
             discordToken: string;
             applicationId: string;
             intents?: string[];
-            configuration?: {
-                tools?: {
-                    parameters?: {
-                        required: boolean;
-                        description: string;
-                        type: string;
-                        name: string;
-                    }[];
-                    description: string;
-                    name: string;
-                    id?: string;
-                }[];
-                toolsEnabled?: boolean;
-                imageGeneration?: {
-                    model?: string;
-                    provider?: string;
-                    enabled?: boolean;
-                };
-                knowledge?: {
-                    source?: string;
-                    type: string;
-                    content: string;
-                    name: string;
-                    id?: string;
-                }[];
-                llmModel?: string;
-                llmProvider?: string;
-                backstory?: string;
-                traits?: string[];
-                personality?: string;
-                systemPrompt?: string;
-            };
+            configuration?: components["schemas"]["Record_string.any_"];
         };
+        /** @description Update Bot Request */
         UpdateBotRequest: {
             name?: string;
             discordToken?: string;
             applicationId?: string;
             intents?: string[];
             status?: components["schemas"]["BotStatus"];
-            configuration?: {
-                tools?: {
-                    implementation?: string;
-                    parameters?: {
-                        required: boolean;
-                        description: string;
-                        type: string;
-                        name: string;
-                    }[];
-                    description: string;
-                    name: string;
-                    id: string;
-                }[];
-                toolsEnabled?: boolean;
-                imageGeneration?: {
-                    apiKey?: string;
-                    model?: string;
-                    provider?: string;
-                    enabled?: boolean;
-                };
-                knowledge?: {
-                    source?: string;
-                    type: string;
-                    content: string;
-                    name: string;
-                    id?: string;
-                }[];
-                apiKey?: string;
-                llmModel?: string;
-                llmProvider?: string;
-                backstory?: string;
-                traits?: string[];
-                personality?: string;
-                systemPrompt?: string;
-            };
+            configuration?: components["schemas"]["Record_string.any_"];
         };
+        /** @description User Response Data */
         UserResponseDto: {
             id: string;
             discordId: string;
@@ -449,12 +403,9 @@ export interface components {
             email: string;
             bots: string[];
         };
+        /** @description User Profile Response Data */
         UserProfileResponseDto: {
             user: components["schemas"]["UserResponseDto"];
-        };
-        ErrorResponseDto: {
-            message: string;
-            error?: string;
         };
     };
     responses: never;
@@ -483,6 +434,15 @@ export interface operations {
                     "application/json": components["schemas"]["LLMModelsResponseDto"];
                 };
             };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
         };
     };
     CreateChatCompletion: {
@@ -505,6 +465,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LLMCompletionResponseDto"];
+                };
+            };
+            /** @description Invalid Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
                 };
             };
         };
@@ -815,7 +793,7 @@ export interface operations {
             };
         };
     };
-    GetUserProfile: {
+    Login: {
         parameters: {
             query?: never;
             header?: never;
@@ -830,34 +808,47 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserProfileResponseDto"];
+                    "application/json": components["schemas"]["UserResponseDto"] | components["schemas"]["ErrorResponseDto"];
                 };
             };
-            /** @description Unauthorized */
-            401: {
+        };
+    };
+    Register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponseDto"];
+                    "application/json": components["schemas"]["UserResponseDto"] | components["schemas"]["ErrorResponseDto"];
                 };
             };
-            /** @description User not found */
-            404: {
+        };
+    };
+    GetProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponseDto"];
-                };
-            };
-            /** @description Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponseDto"];
+                    "application/json": components["schemas"]["UserProfileResponseDto"] | components["schemas"]["ErrorResponseDto"];
                 };
             };
         };
@@ -877,16 +868,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MessageResponseDto"];
-                };
-            };
-            /** @description Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponseDto"];
+                    "application/json": components["schemas"]["MessageResponseDto"] | components["schemas"]["ErrorResponseDto"];
                 };
             };
         };
