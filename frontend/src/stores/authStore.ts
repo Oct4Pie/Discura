@@ -2,15 +2,7 @@ import axios from 'axios';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import api from '../services/api';
-
-interface User {
-  id: string;
-  username: string;
-  discriminator: string;
-  avatar: string;
-  email: string;
-  bots: any[];
-}
+import { User } from '../types/user';
 
 interface AuthState {
   token: string | null;

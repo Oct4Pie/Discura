@@ -1,4 +1,4 @@
-import { CONTROLLER_ROUTES } from 'common/types/routes';
+import { CONTROLLER_ROUTES } from '../types/routes';
 import {
     Controller,
     Get,
@@ -10,12 +10,12 @@ import {
     Tags
 } from 'tsoa';
 import { Request as ExpressRequest } from 'express';
-import { 
+import {
   ErrorResponseDto,
   MessageResponseDto,
   UserProfileResponseDto,
   UserResponseDto
- } from "common/schema/types";
+  } from "../schema/types";
 
 /**
  * Authentication controller

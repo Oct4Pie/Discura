@@ -33,13 +33,7 @@ import { requestLogger } from './middlewares/requestLogger';
 import routes from './routes';
 import { logger } from './utils/logger';
 import { db } from './services/database/database.factory';
-
-// Import TSOA routes using a direct relative path, considering build output
-// The generate-api-types.sh script copies routes to backend/src/generated/routes.ts
-// TSC will compile this to backend/dist/generated/routes.js
-// So, from backend/dist/index.js, the path is './generated/routes.js'
-// For ts-node running src/index.ts, it's './generated/routes'
-import { RegisterRoutes } from './generated/routes';
+import { RegisterRoutes } from '@discura/common/routes';
 
 // Initialize database
 db.initialize()

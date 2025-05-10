@@ -4,7 +4,8 @@
 /* eslint-disable */
 import type { BotResponseDto } from './BotResponseDto';
 /**
- * Bots Response Data
+ * Placeholder interface for BotsResponseDto
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type BotsResponseDto = {
     bots: Array<BotResponseDto>;

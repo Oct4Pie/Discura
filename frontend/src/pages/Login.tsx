@@ -1,13 +1,12 @@
 import { Box, Button, Paper, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Discord as DiscordIcon } from '../components/icons/DiscordIcon';
 import { useAuthStore } from '../stores/authStore';
 
 const Login = () => {
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
-  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   
   // Redirect if already logged in

@@ -2,15 +2,16 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { Record_string_any_ } from './Record_string_any_';
+import type { BotConfiguration } from './BotConfiguration';
 /**
- * Create Bot Request
+ * Placeholder interface for CreateBotRequest
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type CreateBotRequest = {
     name: string;
     discordToken: string;
     applicationId: string;
     intents?: Array<string>;
-    configuration?: Record_string_any_;
+    configuration?: BotConfiguration;
 };
 

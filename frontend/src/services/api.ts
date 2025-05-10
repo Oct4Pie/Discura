@@ -1,5 +1,7 @@
 import axios, { AxiosError } from 'axios';
-import { STORAGE_KEYS } from '../types';
+// Fix the import by using the proper path to constants in the common package
+// This maintains the single source of truth principle while ensuring proper module resolution
+import { STORAGE_KEYS } from '@discura/common/constants';
 
 // Create a configured axios instance
 const api = axios.create({

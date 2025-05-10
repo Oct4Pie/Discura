@@ -1,4 +1,4 @@
-import { ROUTES, CONTROLLER_ROUTES } from 'common/types/routes';
+import { ROUTES, CONTROLLER_ROUTES } from '../types/routes';
 import {
   Body,
   Controller,
@@ -13,13 +13,13 @@ import {
   Request
 } from 'tsoa';
 import { Request as ExpressRequest } from 'express';
-import { 
+import {
   BotStatus,
   ErrorResponseDto,
   MessageResponseDto,
   KnowledgeItemDto,
   KnowledgeBaseResponseDto
- } from "common/schema/types";
+  } from "../schema/types";
 
 /**
  * Knowledge Base Controller

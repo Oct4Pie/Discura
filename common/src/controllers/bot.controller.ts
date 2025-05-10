@@ -1,5 +1,5 @@
-import { CONTROLLER_ROUTES, ROUTES } from 'common/types/routes';
-import { DISCORD_API } from 'common/constants';
+import { CONTROLLER_ROUTES, ROUTES } from '../types/routes';
+import { DISCORD_API } from '../constants';
 import {
   Body,
   Controller,
@@ -15,7 +15,7 @@ import {
   Tags
 } from 'tsoa';
 import { Request as ExpressRequest } from 'express';
-import { 
+import {
   BotResponseDto,
   BotsResponseDto,
   BotStatus,
@@ -24,7 +24,7 @@ import {
   LLMProvider,
   ErrorResponseDto,
   MessageResponseDto
- } from "common/schema/types";
+  } from "../schema/types";
 
 /**
  * Controller for managing Discord bots

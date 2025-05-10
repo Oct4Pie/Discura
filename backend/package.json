@@ -6,11 +6,9 @@
   "type": "commonjs",
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "npm run ensure-common-built && nodemon --exec ts-node --transpile-only src/index.ts",
-    "build": "npm run ensure-common-built && tsc",
-    "ensure-common-built": "cd ../common && npm run build",
+    "dev": "npx ts-node --transpile-only src/index.ts",
+    "build": "npx tsc",
     "clean": "rimraf dist src/generated build",
-    "clean:all": "npm run clean && rm -rf node_modules",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

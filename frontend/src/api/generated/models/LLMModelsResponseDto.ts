@@ -4,7 +4,8 @@
 /* eslint-disable */
 import type { LLMModelData } from './LLMModelData';
 /**
- * LLM Models Response
+ * Placeholder interface for LLMModelsResponseDto
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type LLMModelsResponseDto = {
     object: string;

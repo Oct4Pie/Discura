@@ -3,7 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Knowledge Item Data
+ * Placeholder interface for KnowledgeItemDto
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type KnowledgeItemDto = {
     id: number;

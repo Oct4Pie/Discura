@@ -27,7 +27,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { BotStatus, LLMProvider } from '@discura/common/types';
+import { BotStatus, LLMProvider } from '../types'; // Fixed import path according to guidelines
 import {TabPanelProps} from '../types';
 import BotStatusBadge from '../components/BotStatusBadge';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -90,8 +90,20 @@ const BotDetail = () => {
       setPersonality(currentBot.configuration?.personality || '');
       setTraits(currentBot.configuration?.traits || []);
       setBackstory(currentBot.configuration?.backstory || '');
-      // Cast the llmProvider to LLMProvider enum to fix the type error
-      setLlmProvider((currentBot.configuration?.llmProvider as LLMProvider) || LLMProvider.OPENAI);
+      // Map the string value to LLMProvider enum value instead of using type assertion
+      const provider = currentBot.configuration?.llmProvider || 'openai';
+      if (provider === 'openai') {
+        setLlmProvider(LLMProvider.OPENAI);
+      } else if (provider === 'anthropic') {
+        setLlmProvider(LLMProvider.ANTHROPIC);
+      } else if (provider === 'google') {
+        setLlmProvider(LLMProvider.GOOGLE);
+      } else if (provider === 'custom') {
+        setLlmProvider(LLMProvider.CUSTOM);
+      } else {
+        // Default fallback
+        setLlmProvider(LLMProvider.OPENAI);
+      }
       setLlmModel(currentBot.configuration?.llmModel || '');
       // Use optional chaining and type assertion to handle potential missing apiKey
       setApiKey((currentBot.configuration as any)?.apiKey || '');
@@ -181,22 +193,14 @@ const BotDetail = () => {
     
     setSaving(true);
     try {
-      // Define an interface extension to include apiKey property
-      interface ImageGenerationConfig {
-        enabled: boolean;
-        provider: string;
-        apiKey?: string;
-        model?: string;
-      }
-      
       await updateBotConfiguration(id, {
         imageGeneration: {
           enabled: imageGenEnabled,
-          provider: imageProvider,
+          provider: imageProvider as 'openai' | 'stability' | 'midjourney',
           // Safely access apiKey using type assertion
           apiKey: ((currentBot.configuration?.imageGeneration || {}) as any).apiKey || '',
           model: currentBot.configuration?.imageGeneration?.model || ''
-        } as ImageGenerationConfig
+        }
       });
       toast.success('Image generation settings updated');
     } catch (error) {

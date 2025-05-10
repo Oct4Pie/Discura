@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { BotResponseDto, BotStatus } from '@discura/common/schema/types';
+import { BotResponseDto, BotStatus, ImageProvider, Tool } from '@discura/common/schema/types';
 import { BotRepository } from '../../services/database/bot.repository';
 import { IMAGE_PROVIDER, DEFAULTS } from '@discura/common/constants';
 import { db } from '../../services/database/database.factory';
@@ -157,12 +157,19 @@ export class Bot {
         personality: safeConfiguration.personality,
         backstory: safeConfiguration.backstory || '',
         traits: safeConfiguration.traits || [],
-        llmProvider: safeConfiguration.llmProvider,
+        // Cast llmProvider to the specific string literal type required by BotConfiguration
+        llmProvider: safeConfiguration.llmProvider as 'openai' | 'anthropic' | 'google' | 'custom',
         llmModel: safeConfiguration.llmModel,
-        knowledge: safeConfiguration.knowledge || [],
+        apiKey: safeConfiguration.apiKey || '', // Add the apiKey property
+        // Ensure knowledge items have the correct 'type' property by mapping and casting
+        knowledge: (safeConfiguration.knowledge || []).map(item => ({
+          ...item,
+          type: item.type as 'text' | 'file' // Cast type to the required literal
+        })),
         imageGeneration: {
           enabled: safeConfiguration.imageGeneration?.enabled || false,
-          provider: safeConfiguration.imageGeneration?.provider || IMAGE_PROVIDER.OPENAI,
+          // Convert string to enum using as ImageProvider
+          provider: (safeConfiguration.imageGeneration?.provider || IMAGE_PROVIDER.OPENAI) as ImageProvider,
           model: safeConfiguration.imageGeneration?.enabled ? safeConfiguration.imageGeneration?.model : undefined
         },
         toolsEnabled: safeConfiguration.toolsEnabled || false,
@@ -170,7 +177,8 @@ export class Bot {
           id: tool.id,
           name: tool.name,
           description: tool.description,
-          parameters: tool.parameters || []
+          parameters: tool.parameters || [],
+          implementation: '' // Add required implementation property with empty string default
         }))
       },
       createdAt: this.createdAt.toISOString(),

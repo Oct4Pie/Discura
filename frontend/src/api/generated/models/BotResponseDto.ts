@@ -2,10 +2,11 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { BotConfiguration } from './BotConfiguration';
 import type { BotStatus } from './BotStatus';
-import type { Record_string_any_ } from './Record_string_any_';
 /**
- * Bot Response Data
+ * Placeholder interface for BotResponseDto
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type BotResponseDto = {
     id: string;
@@ -15,7 +16,7 @@ export type BotResponseDto = {
     applicationId: string;
     status: BotStatus;
     intents: Array<string>;
-    configuration: Record_string_any_;
+    configuration: BotConfiguration;
     createdAt: string;
     updatedAt: string;
 };

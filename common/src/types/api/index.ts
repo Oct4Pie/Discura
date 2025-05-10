@@ -9,6 +9,7 @@
  */
 
 export * from './bot';
+export * from './botConfiguration';
 export * from './error';
 export * from './knowledge';
 export * from './llm';

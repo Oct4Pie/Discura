@@ -36,7 +36,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
-  const { initialize, isLoading } = useAuthStore();
+  const { initialize } = useAuthStore();
   
   // Initialize authentication state when the app loads
   useEffect(() => {

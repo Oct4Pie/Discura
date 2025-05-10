@@ -15,7 +15,7 @@ import BotStatusBadge from '../components/BotStatusBadge';
 import { useAuthStore } from '../stores/authStore';
 import { useBotStore } from '../stores/botStore';
 import GridItem from '../components/GridItem';
-import { Bot } from '../types';
+import { FrontendBot } from '../types';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -65,7 +65,7 @@ const Dashboard = () => {
           ))
         ) : bots.length > 0 ? (
           // Bot cards
-          bots.map((bot: Bot) => (
+          bots.map((bot: FrontendBot) => (
             <GridItem item xs={12} sm={6} md={4} key={bot.id}>
               <Card>
                 <CardActionArea onClick={() => navigate(`/bots/${bot.id}`)}>

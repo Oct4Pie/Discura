@@ -25,19 +25,27 @@
     "jsx": "react-jsx",
     "paths": {
       "@discura/common": ["../common"],
-      "@discura/common/*": ["../common/dist/*"]
+      "@discura/common/*": ["../common/src/*", "../common/dist/*"],
+      "auth": ["./src/types/auth"],
+      "routes": ["./src/types/routes"],
+      "schema": ["./src/types/schema"]
     },
     "typeRoots": [
       "./node_modules/@types", 
-      "../common/dist"
+      "../common/dist",
+      "./src/types"
     ],
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noUncheckedIndexedAccess": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": ["src"],
   "references": [

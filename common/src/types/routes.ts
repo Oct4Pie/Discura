@@ -78,3 +78,5 @@ export const CONTROLLER_ROUTES = {
   // This will work better with the TSOA controller implementation
   KNOWLEDGE: `${ROUTES.BOTS}/{botId}/${ROUTES.KNOWLEDGE}`
 };
+
+export * from '../routes/routes';

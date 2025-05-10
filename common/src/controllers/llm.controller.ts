@@ -9,7 +9,7 @@ import {
   Request,
   Response
 } from "tsoa";
-import { ROUTES } from "common/types/routes";
+import { ROUTES } from "../types/routes";
 import {
   LLMModelData,
   LLMModelsResponseDto,
@@ -18,7 +18,7 @@ import {
   LLMCompletionResponseDto,
   LLMProvider,
   ErrorResponseDto
-} from "common/schema/types";
+ } from "../schema/types";
 import { Request as ExpressRequest } from "express";
 
 /**

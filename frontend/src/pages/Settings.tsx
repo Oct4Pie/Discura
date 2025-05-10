@@ -1,36 +1,51 @@
+import { useEffect, useState } from 'react';
 import {
-    Avatar,
-    Box,
-    Button,
-    Card,
-    CardContent,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Divider,
-    List,
-    ListItem,
-    ListItemText,
-    Typography,
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  Typography,
+  ListItemAvatar
 } from '@mui/material';
-import { useState } from 'react';
+import { 
+  Person as PersonIcon, 
+  AccountBox as AccountIcon,
+  CalendarToday as CalendarIcon 
+} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuthStore } from '../stores/authStore';
 import GridItem from '../components/GridItem';
-import { User } from '../types';
+import type { User } from '../types/user';
 
 const Settings = () => {
-  const { user, logout } = useAuthStore();
+  const { user, logout, fetchUserProfile } = useAuthStore();
   const navigate = useNavigate();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   
-  // Cast user to the correct type
+  useEffect(() => {
+    // Fetch user profile if not already loaded
+    if (!user) {
+      fetchUserProfile().catch(error => {
+        console.error('Failed to fetch user profile:', error);
+      });
+    }
+  }, [user, fetchUserProfile]);
+  
+  // Cast to our frontend type with guaranteed id property
   const typedUser = user as User | null;
   
-  // Get Discord avatar URL
-  const avatarUrl = typedUser?.avatar 
+  // Generate avatar URL from Discord data if available
+  const avatarUrl = typedUser?.id && typedUser?.avatar
     ? `https://cdn.discordapp.com/avatars/${typedUser.id}/${typedUser.avatar}.png`
     : '/discord-avatar-placeholder.png';
   
@@ -60,31 +75,43 @@ const Settings = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Avatar
                   src={avatarUrl}
-                  alt={typedUser?.username}
+                  alt={typedUser?.username || 'User'}
                   sx={{ width: 80, height: 80, mr: 3 }}
-                />
+                >
+                  {(typedUser?.username && typedUser.username.charAt(0).toUpperCase()) || <PersonIcon />}
+                </Avatar>
                 <Box>
                   <Typography variant="h6">
-                    {typedUser?.username}
+                    {typedUser?.username || 'Anonymous User'}
                     {typedUser?.discriminator ? `#${typedUser.discriminator}` : ''}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {typedUser?.email}
+                    {typedUser?.email || 'Email not available'}
                   </Typography>
                 </Box>
               </Box>
               
               <List dense>
                 <ListItem>
+                  <ListItemAvatar>
+                    <Avatar>
+                      <AccountIcon />
+                    </Avatar>
+                  </ListItemAvatar>
                   <ListItemText
                     primary="Discord ID"
-                    secondary={typedUser?.id}
+                    secondary={typedUser?.id || 'Not available'}
                   />
                 </ListItem>
                 <ListItem>
+                  <ListItemAvatar>
+                    <Avatar>
+                      <CalendarIcon />
+                    </Avatar>
+                  </ListItemAvatar>
                   <ListItemText
                     primary="Account Created"
-                    secondary={typedUser && new Date(typedUser.id).toLocaleDateString()}
+                    secondary={typedUser?.id ? new Date(parseInt(typedUser.id)).toLocaleDateString() : 'Not available'}
                   />
                 </ListItem>
               </List>

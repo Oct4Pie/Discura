@@ -5,6 +5,8 @@
  * These types are used by the backend JWT implementation and by TSOA controllers.
  */
 
+export * from '../auth/authentication';
+
 // Define our custom JWT payload - abstract from backend implementation
 export interface JwtPayload {
   id: string; 

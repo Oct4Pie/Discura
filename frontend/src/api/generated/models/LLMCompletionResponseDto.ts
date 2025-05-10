@@ -5,7 +5,8 @@
 import type { LLMCompletionResponseChoice } from './LLMCompletionResponseChoice';
 import type { LLMCompletionResponseUsage } from './LLMCompletionResponseUsage';
 /**
- * LLM Completion Response
+ * Placeholder interface for LLMCompletionResponseDto
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type LLMCompletionResponseDto = {
     id: string;

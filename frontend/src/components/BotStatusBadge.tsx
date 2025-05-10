@@ -1,5 +1,5 @@
 import { Badge, SxProps, Theme } from '@mui/material';
-import { BotStatus } from '../api/generated/models/BotStatus'; // Correct import from generated models
+import { BotStatus } from '../api';
 
 interface BotStatusBadgeProps {
   status: BotStatus;

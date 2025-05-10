@@ -1,3 +1,5 @@
+import { BotConfiguration } from './botConfiguration'; // Added import for BotConfiguration
+
 /**
  * Bot API Types
  * 
@@ -27,7 +29,7 @@ export interface BotResponseDto {
   applicationId: string;
   status: BotStatus;
   intents: string[];
-  configuration: Record<string, any>;
+  configuration: BotConfiguration; // Changed from Record<string, any>
   createdAt: string;
   updatedAt: string;
 }
@@ -49,7 +51,7 @@ export interface CreateBotRequest {
   discordToken: string;
   applicationId: string;
   intents?: string[];
-  configuration?: Record<string, any>;
+  configuration?: BotConfiguration; // Changed from Record<string, any>
 }
 
 /**
@@ -62,5 +64,5 @@ export interface UpdateBotRequest {
   applicationId?: string;
   intents?: string[];
   status?: BotStatus;
-  configuration?: Record<string, any>;
+  configuration?: BotConfiguration; // Changed from Record<string, any>
 }

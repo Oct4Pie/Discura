@@ -7,11 +7,15 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
+export { BotConfiguration } from './models/BotConfiguration';
 export type { BotResponseDto } from './models/BotResponseDto';
 export type { BotsResponseDto } from './models/BotsResponseDto';
 export { BotStatus } from './models/BotStatus';
 export type { CreateBotRequest } from './models/CreateBotRequest';
 export type { ErrorResponseDto } from './models/ErrorResponseDto';
+export type { ImageGenerationConfig } from './models/ImageGenerationConfig';
+export { ImageProvider } from './models/ImageProvider';
+export { KnowledgeBase } from './models/KnowledgeBase';
 export type { KnowledgeBaseResponseDto } from './models/KnowledgeBaseResponseDto';
 export type { KnowledgeItemDto } from './models/KnowledgeItemDto';
 export type { LLMCompletionMessage } from './models/LLMCompletionMessage';
@@ -22,7 +26,8 @@ export type { LLMCompletionResponseUsage } from './models/LLMCompletionResponseU
 export type { LLMModelData } from './models/LLMModelData';
 export type { LLMModelsResponseDto } from './models/LLMModelsResponseDto';
 export type { MessageResponseDto } from './models/MessageResponseDto';
-export type { Record_string_any_ } from './models/Record_string_any_';
+export type { Tool } from './models/Tool';
+export type { ToolParameter } from './models/ToolParameter';
 export type { UpdateBotRequest } from './models/UpdateBotRequest';
 export type { UserProfileResponseDto } from './models/UserProfileResponseDto';
 export type { UserResponseDto } from './models/UserResponseDto';

@@ -6,20 +6,14 @@ export default defineConfig({
   plugins: [
     react(),
   ],
+  
   resolve: {
-    alias: [
-      {
-        find: 'common',
-        replacement: path.resolve(__dirname, '../common/src')
-      },
-      // Also support @common alias for backward compatibility
-      {
-        find: '@common',
-        replacement: path.resolve(__dirname, '../common/src')
-      }
-    ],
-    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json']
+    alias: {
+      // Add explicit alias configuration for the common package
+      '@discura/common': path.resolve(__dirname, '../common/src'),
+    },
   },
+  
   server: {
     proxy: {
       '/api': {

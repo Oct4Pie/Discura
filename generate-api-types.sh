@@ -27,9 +27,9 @@ node -e "require('./common/scripts/tsoa-bootstrap').generateRoutes()"
 
 echo "✅ Routes generated successfully in common/src/routes"
 
-echo "🔄 Copying routes to backend src directory for backend compilation..."
-mkdir -p "$ROOT_DIR/backend/src/generated"
-cp -f "$ROOT_DIR/common/src/routes/routes.ts" "$ROOT_DIR/backend/src/generated/routes.ts"
+# echo "🔄 Copying routes to backend src directory for backend compilation..."
+# mkdir -p "$ROOT_DIR/backend/src/generated"
+# cp -f "$ROOT_DIR/common/src/routes/routes.ts" "$ROOT_DIR/backend/src/generated/routes.ts"
 
 # Build the common package without dependencies on backend files
 echo "📦 Building common package with generated types..."

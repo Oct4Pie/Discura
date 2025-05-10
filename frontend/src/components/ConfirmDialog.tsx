@@ -7,10 +7,11 @@ import {
     DialogTitle
 } from '@mui/material';
 
-interface ConfirmDialogProps {
+export interface ConfirmDialogProps {
   open: boolean;
   title: string;
-  message: string;
+  message?: string;
+  content?: string; // Added for backward compatibility
   confirmText?: string;
   cancelText?: string;
   onConfirm: () => void;
@@ -21,11 +22,15 @@ const ConfirmDialog = ({
   open,
   title,
   message,
+  content, // Support both message and content props
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   onConfirm,
   onCancel
 }: ConfirmDialogProps) => {
+  // Use message if provided, otherwise use content
+  const displayMessage = message || content;
+  
   return (
     <Dialog
       open={open}
@@ -36,7 +41,7 @@ const ConfirmDialog = ({
       <DialogTitle id="confirm-dialog-title">{title}</DialogTitle>
       <DialogContent>
         <DialogContentText id="confirm-dialog-description">
-          {message}
+          {displayMessage}
         </DialogContentText>
       </DialogContent>
       <DialogActions>

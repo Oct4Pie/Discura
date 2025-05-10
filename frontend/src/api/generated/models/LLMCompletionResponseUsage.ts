@@ -3,7 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * LLM Completion Response Usage
+ * Placeholder interface for LLMCompletionResponseUsage
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type LLMCompletionResponseUsage = {
     prompt_tokens: number;

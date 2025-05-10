@@ -3,7 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Simple message response
+ * Placeholder interface for MessageResponseDto
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type MessageResponseDto = {
     message: string;

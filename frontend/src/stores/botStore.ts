@@ -1,61 +1,23 @@
 import { create } from 'zustand';
-import { BotStatus } from '../types';
-import { Bot } from '../types';
-import { botApi } from '../api';
-import { CreateBotRequest } from '../api/generated/models/CreateBotRequest';
-import { UpdateBotRequest } from '../api/generated/models/UpdateBotRequest';
-
-// Define the bot configuration type for updates
-interface BotConfiguration {
-  systemPrompt?: string;
-  personality?: string;
-  traits?: string[];
-  backstory?: string;
-  llmProvider?: string;
-  llmModel?: string;
-  apiKey?: string;
-  knowledge?: Array<{
-    id?: string;
-    name: string;
-    content: string;
-    type: string;
-    source?: string;
-  }>;
-  imageGeneration?: {
-    enabled?: boolean;
-    provider?: string;
-    model?: string;
-    apiKey?: string;
-  };
-  toolsEnabled?: boolean;
-  tools?: Array<{
-    id: string;
-    name: string;
-    description: string;
-    parameters?: Array<{
-      name: string;
-      type: string;
-      description: string;
-      required: boolean;
-    }>;
-    implementation?: string;
-  }>;
-}
+import { FrontendBot, toBotModel, toBotModels, BotConfiguration } from '../types';
+import { BotsService } from '../api';
+import { CreateBotRequest } from '../api';
+import { UpdateBotRequest } from '../api';
 
 interface BotsState {
-  bots: Bot[];
-  currentBot: Bot | null;
+  bots: FrontendBot[];
+  currentBot: FrontendBot | null;
   isLoading: boolean;
   error: string | null;
   
   fetchBots: () => Promise<void>;
   fetchBot: (id: string) => Promise<void>;
-  createBot: (botData: Partial<Bot>) => Promise<Bot>;
-  updateBot: (id: string, botData: Partial<Bot>) => Promise<Bot>;
+  createBot: (botData: Partial<FrontendBot>) => Promise<FrontendBot>;
+  updateBot: (id: string, botData: Partial<FrontendBot>) => Promise<FrontendBot>;
   deleteBot: (id: string) => Promise<void>;
-  startBot: (id: string) => Promise<Bot>;
-  stopBot: (id: string) => Promise<Bot>;
-  updateBotConfiguration: (id: string, config: Partial<BotConfiguration>) => Promise<Bot>;
+  startBot: (id: string) => Promise<FrontendBot>;
+  stopBot: (id: string) => Promise<FrontendBot>;
+  updateBotConfiguration: (id: string, config: Partial<BotConfiguration>) => Promise<FrontendBot>;
 }
 
 export const useBotStore = create<BotsState>((set, get) => ({
@@ -69,8 +31,8 @@ export const useBotStore = create<BotsState>((set, get) => ({
     
     try {
       // Use the generated API service
-      const response = await botApi.getUserBots();
-      set({ bots: response.bots, isLoading: false });
+      const response = await BotsService.getUserBots();
+      set({ bots: toBotModels(response.bots), isLoading: false });
     } catch (error) {
       console.error('Error fetching bots:', error);
       set({ error: 'Failed to fetch bots', isLoading: false });
@@ -82,27 +44,28 @@ export const useBotStore = create<BotsState>((set, get) => ({
     
     try {
       // Use the generated API service
-      const response = await botApi.getBotById(id);
-      set({ currentBot: response.bot, isLoading: false });
+      const response = await BotsService.getBotById(id);
+      set({ currentBot: toBotModel(response.bot), isLoading: false });
     } catch (error) {
       console.error(`Error fetching bot ${id}:`, error);
       set({ error: 'Failed to fetch bot details', isLoading: false });
     }
   },
   
-  createBot: async (botData: Partial<Bot>) => {
+  createBot: async (botData: Partial<FrontendBot>) => {
     set({ isLoading: true, error: null });
     
     try {
       // Use the generated API service
-      const response = await botApi.createBot(botData as CreateBotRequest);
+      const response = await BotsService.createBot(botData as CreateBotRequest);
+      const bot = toBotModel(response);
       
       set(state => ({
-        bots: [...state.bots, response],
+        bots: [...state.bots, bot],
         isLoading: false
       }));
       
-      return response;
+      return bot;
     } catch (error) {
       console.error('Error creating bot:', error);
       set({ error: 'Failed to create bot', isLoading: false });
@@ -110,20 +73,21 @@ export const useBotStore = create<BotsState>((set, get) => ({
     }
   },
   
-  updateBot: async (id: string, botData: Partial<Bot>) => {
+  updateBot: async (id: string, botData: Partial<FrontendBot>) => {
     set({ isLoading: true, error: null });
     
     try {
       // Use the generated API service
-      const response = await botApi.updateBot(id, botData as UpdateBotRequest);
+      const response = await BotsService.updateBot(id, botData as UpdateBotRequest);
+      const bot = toBotModel(response);
       
       set(state => ({
-        bots: state.bots.map((bot: Bot) => bot.id === id ? response : bot),
-        currentBot: state.currentBot?.id === id ? response : state.currentBot,
+        bots: state.bots.map((b: FrontendBot) => b.id === id ? bot : b),
+        currentBot: state.currentBot?.id === id ? bot : state.currentBot,
         isLoading: false
       }));
       
-      return response;
+      return bot;
     } catch (error) {
       console.error(`Error updating bot ${id}:`, error);
       set({ error: 'Failed to update bot', isLoading: false });
@@ -136,10 +100,10 @@ export const useBotStore = create<BotsState>((set, get) => ({
     
     try {
       // Use the generated API service
-      await botApi.deleteBot(id);
+      await BotsService.deleteBot(id);
       
       set(state => ({
-        bots: state.bots.filter((bot: Bot) => bot.id !== id),
+        bots: state.bots.filter((bot: FrontendBot) => bot.id !== id),
         currentBot: state.currentBot?.id === id ? null : state.currentBot,
         isLoading: false
       }));
@@ -155,15 +119,16 @@ export const useBotStore = create<BotsState>((set, get) => ({
     
     try {
       // Use the generated API service
-      const response = await botApi.startBot(id);
+      const response = await BotsService.startBotById(id);
+      const bot = toBotModel(response);
       
       set(state => ({
-        bots: state.bots.map((bot: Bot) => bot.id === id ? response : bot),
-        currentBot: state.currentBot?.id === id ? response : state.currentBot,
+        bots: state.bots.map((b: FrontendBot) => b.id === id ? bot : b),
+        currentBot: state.currentBot?.id === id ? bot : state.currentBot,
         isLoading: false
       }));
       
-      return response;
+      return bot;
     } catch (error) {
       console.error(`Error starting bot ${id}:`, error);
       set({ error: 'Failed to start bot', isLoading: false });
@@ -176,15 +141,16 @@ export const useBotStore = create<BotsState>((set, get) => ({
     
     try {
       // Use the generated API service
-      const response = await botApi.stopBot(id);
+      const response = await BotsService.stopBotById(id);
+      const bot = toBotModel(response);
       
       set(state => ({
-        bots: state.bots.map((bot: Bot) => bot.id === id ? response : bot),
-        currentBot: state.currentBot?.id === id ? response : state.currentBot,
+        bots: state.bots.map((b: FrontendBot) => b.id === id ? bot : b),
+        currentBot: state.currentBot?.id === id ? bot : state.currentBot,
         isLoading: false
       }));
       
-      return response;
+      return bot;
     } catch (error) {
       console.error(`Error stopping bot ${id}:`, error);
       set({ error: 'Failed to stop bot', isLoading: false });
