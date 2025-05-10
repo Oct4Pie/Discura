@@ -39,7 +39,7 @@ const BotStatusBadge = ({ status, sx }: BotStatusBadgeProps) => {
           padding: '0 8px',
           height: '20px',
           minWidth: '20px',
-          borderRadius: '10px',
+          borderRadius: 1, // Custom border radius with value 1 (4px)
         },
         ...sx,
       }}

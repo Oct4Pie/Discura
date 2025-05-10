@@ -134,23 +134,7 @@ const Dashboard = () => {
               </Typography>
             </Box>
             
-            <Button 
-              variant="contained" 
-              color="secondary"
-              startIcon={<AddCircleIcon />}
-              onClick={() => navigate('/bots/create')}
-              sx={{ 
-                fontWeight: 600,
-                backgroundColor: '#ffffff',
-                color: 'primary.dark',
-                '&:hover': {
-                  backgroundColor: alpha('#ffffff', 0.9),
-                },
-                boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-              }}
-            >
-              Create New Bot
-            </Button>
+            {/* Removed "Create New Bot" button from the welcome header */}
           </Box>
           
           {/* Stats Cards */}
@@ -239,8 +223,6 @@ const Dashboard = () => {
         container
         spacing={{ xs: 2, md: 3 }}
         sx={{
-          mx: { xs: -2, md: 0 },
-          width: { xs: 'calc(100% + 32px)', md: '100%' },
           alignItems: 'stretch'
         }}
       >

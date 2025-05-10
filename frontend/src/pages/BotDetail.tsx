@@ -251,7 +251,7 @@ const BotDetail = () => {
       <Alert 
         severity="error"
         sx={{
-          borderRadius: 2,
+          borderRadius: 1, // Custom border radius for alert
           border: `1px solid ${alpha(theme.palette.error.main, 0.1)}`,
         }}
       >
@@ -278,6 +278,7 @@ const BotDetail = () => {
             onClick={() => navigate('/bots')}
             sx={{
               backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              borderRadius: '8px', // Custom border radius for icon button
               '&:hover': {
                 backgroundColor: alpha(theme.palette.primary.main, 0.2),
               }
@@ -303,7 +304,7 @@ const BotDetail = () => {
             sx={{
               px: 3,
               py: 1,
-              borderRadius: 2,
+              borderRadius: 1, // Custom border radius for button
               boxShadow: `0 4px 12px ${alpha(
                 currentBot.status === BotStatus.ONLINE 
                   ? theme.palette.error.main 
@@ -322,7 +323,7 @@ const BotDetail = () => {
             onClick={() => setDeleteDialogOpen(true)}
             sx={{
               borderWidth: 1.5,
-              borderRadius: 2,
+              borderRadius: 1, // Custom border radius for button
               '&:hover': {
                 borderWidth: 1.5,
               }
@@ -338,7 +339,7 @@ const BotDetail = () => {
         elevation={0}
         sx={{ 
           mb: 3,
-          borderRadius: 2,
+          borderRadius: 2, // Custom border radius for paper
           border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         }}
       >
@@ -377,6 +378,7 @@ const BotDetail = () => {
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
+                      borderRadius: 1.5, // Custom border radius for text field
                     }
                   }}
                 />
@@ -392,6 +394,7 @@ const BotDetail = () => {
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
+                      borderRadius: 1.5, // Custom border radius for text field
                     }
                   }}
                 />
@@ -409,6 +412,7 @@ const BotDetail = () => {
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
+                      borderRadius: 1.5, // Custom border radius for text field
                     }
                   }}
                 />
@@ -423,7 +427,7 @@ const BotDetail = () => {
                 disabled={saving}
                 sx={{
                   px: 3,
-                  borderRadius: 2,
+                  borderRadius: 1, // Custom border radius for button
                   boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
                 }}
               >
@@ -451,6 +455,7 @@ const BotDetail = () => {
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
+                      borderRadius: 1.5, // Custom border radius for text field
                     }
                   }}
                 />
@@ -468,6 +473,7 @@ const BotDetail = () => {
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
+                      borderRadius: 1.5, // Custom border radius for text field
                     }
                   }}
                 />
@@ -493,7 +499,10 @@ const BotDetail = () => {
                           variant="text"
                           onClick={handleAddTrait}
                           disabled={!newTrait}
-                          sx={{ whiteSpace: 'nowrap' }}
+                          sx={{ 
+                            whiteSpace: 'nowrap',
+                            borderRadius: 1, // Custom border radius for button
+                          }}
                         >
                           Add Trait
                         </Button>
@@ -503,6 +512,7 @@ const BotDetail = () => {
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         backgroundColor: alpha(theme.palette.common.white, 0.9),
+                        borderRadius: 1.5, // Custom border radius for text field
                       }
                     }}
                   />
@@ -515,6 +525,7 @@ const BotDetail = () => {
                         color="primary"
                         variant="outlined"
                         sx={{ 
+                          borderRadius: 1, // Custom border radius for chip
                           borderWidth: 1.5,
                           '& .MuiChip-deleteIcon': {
                             color: theme.palette.primary.main,
@@ -540,6 +551,7 @@ const BotDetail = () => {
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
+                      borderRadius: 1.5, // Custom border radius for text field
                     }
                   }}
                 />
@@ -554,7 +566,7 @@ const BotDetail = () => {
                 disabled={saving}
                 sx={{
                   px: 3,
-                  borderRadius: 2,
+                  borderRadius: 1, // Custom border radius for button
                   boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
                 }}
               >
@@ -578,6 +590,10 @@ const BotDetail = () => {
                     onChange={(e) => setLlmProvider(e.target.value as LLMProvider)}
                     sx={{
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
+                      borderRadius: 1.5, // Custom border radius for select
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderRadius: 1.5,
+                      }
                     }}
                   >
                     <MenuItem value={LLMProvider.OPENAI}>OpenAI</MenuItem>
@@ -612,6 +628,7 @@ const BotDetail = () => {
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
+                      borderRadius: 1.5, // Custom border radius for text field
                     }
                   }}
                 />
@@ -630,6 +647,7 @@ const BotDetail = () => {
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
+                      borderRadius: 1.5, // Custom border radius for text field
                     }
                   }}
                 />
@@ -644,7 +662,7 @@ const BotDetail = () => {
                 disabled={saving}
                 sx={{
                   px: 3,
-                  borderRadius: 2,
+                  borderRadius: 1, // Custom border radius for button
                   boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
                 }}
               >
@@ -690,6 +708,10 @@ const BotDetail = () => {
                     onChange={(e) => setImageProvider(e.target.value as ImageProvider)}
                     sx={{
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
+                      borderRadius: 1.5, // Custom border radius for select
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderRadius: 1.5,
+                      }
                     }}
                   >
                     <MenuItem value={ImageProvider.OPENAI}>OpenAI DALL-E</MenuItem>
@@ -703,7 +725,7 @@ const BotDetail = () => {
                 <Alert 
                   severity="info"
                   sx={{
-                    borderRadius: 2,
+                    borderRadius: 1, // Custom border radius for alert
                     border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
                   }}
                 >
@@ -721,7 +743,7 @@ const BotDetail = () => {
                 disabled={saving}
                 sx={{
                   px: 3,
-                  borderRadius: 2,
+                  borderRadius: 1, // Custom border radius for button
                   boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
                 }}
               >

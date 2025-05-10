@@ -37,6 +37,12 @@ const ConfirmDialog = ({
       onClose={onCancel}
       aria-labelledby="confirm-dialog-title"
       aria-describedby="confirm-dialog-description"
+      PaperProps={{
+        sx: {
+          borderRadius: 2, // Custom border radius for dialog
+          overflow: 'hidden'
+        }
+      }}
     >
       <DialogTitle id="confirm-dialog-title">{title}</DialogTitle>
       <DialogContent>
@@ -44,11 +50,24 @@ const ConfirmDialog = ({
           {displayMessage}
         </DialogContentText>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onCancel} color="primary" autoFocus>
+      <DialogActions sx={{ px: 2.5, pb: 2 }}>
+        <Button 
+          onClick={onCancel} 
+          color="primary" 
+          autoFocus
+          sx={{ 
+            borderRadius: 1 // Custom border radius for button
+          }}
+        >
           {cancelText}
         </Button>
-        <Button onClick={onConfirm} color="error">
+        <Button 
+          onClick={onConfirm} 
+          color="error"
+          sx={{ 
+            borderRadius: 1 // Custom border radius for button
+          }}
+        >
           {confirmText}
         </Button>
       </DialogActions>

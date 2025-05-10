@@ -129,7 +129,7 @@ const BotList = () => {
       },
       '&::-webkit-scrollbar-thumb': {
         backgroundColor: alpha(theme.palette.primary.main, 0.1),
-        borderRadius: 4,
+        borderRadius: 2, // Custom border radius for scrollbar thumb
       },
       '&::-webkit-scrollbar-track': {
         backgroundColor: 'transparent',
@@ -157,6 +157,7 @@ const BotList = () => {
             fontWeight: 600,
             px: 2,
             py: 1,
+            borderRadius: 1, // Custom border radius for button
           }}
         >
           Create Bot
@@ -175,7 +176,12 @@ const BotList = () => {
         {isLoading ? (
           Array.from(new Array(3)).map((_, index) => (
             <GridItem xs={12} sm={6} md={4} key={`skeleton-${index}`} item>
-              <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+              <Card sx={{ 
+                height: "100%", 
+                display: "flex", 
+                flexDirection: "column",
+                borderRadius: 2, // Custom border radius for card
+              }}>
                 <Skeleton variant="rectangular" height={140} />
                 <CardContent>
                   <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
@@ -203,6 +209,7 @@ const BotList = () => {
                 borderColor: alpha(theme.palette.error.main, 0.2),
                 backgroundColor: alpha(theme.palette.error.main, 0.02),
                 boxShadow: 'none',
+                borderRadius: 2, // Custom border radius for error card
               }}
             >
               <Typography color="error" gutterBottom>
@@ -211,7 +218,10 @@ const BotList = () => {
               <Button 
                 variant="contained" 
                 onClick={() => fetchBots()} 
-                sx={{ mt: 2 }}
+                sx={{ 
+                  mt: 2,
+                  borderRadius: 1, // Custom border radius for button
+                }}
               >
                 Try Again
               </Button>
@@ -229,6 +239,7 @@ const BotList = () => {
                 borderColor: alpha(theme.palette.primary.main, 0.2),
                 backgroundColor: alpha(theme.palette.primary.main, 0.02),
                 boxShadow: 'none',
+                borderRadius: 2, // Custom border radius for empty state card
               }}
             >
               <Box
@@ -238,7 +249,7 @@ const BotList = () => {
                   justifyContent: 'center',
                   width: 80,
                   height: 80,
-                  borderRadius: '50%',
+                  borderRadius: '50%', // Keep circular for this specific icon container
                   backgroundColor: alpha(theme.palette.primary.main, 0.1),
                   m: 'auto',
                   mb: 3,
@@ -265,6 +276,7 @@ const BotList = () => {
                   px: 4,
                   py: 1.2,
                   fontWeight: 600,
+                  borderRadius: 1, // Custom border radius for button
                 }}
               >
                 Create Your First Bot
@@ -281,6 +293,7 @@ const BotList = () => {
                   flexDirection: "column",
                   transition: 'all 0.2s ease-in-out',
                   cursor: 'pointer',
+                  borderRadius: 2, // Custom border radius for bot card
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.15)}`
@@ -306,6 +319,10 @@ const BotList = () => {
                     .replace(/\s+/g, "-")
                     .toLowerCase()}`}
                   alt={bot.name}
+                  sx={{
+                    borderTopLeftRadius: 2, // Match card border radius
+                    borderTopRightRadius: 2, // Match card border radius
+                  }}
                 />
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Box
@@ -351,6 +368,8 @@ const BotList = () => {
                   gap: 1,
                   backgroundColor: alpha(theme.palette.primary.main, 0.02),
                   p: 2,
+                  borderBottomLeftRadius: 2, // Match card border radius
+                  borderBottomRightRadius: 2, // Match card border radius
                 }}>
                   {bot.status === BotStatus.OFFLINE ? (
                     <Tooltip title="Start Bot">
@@ -363,6 +382,7 @@ const BotList = () => {
                           backgroundColor: alpha(theme.palette.secondary.main, 0.1),
                           width: 36,
                           height: 36,
+                          borderRadius: '8px', // Custom border radius for icon button
                           '&:hover': {
                             backgroundColor: alpha(theme.palette.secondary.main, 0.2)
                           }
@@ -382,6 +402,7 @@ const BotList = () => {
                           backgroundColor: alpha(theme.palette.error.main, 0.1),
                           width: 36,
                           height: 36,
+                          borderRadius: '8px', // Custom border radius for icon button
                           '&:hover': {
                             backgroundColor: alpha(theme.palette.error.main, 0.2)
                           }
@@ -402,6 +423,7 @@ const BotList = () => {
                         backgroundColor: alpha(theme.palette.error.main, 0.1),
                         width: 36,
                         height: 36,
+                        borderRadius: '8px', // Custom border radius for icon button
                         '&:hover': {
                           backgroundColor: alpha(theme.palette.error.main, 0.2)
                         }
@@ -420,6 +442,7 @@ const BotList = () => {
                       backgroundColor: alpha(theme.palette.primary.main, 0.05),
                       width: 36,
                       height: 36,
+                      borderRadius: '8px', // Custom border radius for icon button
                       '&:hover': {
                         backgroundColor: alpha(theme.palette.primary.main, 0.1)
                       }
@@ -443,7 +466,7 @@ const BotList = () => {
         elevation={2}
         sx={{
           '& .MuiPaper-root': {
-            borderRadius: 2,
+            borderRadius: 1, // Custom border radius for menu
             minWidth: 180,
             boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
           }

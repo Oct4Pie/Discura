@@ -5,14 +5,12 @@ import {
     Menu as MenuIcon,
     Settings as SettingsIcon,
     AccountCircle,
-    NotificationsNoneOutlined as NotificationIcon,
-    ChevronLeft,
-    ChevronRight
+    ChevronLeft as ChevronLeftIcon,
+    ChevronRight as ChevronRightIcon
 } from '@mui/icons-material';
 import {
     AppBar,
     Avatar,
-    Badge,
     Box,
     Container,
     Divider,
@@ -39,10 +37,8 @@ import { UserResponseDto } from '../api';
 
 // Width of the drawer
 const drawerWidth = 260;
-const collapsedDrawerWidth = 80;
 
 const MainLayout = () => {
-  const [isDrawerCollapsed, setIsDrawerCollapsed] = useState(false);
   const { user, logout } = useAuthStore();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -54,16 +50,15 @@ const MainLayout = () => {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const collapsedWidth = 72;
 
-  // Toggle drawer collapsed state
-  const handleDrawerCollapse = () => {
-    setIsDrawerCollapsed(!isDrawerCollapsed);
-  };
-
-  // Toggle mobile drawer
+  // Toggle drawer
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
+
+  const handleCollapseToggle = () => setCollapsed(prev => !prev);
 
   // Handle user menu open/close
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -96,91 +91,74 @@ const MainLayout = () => {
       bgcolor: 'background.paper',
       borderRight: '1px solid',
       borderColor: alpha(theme.palette.primary.main, 0.08),
-      position: 'relative',
-      overflow: 'hidden',
-      transition: theme.transitions.create(['width', 'transform'], {
+      width: collapsed ? collapsedWidth : drawerWidth,
+      transition: theme.transitions.create('width', {
         easing: theme.transitions.easing.sharp,
         duration: theme.transitions.duration.enteringScreen,
       }),
+      overflow: 'hidden',
     }}>
-      {/* Collapse Button */}
-      <IconButton
-        onClick={handleDrawerCollapse}
-        sx={{
-          position: 'absolute',
-          right: -10,
-          top: 20,
-          width: 20,
-          height: 20,
-          borderRadius: '50%',
-          background: theme.palette.background.paper,
-          border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          color: 'text.secondary',
-          '&:hover': {
-            background: theme.palette.background.paper,
-          },
-          zIndex: 1,
-        }}
-      >
-        {isDrawerCollapsed ? <ChevronRight /> : <ChevronLeft />}
-      </IconButton>
-
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: isDrawerCollapsed ? 'center' : 'flex-start',
-        padding: isDrawerCollapsed ? 1 : 2,
-        transition: theme.transitions.create(['padding', 'justify-content'], {
-          easing: theme.transitions.easing.sharp,
-          duration: theme.transitions.duration.enteringScreen,
-        }),
+      {/* Collapse toggle */}
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: collapsed ? 'center' : 'space-between',
+        px: collapsed ? 0 : 2,
+        minHeight: 64, // Standard Material UI AppBar height
       }}>
-        <Box
+        {!collapsed && (
+          <Box sx={{ 
+            flex: 1, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'flex-start', 
+            gap: 1.5
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 2,
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 10px rgba(114, 137, 218, 0.2)',
+                  color: 'white',
+                  fontSize: 24,
+                  fontWeight: 'bold',
+                }}
+              >
+                D
+              </Box>
+              
+              <Typography variant="h5" component="div" color="primary" fontWeight={700}>
+                Discura
+              </Typography>
+            </Box>
+          </Box>
+        )}
+        <IconButton 
+          onClick={handleCollapseToggle} 
+          size="small"
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: isDrawerCollapsed ? 0 : 1.5,
+            width: 32,
+            height: 32,
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+            '&:hover': {
+              backgroundColor: alpha(theme.palette.primary.main, 0.08),
+            }
           }}
         >
-          <Box
-            sx={{
-              width: isDrawerCollapsed ? 36 : 42,
-              height: isDrawerCollapsed ? 36 : 42,
-              borderRadius: 2,
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 10px rgba(114, 137, 218, 0.2)',
-              color: 'white',
-              fontSize: isDrawerCollapsed ? 20 : 24,
-              fontWeight: 'bold',
-              flexShrink: 0,
-            }}
-          >
-            D
-          </Box>
-          
-          {!isDrawerCollapsed && (
-            <Typography variant="h5" component="div" color="primary" fontWeight={700}>
-              Discura
-            </Typography>
-          )}
-        </Box>
+          {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
+        </IconButton>
       </Box>
       
       <Divider sx={{ opacity: 0.6 }} />
       
-      <Box sx={{ 
-        px: isDrawerCollapsed ? 1 : 2, 
-        py: 2,
-        transition: theme.transitions.create('padding', {
-          easing: theme.transitions.easing.sharp,
-          duration: theme.transitions.duration.enteringScreen,
-        }),
-      }}>
-        {!isDrawerCollapsed && (
+      <Box sx={{ px: collapsed ? 0 : 2, py: 2 }}>
+        {!collapsed && (
           <Typography variant="subtitle2" color="text.secondary" sx={{ px: 1, mb: 1, fontWeight: 500, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Main
           </Typography>
@@ -192,9 +170,11 @@ const MainLayout = () => {
               onClick={() => navigate('/')}
               selected={isRouteActive('/')}
               sx={{
-                borderRadius: 2,
-                py: 1.2,
-                minHeight: 44,
+                borderRadius: collapsed ? 0 : 2,
+                py: 1.5,
+                px: collapsed ? 0 : 2,
+                minHeight: 50,
+                justifyContent: collapsed ? 'center' : 'flex-start',
                 '&.Mui-selected': {
                   bgcolor: 'primary.main',
                   color: 'primary.contrastText',
@@ -210,24 +190,17 @@ const MainLayout = () => {
                 }
               }}
             >
-              <ListItemIcon sx={{ minWidth: isDrawerCollapsed ? 0 : 40, justifyContent: 'center' }}>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 40, mr: collapsed ? 0 : 2 }}>
                 <DashboardIcon />
               </ListItemIcon>
-              {!isDrawerCollapsed && <ListItemText primary="Dashboard" />}
+              {!collapsed && <ListItemText primary="Dashboard" />}
             </ListItemButton>
           </ListItem>
         </List>
       </Box>
       
-      <Box sx={{ 
-        px: isDrawerCollapsed ? 1 : 2, 
-        py: 1,
-        transition: theme.transitions.create('padding', {
-          easing: theme.transitions.easing.sharp,
-          duration: theme.transitions.duration.enteringScreen,
-        }),
-      }}>
-        {!isDrawerCollapsed && (
+      <Box sx={{ px: collapsed ? 0 : 2, py: 1 }}>
+        {!collapsed && (
           <Typography variant="subtitle2" color="text.secondary" sx={{ px: 1, mb: 1, fontWeight: 500, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Bots
           </Typography>
@@ -239,9 +212,11 @@ const MainLayout = () => {
               onClick={() => navigate('/bots')}
               selected={isRouteActive('/bots') && !isRouteActive('/bots/create')}
               sx={{
-                borderRadius: 2,
-                py: 1.2,
-                minHeight: 44,
+                borderRadius: collapsed ? 0 : 2,
+                py: 1.5,
+                px: collapsed ? 0 : 2,
+                minHeight: 50,
+                justifyContent: collapsed ? 'center' : 'flex-start',
                 '&.Mui-selected': {
                   bgcolor: 'primary.main',
                   color: 'primary.contrastText',
@@ -257,10 +232,10 @@ const MainLayout = () => {
                 }
               }}
             >
-              <ListItemIcon sx={{ minWidth: isDrawerCollapsed ? 0 : 40, justifyContent: 'center' }}>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 40, mr: collapsed ? 0 : 2 }}>
                 <BotIcon />
               </ListItemIcon>
-              {!isDrawerCollapsed && <ListItemText primary="My Bots" />}
+              {!collapsed && <ListItemText primary="My Bots" />}
             </ListItemButton>
           </ListItem>
           
@@ -269,9 +244,11 @@ const MainLayout = () => {
               onClick={() => navigate('/bots/create')}
               selected={isRouteActive('/bots/create')}
               sx={{
-                borderRadius: 2,
-                py: 1.2,
-                minHeight: 44,
+                borderRadius: collapsed ? 0 : 2,
+                py: 1.5,
+                px: collapsed ? 0 : 2,
+                minHeight: 50,
+                justifyContent: collapsed ? 'center' : 'flex-start',
                 '&.Mui-selected': {
                   bgcolor: 'primary.main',
                   color: 'primary.contrastText',
@@ -287,24 +264,19 @@ const MainLayout = () => {
                 }
               }}
             >
-              <ListItemIcon sx={{ minWidth: isDrawerCollapsed ? 0 : 40, justifyContent: 'center' }}>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 40, mr: collapsed ? 0 : 2 }}>
                 <AddIcon />
               </ListItemIcon>
-              {!isDrawerCollapsed && <ListItemText primary="Create Bot" />}
+              {!collapsed && <ListItemText primary="Create Bot" />}
             </ListItemButton>
           </ListItem>
         </List>
       </Box>
       
-      <Box sx={{ 
-        px: isDrawerCollapsed ? 1 : 2, 
-        py: 2,
-        transition: theme.transitions.create('padding', {
-          easing: theme.transitions.easing.sharp,
-          duration: theme.transitions.duration.enteringScreen,
-        }),
-      }}>
-        {!isDrawerCollapsed && (
+      <Divider sx={{ mt: 'auto', opacity: 0.6 }} />
+      
+      <Box sx={{ px: collapsed ? 0 : 2, py: 2 }}>
+        {!collapsed && (
           <Typography variant="subtitle2" color="text.secondary" sx={{ px: 1, mb: 1, fontWeight: 500, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             System
           </Typography>
@@ -316,9 +288,11 @@ const MainLayout = () => {
               onClick={() => navigate('/settings')}
               selected={isRouteActive('/settings')}
               sx={{
-                borderRadius: 2,
-                py: 1.2,
-                minHeight: 44,
+                borderRadius: collapsed ? 0 : 2,
+                py: 1.5,
+                px: collapsed ? 0 : 2,
+                minHeight: 50,
+                justifyContent: collapsed ? 'center' : 'flex-start',
                 '&.Mui-selected': {
                   bgcolor: 'primary.main',
                   color: 'primary.contrastText',
@@ -334,16 +308,16 @@ const MainLayout = () => {
                 }
               }}
             >
-              <ListItemIcon sx={{ minWidth: isDrawerCollapsed ? 0 : 40, justifyContent: 'center' }}>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 40, mr: collapsed ? 0 : 2 }}>
                 <SettingsIcon />
               </ListItemIcon>
-              {!isDrawerCollapsed && <ListItemText primary="Settings" />}
+              {!collapsed && <ListItemText primary="Settings" />}
             </ListItemButton>
           </ListItem>
         </List>
       </Box>
       
-      {!isDrawerCollapsed && (
+      {!collapsed && (
         <Box 
           sx={{ 
             mt: 'auto', 
@@ -395,10 +369,26 @@ const MainLayout = () => {
           </Box>
         </Box>
       )}
+      {collapsed && (
+        <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
+          <Tooltip title="Need Help?">
+            <IconButton
+              component="a"
+              href="https://docs.discura.io"
+              target="_blank"
+              size="small"
+              color="primary"
+              sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </IconButton>
+          </Tooltip>
+        </Box>
+      )}
     </Box>
   );
 
-  // Render avatar and username
+  // Render avatar and username - use user.id instead of discordId
   const userAvatar = typedUser?.avatar 
     ? `https://cdn.discordapp.com/avatars/${typedUser.id}/${typedUser.avatar}.png`
     : '/discord-avatar-placeholder.png';
@@ -418,8 +408,8 @@ const MainLayout = () => {
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${isDrawerCollapsed ? collapsedDrawerWidth : drawerWidth}px)` },
-          ml: { sm: `${isDrawerCollapsed ? collapsedDrawerWidth : drawerWidth}px` },
+          width: { sm: `calc(100% - ${collapsed ? collapsedWidth : drawerWidth}px)` },
+          ml: { sm: `${collapsed ? collapsedWidth : drawerWidth}px` },
           backdropFilter: 'blur(10px)',
           backgroundColor: 'rgba(255, 255, 255, 0.9)',
           borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
@@ -429,7 +419,7 @@ const MainLayout = () => {
       >
         <Toolbar 
           sx={{ 
-            height: 70,
+            minHeight: 64, // Standard Material UI AppBar height
             display: 'flex',
             justifyContent: 'space-between',
             px: { xs: 1.5, sm: 2, md: 3 },
@@ -459,9 +449,6 @@ const MainLayout = () => {
               Discura
             </Typography>
           </Box>
-
-          {/* Spacer */}
-          <Box sx={{ flexGrow: 1 }} />
           
           {/* Action Buttons */}
           <Box sx={{ 
@@ -470,32 +457,7 @@ const MainLayout = () => {
             gap: 1,
             flexShrink: 0
           }}>
-            <Tooltip title="Notifications">
-              <IconButton 
-                color="inherit" 
-                size={isMobile ? "small" : "medium"}
-              >
-                <Badge badgeContent={2} color="error">
-                  <NotificationIcon fontSize={isMobile ? "small" : "medium"} />
-                </Badge>
-              </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="Create new bot">
-              <IconButton 
-                color="primary" 
-                size={isMobile ? "small" : "medium"}
-                sx={{ 
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.2),
-                  }
-                }}
-                onClick={() => navigate('/bots/create')}
-              >
-                <AddIcon fontSize={isMobile ? "small" : "medium"} />
-              </IconButton>
-            </Tooltip>
+            {/* "Create new bot" button has been removed */}
             
             {/* User section */}
             <Box 
@@ -618,19 +580,14 @@ const MainLayout = () => {
           display: { xs: 'none', sm: 'block' },
           '& .MuiDrawer-paper': { 
             boxSizing: 'border-box', 
-            width: isDrawerCollapsed ? collapsedDrawerWidth : drawerWidth,
+            width: collapsed ? collapsedWidth : drawerWidth,
             boxShadow: 'none',
             border: 'none',
             position: 'relative',
-            transition: theme.transitions.create('width', {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.enteringScreen,
-            }),
           },
-          width: isDrawerCollapsed ? collapsedDrawerWidth : drawerWidth,
+          width: collapsed ? collapsedWidth : drawerWidth,
           flexShrink: 0,
         }}
-        open
       >
         {drawer}
       </Drawer>
@@ -641,19 +598,20 @@ const MainLayout = () => {
         sx={{
           flexGrow: 1,
           p: { xs: 2, md: 3 },
-          width: { sm: `calc(100% - ${isDrawerCollapsed ? collapsedDrawerWidth : drawerWidth}px)` },
+          width: { sm: `calc(100% - ${collapsed ? collapsedWidth : drawerWidth}px)` },
           minHeight: '100vh',
           backgroundColor: theme.palette.background.default,
           position: 'relative',
           zIndex: 1,
-          pt: '70px', // Match toolbar height
-          ml: { xs: 0, sm: `${isDrawerCollapsed ? collapsedDrawerWidth : drawerWidth}px` },
+          ml: { xs: 0, sm: `${collapsed ? collapsedWidth : drawerWidth}px` },
           transition: theme.transitions.create(['margin', 'width'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
           }),
         }}
       >
+        {/* Offset for AppBar */}
+        <Toolbar sx={{ minHeight: 64 }} />
         <Container 
           maxWidth="xl" 
           sx={{ 
