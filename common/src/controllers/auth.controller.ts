@@ -15,7 +15,7 @@ import {
   MessageResponseDto,
   UserProfileResponseDto,
   UserResponseDto
-  } from "../schema/types";
+  } from "../types/api";
 
 /**
  * Authentication controller

@@ -1,363 +1,442 @@
 import {
-    Delete as DeleteIcon,
-    Save as SaveIcon,
-    PlayArrow as StartIcon,
-    Stop as StopIcon,
-} from '@mui/icons-material';
+  Delete as DeleteIcon,
+  Save as SaveIcon,
+  PlayArrow as StartIcon,
+  Stop as StopIcon,
+  ArrowBack as ArrowBackIcon,
+  Settings as SettingsIcon,
+  Person as PersonIcon,
+  Code as CodeIcon,
+  Image as ImageIcon,
+  Book as BookIcon,
+  Build as BuildIcon
+} from "@mui/icons-material";
 import {
-    Alert,
-    Box,
-    Button,
-    CardContent,
-    Chip,
-    CircularProgress,
-    Divider,
-    FormControl,
-    FormControlLabel,
-    InputLabel,
-    MenuItem,
-    Paper,
-    Select,
-    Switch,
-    Tab,
-    Tabs,
-    TextField,
-    Typography
-} from '@mui/material';
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import { BotStatus, LLMProvider } from '../types'; // Fixed import path according to guidelines
-import {TabPanelProps} from '../types';
-import BotStatusBadge from '../components/BotStatusBadge';
-import ConfirmDialog from '../components/ConfirmDialog';
-import { useBotStore } from '../stores/botStore';
-import GridItem from '../components/GridItem';
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`bot-tabpanel-${index}`}
-      aria-labelledby={`bot-tab-${index}`}
-      {...other}
-      style={{ padding: '24px 0' }}
-    >
-      {value === index && <Box>{children}</Box>}
-    </div>
-  );
-}
-
-// Define a type for the image provider to ensure type safety
-type ImageProvider = 'openai' | 'stability' | 'midjourney';
+  Alert,
+  Box,
+  Button,
+  CardContent,
+  Chip,
+  CircularProgress,
+  Divider,
+  FormControl,
+  FormControlLabel,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Switch,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+  alpha,
+  useTheme
+} from "@mui/material";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
+import { BotStatus, ImageProvider } from "../types";
+import { LLMProvider } from "../api/";
+import BotStatusBadge from "../components/BotStatusBadge";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { useBotStore } from "../stores/botStore";
+import GridItem from "../components/GridItem";
+import TabPanel from "../components/TabPanel";
 
 const BotDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const { currentBot, fetchBot, updateBot, deleteBot, startBot, stopBot, isLoading, updateBotConfiguration } = useBotStore();
   
+  const {
+    currentBot,
+    fetchBot,
+    updateBot,
+    deleteBot,
+    startBot,
+    stopBot,
+    isLoading,
+    updateBotConfiguration,
+  } = useBotStore();
+
   // Form state
-  const [name, setName] = useState('');
-  const [systemPrompt, setSystemPrompt] = useState('');
-  const [personality, setPersonality] = useState('');
+  const [name, setName] = useState("");
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [personality, setPersonality] = useState("");
   const [traits, setTraits] = useState<string[]>([]);
-  const [newTrait, setNewTrait] = useState('');
-  const [backstory, setBackstory] = useState('');
+  const [newTrait, setNewTrait] = useState("");
+  const [backstory, setBackstory] = useState("");
   const [llmProvider, setLlmProvider] = useState<LLMProvider>(LLMProvider.OPENAI);
-  const [llmModel, setLlmModel] = useState('');
-  const [apiKey, setApiKey] = useState('');
+  const [llmModel, setLlmModel] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [imageGenEnabled, setImageGenEnabled] = useState(false);
-  const [imageProvider, setImageProvider] = useState<ImageProvider>('openai');
-  
+  const [imageProvider, setImageProvider] = useState<ImageProvider>(ImageProvider.OPENAI);
+
   // Load bot data
   useEffect(() => {
     if (id) {
       fetchBot(id);
     }
   }, [id, fetchBot]);
-  
+
   // Update form when bot data changes
   useEffect(() => {
     if (currentBot) {
       setName(currentBot.name);
-      setSystemPrompt(currentBot.configuration?.systemPrompt || '');
-      setPersonality(currentBot.configuration?.personality || '');
+      setSystemPrompt(currentBot.configuration?.systemPrompt || "");
+      setPersonality(currentBot.configuration?.personality || "");
       setTraits(currentBot.configuration?.traits || []);
-      setBackstory(currentBot.configuration?.backstory || '');
-      // Map the string value to LLMProvider enum value instead of using type assertion
-      const provider = currentBot.configuration?.llmProvider || 'openai';
-      if (provider === 'openai') {
+      setBackstory(currentBot.configuration?.backstory || "");
+      
+      const provider = currentBot.configuration?.llmProvider || "openai";
+      if (provider === "openai") {
         setLlmProvider(LLMProvider.OPENAI);
-      } else if (provider === 'anthropic') {
+      } else if (provider === "anthropic") {
         setLlmProvider(LLMProvider.ANTHROPIC);
-      } else if (provider === 'google') {
+      } else if (provider === "google") {
         setLlmProvider(LLMProvider.GOOGLE);
-      } else if (provider === 'custom') {
+      } else if (provider === "custom") {
         setLlmProvider(LLMProvider.CUSTOM);
       } else {
-        // Default fallback
         setLlmProvider(LLMProvider.OPENAI);
       }
-      setLlmModel(currentBot.configuration?.llmModel || '');
-      // Use optional chaining and type assertion to handle potential missing apiKey
-      setApiKey((currentBot.configuration as any)?.apiKey || '');
+      
+      setLlmModel(currentBot.configuration?.llmModel || "");
+      setApiKey((currentBot.configuration as any)?.apiKey || "");
       setImageGenEnabled(currentBot.configuration?.imageGeneration?.enabled || false);
-      setImageProvider((currentBot.configuration?.imageGeneration?.provider as ImageProvider) || 'openai');
+      setImageProvider((currentBot.configuration?.imageGeneration?.provider as ImageProvider) || ImageProvider.OPENAI);
     }
   }, [currentBot]);
-  
-  // Handle tab change - removed unused event parameter
+
   const handleChangeTab = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-  
-  // Add trait
+
   const handleAddTrait = () => {
     if (newTrait && !traits.includes(newTrait)) {
       setTraits([...traits, newTrait]);
-      setNewTrait('');
+      setNewTrait("");
     }
   };
-  
-  // Remove trait
+
   const handleRemoveTrait = (traitToRemove: string) => {
-    setTraits(traits.filter(trait => trait !== traitToRemove));
+    setTraits(traits.filter((trait) => trait !== traitToRemove));
   };
-  
-  // Save basic info
+
   const handleSaveBasicInfo = async () => {
     if (!currentBot || !id) return;
-    
+
     setSaving(true);
     try {
       await updateBot(id, { name });
-      toast.success('Bot information updated');
+      toast.success("Bot information updated");
     } catch (error) {
-      toast.error('Failed to update bot information');
-      console.error('Update bot error:', error);
+      toast.error("Failed to update bot information");
+      console.error("Update bot error:", error);
     } finally {
       setSaving(false);
     }
   };
-  
-  // Save personality
+
   const handleSavePersonality = async () => {
     if (!currentBot || !id) return;
-    
+
     setSaving(true);
     try {
       await updateBotConfiguration(id, {
         systemPrompt,
         personality,
         traits,
-        backstory
+        backstory,
       });
-      toast.success('Bot personality updated');
+      toast.success("Bot personality updated");
     } catch (error) {
-      toast.error('Failed to update bot personality');
-      console.error('Update personality error:', error);
+      toast.error("Failed to update bot personality");
+      console.error("Update personality error:", error);
     } finally {
       setSaving(false);
     }
   };
-  
-  // Save LLM settings
+
   const handleSaveLLMSettings = async () => {
     if (!currentBot || !id) return;
-    
+
     setSaving(true);
     try {
       await updateBotConfiguration(id, {
         llmProvider,
         llmModel,
-        apiKey
+        apiKey,
       });
-      toast.success('LLM settings updated');
+      toast.success("LLM settings updated");
     } catch (error) {
-      toast.error('Failed to update LLM settings');
-      console.error('Update LLM settings error:', error);
+      toast.error("Failed to update LLM settings");
+      console.error("Update LLM settings error:", error);
     } finally {
       setSaving(false);
     }
   };
-  
-  // Save image generation settings
+
   const handleSaveImageSettings = async () => {
     if (!currentBot || !id) return;
-    
+
     setSaving(true);
     try {
       await updateBotConfiguration(id, {
         imageGeneration: {
           enabled: imageGenEnabled,
-          provider: imageProvider as 'openai' | 'stability' | 'midjourney',
-          // Safely access apiKey using type assertion
-          apiKey: ((currentBot.configuration?.imageGeneration || {}) as any).apiKey || '',
-          model: currentBot.configuration?.imageGeneration?.model || ''
-        }
+          provider: imageProvider,
+          apiKey: ((currentBot.configuration?.imageGeneration || {}) as any).apiKey || "",
+          model: currentBot.configuration?.imageGeneration?.model || "",
+        },
       });
-      toast.success('Image generation settings updated');
+      toast.success("Image generation settings updated");
     } catch (error) {
-      toast.error('Failed to update image generation settings');
-      console.error('Update image settings error:', error);
+      toast.error("Failed to update image generation settings");
+      console.error("Update image settings error:", error);
     } finally {
       setSaving(false);
     }
   };
-  
-  // Delete bot
+
   const handleDeleteBot = async () => {
     if (!id) return;
-    
+
     try {
       await deleteBot(id);
-      toast.success('Bot deleted successfully');
-      navigate('/bots');
+      toast.success("Bot deleted successfully");
+      navigate("/bots");
     } catch (error) {
-      toast.error('Failed to delete bot');
-      console.error('Delete bot error:', error);
+      toast.error("Failed to delete bot");
+      console.error("Delete bot error:", error);
     } finally {
       setDeleteDialogOpen(false);
     }
   };
-  
-  // Start/stop bot
+
   const handleToggleBotStatus = async () => {
     if (!currentBot || !id) return;
-    
+
     try {
       if (currentBot.status === BotStatus.ONLINE) {
         await stopBot(id);
-        toast.success('Bot stopped successfully');
+        toast.success("Bot stopped successfully");
       } else {
         await startBot(id);
-        toast.success('Bot started successfully');
+        toast.success("Bot started successfully");
       }
     } catch (error) {
-      toast.error(`Failed to ${currentBot.status === BotStatus.ONLINE ? 'stop' : 'start'} bot`);
-      console.error('Toggle bot status error:', error);
+      toast.error(
+        `Failed to ${currentBot.status === BotStatus.ONLINE ? "stop" : "start"} bot`
+      );
+      console.error("Toggle bot status error:", error);
     }
   };
-  
+
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
         <CircularProgress />
       </Box>
     );
   }
-  
+
   if (!currentBot) {
     return (
-      <Alert severity="error">
+      <Alert 
+        severity="error"
+        sx={{
+          borderRadius: 2,
+          border: `1px solid ${alpha(theme.palette.error.main, 0.1)}`,
+        }}
+      >
         Bot not found. It may have been deleted or you don't have access to it.
       </Alert>
     );
   }
-  
+
   return (
-    <Box>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            {currentBot.name}
-          </Typography>
-          <BotStatusBadge status={currentBot.status as BotStatus} />
+    <Box sx={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+      {/* Header */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 4,
+          gap: 2,
+          flexWrap: { xs: 'wrap', sm: 'nowrap' },
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+          <IconButton
+            onClick={() => navigate('/bots')}
+            sx={{
+              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.2),
+              }
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          
+          <Box>
+            <Typography variant="h4" component="h1" fontWeight={600} gutterBottom>
+              {currentBot.name}
+            </Typography>
+            <BotStatusBadge status={currentBot.status as BotStatus} />
+          </Box>
         </Box>
-        
-        <Box>
+
+        <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
             variant="contained"
-            color={currentBot.status === BotStatus.ONLINE ? 'error' : 'success'}
+            color={currentBot.status === BotStatus.ONLINE ? "error" : "success"}
             startIcon={currentBot.status === BotStatus.ONLINE ? <StopIcon /> : <StartIcon />}
             onClick={handleToggleBotStatus}
-            sx={{ mr: 2 }}
+            sx={{
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              boxShadow: `0 4px 12px ${alpha(
+                currentBot.status === BotStatus.ONLINE 
+                  ? theme.palette.error.main 
+                  : theme.palette.success.main, 
+                0.2
+              )}`,
+            }}
           >
-            {currentBot.status === BotStatus.ONLINE ? 'Stop Bot' : 'Start Bot'}
+            {currentBot.status === BotStatus.ONLINE ? "Stop Bot" : "Start Bot"}
           </Button>
-          
+
           <Button
             variant="outlined"
             color="error"
             startIcon={<DeleteIcon />}
             onClick={() => setDeleteDialogOpen(true)}
+            sx={{
+              borderWidth: 1.5,
+              borderRadius: 2,
+              '&:hover': {
+                borderWidth: 1.5,
+              }
+            }}
           >
             Delete Bot
           </Button>
         </Box>
       </Box>
-      
-      <Paper sx={{ mb: 3 }}>
-        <Tabs value={tabValue} onChange={handleChangeTab} aria-label="bot configuration tabs">
-          <Tab label="Basic Info" />
-          <Tab label="Personality" />
-          <Tab label="LLM Settings" />
-          <Tab label="Image Generation" />
-          <Tab label="Knowledge" disabled />
-          <Tab label="Tools" disabled />
+
+      {/* Tabs */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          mb: 3,
+          borderRadius: 2,
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+        }}
+      >
+        <Tabs
+          value={tabValue}
+          onChange={handleChangeTab}
+          aria-label="bot configuration tabs"
+          sx={{
+            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            '& .MuiTab-root': {
+              py: 2,
+              px: 3,
+              minHeight: 'unset',
+            }
+          }}
+        >
+          <Tab icon={<SettingsIcon sx={{ mb: 0.5 }} />} label="Basic Info" iconPosition="top" />
+          <Tab icon={<PersonIcon sx={{ mb: 0.5 }} />} label="Personality" iconPosition="top" />
+          <Tab icon={<CodeIcon sx={{ mb: 0.5 }} />} label="LLM Settings" iconPosition="top" />
+          <Tab icon={<ImageIcon sx={{ mb: 0.5 }} />} label="Image Generation" iconPosition="top" />
+          <Tab icon={<BookIcon sx={{ mb: 0.5 }} />} label="Knowledge" iconPosition="top" disabled />
+          <Tab icon={<BuildIcon sx={{ mb: 0.5 }} />} label="Tools" iconPosition="top" disabled />
         </Tabs>
-        
-        {/* Basic Info */}
+
+        {/* Basic Info Tab */}
         <TabPanel value={tabValue} index={0}>
           <CardContent>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
               <GridItem item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Bot Name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: alpha(theme.palette.common.white, 0.9),
+                    }
+                  }}
                 />
               </GridItem>
-              
+
               <GridItem item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Application ID"
                   value={currentBot.applicationId}
-                  InputProps={{
-                    readOnly: true,
+                  InputProps={{ readOnly: true }}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: alpha(theme.palette.common.white, 0.9),
+                    }
                   }}
                 />
               </GridItem>
-              
+
               <GridItem item xs={12} md={6}>
                 <TextField
                   fullWidth
                   type="password"
                   label="Discord Token"
                   value={currentBot.discordToken}
-                  InputProps={{
-                    readOnly: true,
-                  }}
+                  InputProps={{ readOnly: true }}
+                  InputLabelProps={{ shrink: true }}
                   helperText="For security, the token is masked"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: alpha(theme.palette.common.white, 0.9),
+                    }
+                  }}
                 />
               </GridItem>
             </Box>
-            
-            <Box sx={{ mt: 3, textAlign: 'right' }}>
+
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
               <Button
                 variant="contained"
                 startIcon={<SaveIcon />}
                 onClick={handleSaveBasicInfo}
                 disabled={saving}
+                sx={{
+                  px: 3,
+                  borderRadius: 2,
+                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
+                }}
               >
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? "Saving..." : "Save Changes"}
               </Button>
             </Box>
           </CardContent>
         </TabPanel>
-        
-        {/* Personality */}
+
+        {/* Personality Tab */}
         <TabPanel value={tabValue} index={1}>
           <CardContent>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
               <GridItem item xs={12}>
                 <TextField
                   fullWidth
@@ -368,9 +447,15 @@ const BotDetail = () => {
                   onChange={(e) => setSystemPrompt(e.target.value)}
                   placeholder="Instructions for the AI on how to behave and respond"
                   helperText="This is the primary instruction set that defines your bot's behavior"
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: alpha(theme.palette.common.white, 0.9),
+                    }
+                  }}
                 />
               </GridItem>
-              
+
               <GridItem item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -379,9 +464,15 @@ const BotDetail = () => {
                   onChange={(e) => setPersonality(e.target.value)}
                   placeholder="e.g., Friendly, Sarcastic, Professional"
                   helperText="A short description of your bot's personality"
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: alpha(theme.palette.common.white, 0.9),
+                    }
+                  }}
                 />
               </GridItem>
-              
+
               <GridItem item xs={12} md={6}>
                 <Box>
                   <TextField
@@ -391,7 +482,7 @@ const BotDetail = () => {
                     onChange={(e) => setNewTrait(e.target.value)}
                     placeholder="Add personality traits"
                     onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         handleAddTrait();
                       }
@@ -402,25 +493,39 @@ const BotDetail = () => {
                           variant="text"
                           onClick={handleAddTrait}
                           disabled={!newTrait}
+                          sx={{ whiteSpace: 'nowrap' }}
                         >
-                          Add
+                          Add Trait
                         </Button>
                       ),
                     }}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: alpha(theme.palette.common.white, 0.9),
+                      }
+                    }}
                   />
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1 }}>
                     {traits.map((trait) => (
-                      <Chip 
+                      <Chip
                         key={trait}
                         label={trait}
                         onDelete={() => handleRemoveTrait(trait)}
                         color="primary"
+                        variant="outlined"
+                        sx={{ 
+                          borderWidth: 1.5,
+                          '& .MuiChip-deleteIcon': {
+                            color: theme.palette.primary.main,
+                          }
+                        }}
                       />
                     ))}
                   </Box>
                 </Box>
               </GridItem>
-              
+
               <GridItem item xs={12}>
                 <TextField
                   fullWidth
@@ -431,27 +536,38 @@ const BotDetail = () => {
                   onChange={(e) => setBackstory(e.target.value)}
                   placeholder="The background and history of your bot"
                   helperText="Give your bot a rich backstory to enhance its character"
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: alpha(theme.palette.common.white, 0.9),
+                    }
+                  }}
                 />
               </GridItem>
             </Box>
-            
-            <Box sx={{ mt: 3, textAlign: 'right' }}>
+
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
               <Button
                 variant="contained"
                 startIcon={<SaveIcon />}
                 onClick={handleSavePersonality}
                 disabled={saving}
+                sx={{
+                  px: 3,
+                  borderRadius: 2,
+                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
+                }}
               >
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? "Saving..." : "Save Changes"}
               </Button>
             </Box>
           </CardContent>
         </TabPanel>
-        
-        {/* LLM Settings */}
+
+        {/* LLM Settings Tab */}
         <TabPanel value={tabValue} index={2}>
           <CardContent>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
               <GridItem item xs={12} md={6}>
                 <FormControl fullWidth>
                   <InputLabel id="llm-provider-label">LLM Provider</InputLabel>
@@ -460,6 +576,9 @@ const BotDetail = () => {
                     value={llmProvider}
                     label="LLM Provider"
                     onChange={(e) => setLlmProvider(e.target.value as LLMProvider)}
+                    sx={{
+                      backgroundColor: alpha(theme.palette.common.white, 0.9),
+                    }}
                   >
                     <MenuItem value={LLMProvider.OPENAI}>OpenAI</MenuItem>
                     <MenuItem value={LLMProvider.ANTHROPIC}>Anthropic</MenuItem>
@@ -468,21 +587,36 @@ const BotDetail = () => {
                   </Select>
                 </FormControl>
               </GridItem>
-              
+
               <GridItem item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Model"
                   value={llmModel}
                   onChange={(e) => setLlmModel(e.target.value)}
-                  placeholder={llmProvider === LLMProvider.OPENAI ? "gpt-3.5-turbo" : 
-                    llmProvider === LLMProvider.ANTHROPIC ? "claude-3-sonnet-20240229" : 
-                    llmProvider === LLMProvider.GOOGLE ? "gemini-pro" : 
-                    "API endpoint URL"}
-                  helperText={llmProvider === LLMProvider.CUSTOM ? "For custom providers, enter the API endpoint" : "The model to use for this bot"}
+                  placeholder={
+                    llmProvider === LLMProvider.OPENAI
+                      ? "gpt-3.5-turbo"
+                      : llmProvider === LLMProvider.ANTHROPIC
+                      ? "claude-3-sonnet-20240229"
+                      : llmProvider === LLMProvider.GOOGLE
+                      ? "gemini-pro"
+                      : "API endpoint URL"
+                  }
+                  helperText={
+                    llmProvider === LLMProvider.CUSTOM
+                      ? "For custom providers, enter the API endpoint"
+                      : "The model to use for this bot"
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: alpha(theme.palette.common.white, 0.9),
+                    }
+                  }}
                 />
               </GridItem>
-              
+
               <GridItem item xs={12}>
                 <TextField
                   fullWidth
@@ -492,24 +626,35 @@ const BotDetail = () => {
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder="Your LLM provider API key"
                   helperText="Your API key will be encrypted in our database"
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: alpha(theme.palette.common.white, 0.9),
+                    }
+                  }}
                 />
               </GridItem>
             </Box>
-            
-            <Box sx={{ mt: 3, textAlign: 'right' }}>
+
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
               <Button
                 variant="contained"
                 startIcon={<SaveIcon />}
                 onClick={handleSaveLLMSettings}
                 disabled={saving}
+                sx={{
+                  px: 3,
+                  borderRadius: 2,
+                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
+                }}
               >
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? "Saving..." : "Save Changes"}
               </Button>
             </Box>
           </CardContent>
         </TabPanel>
-        
-        {/* Image Generation */}
+
+        {/* Image Generation Tab */}
         <TabPanel value={tabValue} index={3}>
           <CardContent>
             <FormControlLabel
@@ -523,10 +668,18 @@ const BotDetail = () => {
               label="Enable Image Generation"
               sx={{ mb: 3 }}
             />
-            
+
             <Divider sx={{ mb: 3 }} />
-            
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, opacity: imageGenEnabled ? 1 : 0.5, pointerEvents: imageGenEnabled ? 'auto' : 'none' }}>
+
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 3,
+                opacity: imageGenEnabled ? 1 : 0.5,
+                pointerEvents: imageGenEnabled ? "auto" : "none",
+              }}
+            >
               <GridItem item xs={12} md={6}>
                 <FormControl fullWidth>
                   <InputLabel id="image-provider-label">Image Provider</InputLabel>
@@ -535,36 +688,50 @@ const BotDetail = () => {
                     value={imageProvider}
                     label="Image Provider"
                     onChange={(e) => setImageProvider(e.target.value as ImageProvider)}
+                    sx={{
+                      backgroundColor: alpha(theme.palette.common.white, 0.9),
+                    }}
                   >
-                    <MenuItem value="openai">OpenAI DALL-E</MenuItem>
-                    <MenuItem value="stability">Stability AI</MenuItem>
-                    <MenuItem value="midjourney">Midjourney</MenuItem>
+                    <MenuItem value={ImageProvider.OPENAI}>OpenAI DALL-E</MenuItem>
+                    <MenuItem value={ImageProvider.STABILITY}>Stability AI</MenuItem>
+                    <MenuItem value={ImageProvider.MIDJOURNEY}>Midjourney</MenuItem>
                   </Select>
                 </FormControl>
               </GridItem>
-              
+
               <GridItem item xs={12}>
-                <Alert severity="info">
+                <Alert 
+                  severity="info"
+                  sx={{
+                    borderRadius: 2,
+                    border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
+                  }}
+                >
                   The bot will use your LLM provider's API key for image generation if available (like with OpenAI).
                   Custom API keys for specific image providers can be configured in a future update.
                 </Alert>
               </GridItem>
             </Box>
-            
-            <Box sx={{ mt: 3, textAlign: 'right' }}>
+
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
               <Button
                 variant="contained"
                 startIcon={<SaveIcon />}
                 onClick={handleSaveImageSettings}
                 disabled={saving}
+                sx={{
+                  px: 3,
+                  borderRadius: 2,
+                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
+                }}
               >
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? "Saving..." : "Save Changes"}
               </Button>
             </Box>
           </CardContent>
         </TabPanel>
       </Paper>
-      
+
       {/* Delete confirmation dialog */}
       <ConfirmDialog
         open={deleteDialogOpen}

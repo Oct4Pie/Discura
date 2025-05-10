@@ -1,11 +1,11 @@
-import { BotConfiguration } from './botConfiguration'; // Added import for BotConfiguration
-
 /**
  * Bot API Types
- * 
+ *
  * This file contains all API types related to the Bot service.
  * These are defined with @tsoaModel decorator to be picked up by the API generation process.
  */
+
+import { BotConfiguration } from "./botConfiguration";
 
 /**
  * Bot Status Enum

@@ -4,85 +4,6 @@
  */
 
 export interface paths {
-    "/undefined/models": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description List available LLM models
-         *
-         *     Returns a list of the available models sorted by creation date.
-         *     Models may vary based on system configuration and user permissions. */
-        get: operations["GetModels"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/undefined/chat/completions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description Create a chat completion
-         *
-         *     Creates a completion for the chat message. This endpoint is compatible
-         *     with the OpenAI Chat API format but can work with multiple LLM providers.
-         *
-         *     The completion includes choices which contain generated messages from the model.
-         *     Response format can be controlled by the request parameters. */
-        post: operations["CreateChatCompletion"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/undefined/{botId}/knowledge": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Get all knowledge items for a specific bot */
-        get: operations["GetKnowledgeItems"];
-        put?: never;
-        /** @description Add a new knowledge item to a bot */
-        post: operations["AddKnowledgeItem"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/undefined/{botId}/knowledge/{itemId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** @description Update a knowledge item */
-        put: operations["UpdateKnowledgeItem"];
-        post?: never;
-        /** @description Delete a knowledge item */
-        delete: operations["DeleteKnowledgeItem"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/undefined/login": {
         parameters: {
             query?: never;
@@ -154,11 +75,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description List all bots for the authenticated user
-         *
-         *     Returns a list of Discord bots owned by the authenticated user,
-         *     including their configuration and status. */
-        get: operations["GetUserBots"];
+        /** @description Get all application constants */
+        get: operations["GetConstants"];
         put?: never;
         /** @description Create a new bot
          *
@@ -255,10 +173,400 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/undefined/{botId}/knowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get all knowledge items for a specific bot */
+        get: operations["GetKnowledgeItems"];
+        put?: never;
+        /** @description Add a new knowledge item to a bot */
+        post: operations["AddKnowledgeItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/undefined/{botId}/knowledge/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Update a knowledge item */
+        put: operations["UpdateKnowledgeItem"];
+        post?: never;
+        /** @description Delete a knowledge item */
+        delete: operations["DeleteKnowledgeItem"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/undefined/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description List available LLM models
+         *
+         *     Returns a list of the available models sorted by creation date.
+         *     Models may vary based on system configuration and user permissions. */
+        get: operations["GetModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/undefined/chat/completions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Create a chat completion
+         *
+         *     Creates a completion for the chat message. This endpoint is compatible
+         *     with the OpenAI Chat API format but can work with multiple LLM providers.
+         *
+         *     The completion includes choices which contain generated messages from the model.
+         *     Response format can be controlled by the request parameters. */
+        post: operations["CreateChatCompletion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/undefined/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get available LLM providers
+         *
+         *     Returns the list of supported LLM providers in the system.
+         *     This helps clients know which providers are available. */
+        get: operations["GetProviders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/undefined/providers/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Check if a specific provider is available
+         *
+         *     Validates if the requested LLM provider is supported and available. */
+        get: operations["CheckProviderAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Placeholder interface for UserResponseDto
+         *     This will be replaced with the actual definition by sync-types.js */
+        UserResponseDto: {
+            id: string;
+            discordId: string;
+            username: string;
+            discriminator: string;
+            avatar: string;
+            email: string;
+            bots: string[];
+        };
+        /** @description Placeholder interface for ErrorResponseDto
+         *     This will be replaced with the actual definition by sync-types.js */
+        ErrorResponseDto: {
+            message: string;
+            error?: string;
+        };
+        /** @description Placeholder interface for UserProfileResponseDto
+         *     This will be replaced with the actual definition by sync-types.js */
+        UserProfileResponseDto: {
+            user: components["schemas"]["UserResponseDto"];
+        };
+        /** @description Placeholder interface for MessageResponseDto
+         *     This will be replaced with the actual definition by sync-types.js */
+        MessageResponseDto: {
+            message: string;
+        };
+        /**
+         * @description Placeholder enum for BotStatus
+         *     This will be replaced with the actual definition by sync-types.js
+         * @enum {string}
+         */
+        BotStatus: "offline" | "online" | "error";
+        /**
+         * @description Placeholder enum for LLMProvider
+         *     This will be replaced with the actual definition by sync-types.js
+         * @enum {string}
+         */
+        LLMProvider: "openai" | "anthropic" | "google" | "custom";
+        /** @description Placeholder interface for KnowledgeBase
+         *     This will be replaced with the actual definition by sync-types.js */
+        KnowledgeBase: {
+            id: string;
+            name: string;
+            content: string;
+            /** @enum {string} */
+            type: "text" | "file";
+            source?: string;
+        };
+        /**
+         * @description Placeholder enum for ImageProvider
+         *     This will be replaced with the actual definition by sync-types.js
+         * @enum {string}
+         */
+        ImageProvider: "openai" | "stability" | "midjourney";
+        /** @description Placeholder interface for ImageGenerationConfig
+         *     This will be replaced with the actual definition by sync-types.js */
+        ImageGenerationConfig: {
+            enabled: boolean;
+            provider: components["schemas"]["ImageProvider"];
+            apiKey?: string;
+            model?: string;
+        };
+        /** @description Placeholder interface for ToolParameter
+         *     This will be replaced with the actual definition by sync-types.js */
+        ToolParameter: {
+            name: string;
+            type: string;
+            description: string;
+            required: boolean;
+        };
+        /** @description Placeholder interface for Tool
+         *     This will be replaced with the actual definition by sync-types.js */
+        Tool: {
+            id: string;
+            name: string;
+            description: string;
+            parameters: components["schemas"]["ToolParameter"][];
+            implementation: string;
+        };
+        /** @description Placeholder interface for BotConfiguration
+         *     This will be replaced with the actual definition by sync-types.js */
+        BotConfiguration: {
+            systemPrompt: string;
+            personality: string;
+            traits: string[];
+            backstory: string;
+            llmProvider: components["schemas"]["LLMProvider"];
+            llmModel: string;
+            apiKey: string;
+            knowledge: components["schemas"]["KnowledgeBase"][];
+            imageGeneration: components["schemas"]["ImageGenerationConfig"];
+            toolsEnabled: boolean;
+            tools: components["schemas"]["Tool"][];
+        };
+        /** @description Placeholder interface for BotResponseDto
+         *     This will be replaced with the actual definition by sync-types.js */
+        BotResponseDto: {
+            id: string;
+            userId: string;
+            name: string;
+            discordToken?: string;
+            applicationId: string;
+            status: components["schemas"]["BotStatus"];
+            intents: string[];
+            configuration: components["schemas"]["BotConfiguration"];
+            createdAt: string;
+            updatedAt: string;
+        };
+        /** @description Placeholder interface for BotsResponseDto
+         *     This will be replaced with the actual definition by sync-types.js */
+        BotsResponseDto: {
+            bots: components["schemas"]["BotResponseDto"][];
+        };
+        /** @description Placeholder interface for CreateBotRequest
+         *     This will be replaced with the actual definition by sync-types.js */
+        CreateBotRequest: {
+            name: string;
+            discordToken: string;
+            applicationId: string;
+            intents?: string[];
+            configuration?: components["schemas"]["BotConfiguration"];
+        };
+        /** @description Placeholder interface for UpdateBotRequest
+         *     This will be replaced with the actual definition by sync-types.js */
+        UpdateBotRequest: {
+            name?: string;
+            discordToken?: string;
+            applicationId?: string;
+            intents?: string[];
+            status?: components["schemas"]["BotStatus"];
+            configuration?: components["schemas"]["BotConfiguration"];
+        };
+        /** @description Placeholder interface for KnowledgeItemDto
+         *     This will be replaced with the actual definition by sync-types.js */
+        KnowledgeItemDto: {
+            /** Format: double */
+            id: number;
+            title: string;
+            content: string;
+            type: string;
+            /** Format: double */
+            priority: number;
+            createdAt: string;
+            updatedAt: string;
+        };
+        /** @description Placeholder interface for KnowledgeBaseResponseDto
+         *     This will be replaced with the actual definition by sync-types.js */
+        KnowledgeBaseResponseDto: {
+            botId: string;
+            items: components["schemas"]["KnowledgeItemDto"][];
+        };
+        /** @description Bot status structure for API */
+        BotStatusConstants: {
+            OFFLINE: string;
+            ONLINE: string;
+            ERROR: string;
+            LABELS: {
+                error: string;
+                online: string;
+                offline: string;
+            };
+            COLORS: {
+                error: string;
+                online: string;
+                offline: string;
+            };
+        };
+        /** @description LLM provider structure for API */
+        LlmProviderConstants: {
+            OPENAI: string;
+            ANTHROPIC: string;
+            GOOGLE: string;
+            CUSTOM: string;
+            LABELS: {
+                custom: string;
+                google: string;
+                anthropic: string;
+                openai: string;
+            };
+        };
+        /** @description Image provider structure for API */
+        ImageProviderConstants: {
+            OPENAI: string;
+            STABILITY: string;
+            MIDJOURNEY: string;
+            LABELS: {
+                midjourney: string;
+                stability: string;
+                openai: string;
+            };
+        };
+        /** @description HTTP status codes structure for API */
+        HttpStatusConstants: {
+            /** Format: double */
+            OK: number;
+            /** Format: double */
+            CREATED: number;
+            /** Format: double */
+            BAD_REQUEST: number;
+            /** Format: double */
+            UNAUTHORIZED: number;
+            /** Format: double */
+            FORBIDDEN: number;
+            /** Format: double */
+            NOT_FOUND: number;
+            /** Format: double */
+            INTERNAL_SERVER_ERROR: number;
+        };
+        /** @description Storage keys structure for API */
+        StorageKeysConstants: {
+            AUTH_STORAGE: string;
+            USER_PREFERENCES: string;
+            THEME_MODE: string;
+            AUTH_TOKEN: string;
+            USER_PROFILE: string;
+        };
+        /** @description Default values structure for API */
+        DefaultsConstants: {
+            BOT: {
+                LLM_MODEL: string;
+                LLM_PROVIDER: string;
+                TRAITS: string[];
+                PERSONALITY: string;
+                SYSTEM_PROMPT: string;
+            };
+        };
+        /** @description Environment variable names structure for API */
+        EnvVarsConstants: {
+            API_URL: string;
+            NODE_ENV: string;
+            PORT: string;
+            DB_PATH: string;
+            JWT_SECRET: string;
+            DISCORD_CLIENT_ID: string;
+            DISCORD_CLIENT_SECRET: string;
+            DISCORD_CALLBACK_URL: string;
+        };
+        /** @description Discord API constants structure for API */
+        DiscordApiConstants: {
+            BASE_URL: string;
+            OAUTH2_URL: string;
+            PERMISSIONS: {
+                EMBED_LINKS: string;
+                ATTACH_FILES: string;
+                READ_MESSAGE_HISTORY: string;
+                VIEW_CHANNEL: string;
+                SEND_MESSAGES: string;
+            };
+            SCOPES: {
+                APPLICATIONS_COMMANDS: string;
+                BOT: string;
+            };
+            PERMISSION_INTEGERS: {
+                BASIC_BOT: string;
+            };
+        };
+        /** @description Constants exported from common for frontend use */
+        Constants: {
+            BOT_STATUS: components["schemas"]["BotStatusConstants"];
+            LLM_PROVIDER: components["schemas"]["LlmProviderConstants"];
+            IMAGE_PROVIDER: components["schemas"]["ImageProviderConstants"];
+            HTTP_STATUS: components["schemas"]["HttpStatusConstants"];
+            STORAGE_KEYS: components["schemas"]["StorageKeysConstants"];
+            DEFAULTS: components["schemas"]["DefaultsConstants"];
+            ENV_VARS: components["schemas"]["EnvVarsConstants"];
+            DISCORD_API: components["schemas"]["DiscordApiConstants"];
+        };
+        /** @description Response DTO for constants */
+        ConstantsResponseDto: {
+            constants: components["schemas"]["Constants"];
+        };
         /** @description Placeholder interface for LLMModelData
          *     This will be replaced with the actual definition by sync-types.js */
         LLMModelData: {
@@ -273,12 +581,6 @@ export interface components {
         LLMModelsResponseDto: {
             object: string;
             data: components["schemas"]["LLMModelData"][];
-        };
-        /** @description Placeholder interface for ErrorResponseDto
-         *     This will be replaced with the actual definition by sync-types.js */
-        ErrorResponseDto: {
-            message: string;
-            error?: string;
         };
         /** @description Placeholder interface for LLMCompletionMessage
          *     This will be replaced with the actual definition by sync-types.js */
@@ -337,147 +639,6 @@ export interface components {
             frequency_penalty?: number;
             user?: string;
         };
-        /** @description Placeholder interface for KnowledgeItemDto
-         *     This will be replaced with the actual definition by sync-types.js */
-        KnowledgeItemDto: {
-            /** Format: double */
-            id: number;
-            title: string;
-            content: string;
-            type: string;
-            /** Format: double */
-            priority: number;
-            createdAt: string;
-            updatedAt: string;
-        };
-        /** @description Placeholder interface for KnowledgeBaseResponseDto
-         *     This will be replaced with the actual definition by sync-types.js */
-        KnowledgeBaseResponseDto: {
-            botId: string;
-            items: components["schemas"]["KnowledgeItemDto"][];
-        };
-        /** @description Placeholder interface for MessageResponseDto
-         *     This will be replaced with the actual definition by sync-types.js */
-        MessageResponseDto: {
-            message: string;
-        };
-        /** @description Placeholder interface for UserResponseDto
-         *     This will be replaced with the actual definition by sync-types.js */
-        UserResponseDto: {
-            id: string;
-            discordId: string;
-            username: string;
-            discriminator: string;
-            avatar: string;
-            email: string;
-            bots: string[];
-        };
-        /** @description Placeholder interface for UserProfileResponseDto
-         *     This will be replaced with the actual definition by sync-types.js */
-        UserProfileResponseDto: {
-            user: components["schemas"]["UserResponseDto"];
-        };
-        /**
-         * @description Placeholder enum for BotStatus
-         *     This will be replaced with the actual definition by sync-types.js
-         * @enum {string}
-         */
-        BotStatus: "offline" | "online" | "error";
-        /** @description Placeholder interface for KnowledgeBase
-         *     This will be replaced with the actual definition by sync-types.js */
-        KnowledgeBase: {
-            id: string;
-            name: string;
-            content: string;
-            /** @enum {string} */
-            type: "text" | "file";
-            source?: string;
-        };
-        /**
-         * @description Placeholder enum for ImageProvider
-         *     This will be replaced with the actual definition by sync-types.js
-         * @enum {string}
-         */
-        ImageProvider: "openai" | "stability" | "midjourney";
-        /** @description Placeholder interface for ImageGenerationConfig
-         *     This will be replaced with the actual definition by sync-types.js */
-        ImageGenerationConfig: {
-            enabled: boolean;
-            provider: components["schemas"]["ImageProvider"];
-            apiKey?: string;
-            model?: string;
-        };
-        /** @description Placeholder interface for ToolParameter
-         *     This will be replaced with the actual definition by sync-types.js */
-        ToolParameter: {
-            name: string;
-            type: string;
-            description: string;
-            required: boolean;
-        };
-        /** @description Placeholder interface for Tool
-         *     This will be replaced with the actual definition by sync-types.js */
-        Tool: {
-            id: string;
-            name: string;
-            description: string;
-            parameters: components["schemas"]["ToolParameter"][];
-            implementation: string;
-        };
-        /** @description Placeholder interface for BotConfiguration
-         *     This will be replaced with the actual definition by sync-types.js */
-        BotConfiguration: {
-            systemPrompt: string;
-            personality: string;
-            traits: string[];
-            backstory: string;
-            /** @enum {string} */
-            llmProvider: "openai" | "anthropic" | "google" | "custom";
-            llmModel: string;
-            apiKey: string;
-            knowledge: components["schemas"]["KnowledgeBase"][];
-            imageGeneration: components["schemas"]["ImageGenerationConfig"];
-            toolsEnabled: boolean;
-            tools: components["schemas"]["Tool"][];
-        };
-        /** @description Placeholder interface for BotResponseDto
-         *     This will be replaced with the actual definition by sync-types.js */
-        BotResponseDto: {
-            id: string;
-            userId: string;
-            name: string;
-            discordToken?: string;
-            applicationId: string;
-            status: components["schemas"]["BotStatus"];
-            intents: string[];
-            configuration: components["schemas"]["BotConfiguration"];
-            createdAt: string;
-            updatedAt: string;
-        };
-        /** @description Placeholder interface for BotsResponseDto
-         *     This will be replaced with the actual definition by sync-types.js */
-        BotsResponseDto: {
-            bots: components["schemas"]["BotResponseDto"][];
-        };
-        /** @description Placeholder interface for CreateBotRequest
-         *     This will be replaced with the actual definition by sync-types.js */
-        CreateBotRequest: {
-            name: string;
-            discordToken: string;
-            applicationId: string;
-            intents?: string[];
-            configuration?: components["schemas"]["BotConfiguration"];
-        };
-        /** @description Placeholder interface for UpdateBotRequest
-         *     This will be replaced with the actual definition by sync-types.js */
-        UpdateBotRequest: {
-            name?: string;
-            discordToken?: string;
-            applicationId?: string;
-            intents?: string[];
-            status?: components["schemas"]["BotStatus"];
-            configuration?: components["schemas"]["BotConfiguration"];
-        };
     };
     responses: never;
     parameters: never;
@@ -487,193 +648,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    GetModels: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LLMModelsResponseDto"];
-                };
-            };
-            /** @description Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponseDto"];
-                };
-            };
-        };
-    };
-    CreateChatCompletion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LLMCompletionRequestDto"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LLMCompletionResponseDto"];
-                };
-            };
-            /** @description Invalid Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponseDto"];
-                };
-            };
-            /** @description Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponseDto"];
-                };
-            };
-        };
-    };
-    GetKnowledgeItems: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The unique identifier of the bot */
-                botId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["KnowledgeBaseResponseDto"];
-                };
-            };
-        };
-    };
-    AddKnowledgeItem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The unique identifier of the bot */
-                botId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** Format: double */
-                    priority?: number;
-                    type: string;
-                    content: string;
-                    title: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["KnowledgeItemDto"];
-                };
-            };
-        };
-    };
-    UpdateKnowledgeItem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The unique identifier of the bot */
-                botId: string;
-                /** @description The unique identifier of the knowledge item */
-                itemId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** Format: double */
-                    priority?: number;
-                    type?: string;
-                    content?: string;
-                    title?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["KnowledgeItemDto"];
-                };
-            };
-        };
-    };
-    DeleteKnowledgeItem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The unique identifier of the bot */
-                botId: string;
-                /** @description The unique identifier of the knowledge item */
-                itemId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponseDto"];
-                };
-            };
-        };
-    };
     Login: {
         parameters: {
             query?: never;
@@ -754,7 +728,7 @@ export interface operations {
             };
         };
     };
-    GetUserBots: {
+    GetConstants: {
         parameters: {
             query?: never;
             header?: never;
@@ -769,7 +743,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BotsResponseDto"];
+                    "application/json": components["schemas"]["ConstantsResponseDto"];
                 };
             };
         };
@@ -940,6 +914,266 @@ export interface operations {
                     "application/json": {
                         inviteUrl: string;
                     };
+                };
+            };
+        };
+    };
+    GetKnowledgeItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unique identifier of the bot */
+                botId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeBaseResponseDto"];
+                };
+            };
+        };
+    };
+    AddKnowledgeItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unique identifier of the bot */
+                botId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: double */
+                    priority?: number;
+                    type: string;
+                    content: string;
+                    title: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeItemDto"];
+                };
+            };
+        };
+    };
+    UpdateKnowledgeItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unique identifier of the bot */
+                botId: string;
+                /** @description The unique identifier of the knowledge item */
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: double */
+                    priority?: number;
+                    type?: string;
+                    content?: string;
+                    title?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeItemDto"];
+                };
+            };
+        };
+    };
+    DeleteKnowledgeItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unique identifier of the bot */
+                botId: string;
+                /** @description The unique identifier of the knowledge item */
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponseDto"];
+                };
+            };
+        };
+    };
+    GetModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMModelsResponseDto"];
+                };
+            };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    CreateChatCompletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LLMCompletionRequestDto"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMCompletionResponseDto"];
+                };
+            };
+            /** @description Invalid Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    GetProviders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        providers: components["schemas"]["LLMProvider"][];
+                    };
+                };
+            };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    CheckProviderAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["LLMProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        available: boolean;
+                    };
+                };
+            };
+            /** @description Provider Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
                 };
             };
         };

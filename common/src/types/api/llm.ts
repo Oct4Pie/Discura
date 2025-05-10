@@ -1,20 +1,9 @@
 /**
  * LLM API Types
- * 
+ *
  * This file contains all API types related to the LLM service.
  * These are defined with @tsoaModel decorator to be picked up by the API generation process.
  */
-
-/**
- * LLM Provider Enum
- * @tsoaModel
- */
-export enum LLMProvider {
-  OPENAI = 'openai',
-  ANTHROPIC = 'anthropic',
-  GOOGLE = 'google',
-  CUSTOM = 'custom'
-}
 
 /**
  * LLM Model Data Structure

@@ -14,12 +14,21 @@ import {
   ListItem,
   ListItemText,
   Typography,
-  ListItemAvatar
+  ListItemAvatar,
+  alpha,
+  useTheme,
+  IconButton,
+  Paper,
+  Tooltip
 } from '@mui/material';
 import { 
   Person as PersonIcon, 
   AccountBox as AccountIcon,
-  CalendarToday as CalendarIcon 
+  CalendarToday as CalendarIcon,
+  Logout as LogoutIcon,
+  Key as KeyIcon,
+  Settings as SettingsIcon,
+  ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -30,10 +39,10 @@ import type { User } from '../types/user';
 const Settings = () => {
   const { user, logout, fetchUserProfile } = useAuthStore();
   const navigate = useNavigate();
+  const theme = useTheme();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   
   useEffect(() => {
-    // Fetch user profile if not already loaded
     if (!user) {
       fetchUserProfile().catch(error => {
         console.error('Failed to fetch user profile:', error);
@@ -41,10 +50,8 @@ const Settings = () => {
     }
   }, [user, fetchUserProfile]);
   
-  // Cast to our frontend type with guaranteed id property
   const typedUser = user as User | null;
   
-  // Generate avatar URL from Discord data if available
   const avatarUrl = typedUser?.id && typedUser?.avatar
     ? `https://cdn.discordapp.com/avatars/${typedUser.id}/${typedUser.avatar}.png`
     : '/discord-avatar-placeholder.png';
@@ -57,31 +64,69 @@ const Settings = () => {
   };
   
   return (
-    <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Settings
-      </Typography>
+    <Box sx={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+      {/* Header */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          mb: 4,
+        }}
+      >
+        <IconButton
+          onClick={() => navigate(-1)}
+          sx={{
+            backgroundColor: alpha(theme.palette.primary.main, 0.1),
+            '&:hover': {
+              backgroundColor: alpha(theme.palette.primary.main, 0.2),
+            }
+          }}
+        >
+          <ArrowBackIcon />
+        </IconButton>
+        
+        <Typography variant="h4" component="h1" fontWeight={600}>
+          Settings
+        </Typography>
+      </Box>
       
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
         {/* User Profile */}
         <GridItem item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                User Profile
-              </Typography>
+          <Card elevation={0} sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                <PersonIcon color="primary" />
+                <Typography variant="h6" fontWeight={600}>
+                  User Profile
+                </Typography>
+              </Box>
               <Divider sx={{ mb: 3 }} />
               
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                mb: 3,
+                p: 2,
+                backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                borderRadius: 2,
+              }}>
                 <Avatar
                   src={avatarUrl}
                   alt={typedUser?.username || 'User'}
-                  sx={{ width: 80, height: 80, mr: 3 }}
+                  sx={{ 
+                    width: 80, 
+                    height: 80, 
+                    mr: 3,
+                    border: `3px solid ${theme.palette.primary.main}`,
+                    boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
+                  }}
                 >
                   {(typedUser?.username && typedUser.username.charAt(0).toUpperCase()) || <PersonIcon />}
                 </Avatar>
                 <Box>
-                  <Typography variant="h6">
+                  <Typography variant="h6" fontWeight={600}>
                     {typedUser?.username || 'Anonymous User'}
                     {typedUser?.discriminator ? `#${typedUser.discriminator}` : ''}
                   </Typography>
@@ -91,27 +136,29 @@ const Settings = () => {
                 </Box>
               </Box>
               
-              <List dense>
-                <ListItem>
+              <List sx={{ mb: 3 }}>
+                <ListItem sx={{ px: 0 }}>
                   <ListItemAvatar>
-                    <Avatar>
-                      <AccountIcon />
+                    <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
+                      <AccountIcon sx={{ color: theme.palette.primary.main }} />
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
                     primary="Discord ID"
                     secondary={typedUser?.id || 'Not available'}
+                    primaryTypographyProps={{ fontWeight: 500 }}
                   />
                 </ListItem>
-                <ListItem>
+                <ListItem sx={{ px: 0 }}>
                   <ListItemAvatar>
-                    <Avatar>
-                      <CalendarIcon />
+                    <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
+                      <CalendarIcon sx={{ color: theme.palette.primary.main }} />
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
                     primary="Account Created"
                     secondary={typedUser?.id ? new Date(parseInt(typedUser.id)).toLocaleDateString() : 'Not available'}
+                    primaryTypographyProps={{ fontWeight: 500 }}
                   />
                 </ListItem>
               </List>
@@ -119,8 +166,14 @@ const Settings = () => {
               <Button
                 variant="outlined"
                 color="error"
+                startIcon={<LogoutIcon />}
                 onClick={() => setLogoutDialogOpen(true)}
-                sx={{ mt: 2 }}
+                sx={{
+                  borderWidth: 2,
+                  '&:hover': {
+                    borderWidth: 2,
+                  }
+                }}
               >
                 Logout
               </Button>
@@ -130,21 +183,35 @@ const Settings = () => {
         
         {/* App Settings */}
         <GridItem item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                App Settings
-              </Typography>
+          <Card elevation={0} sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                <SettingsIcon color="primary" />
+                <Typography variant="h6" fontWeight={600}>
+                  App Settings
+                </Typography>
+              </Box>
               <Divider sx={{ mb: 3 }} />
               
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                Coming soon: Customize the app appearance, notification settings, and more.
-              </Typography>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  backgroundColor: alpha(theme.palette.info.main, 0.05),
+                  border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
+                  borderRadius: 2,
+                  mb: 3,
+                }}
+              >
+                <Typography variant="body2">
+                  Coming soon: Customize the app appearance, notification settings, and more.
+                </Typography>
+              </Paper>
               
               <Button
                 variant="contained"
                 disabled
-                sx={{ mt: 2 }}
+                startIcon={<SettingsIcon />}
               >
                 Save Settings
               </Button>
@@ -154,11 +221,14 @@ const Settings = () => {
         
         {/* API Keys */}
         <GridItem item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Default API Keys
-              </Typography>
+          <Card elevation={0} sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                <KeyIcon color="primary" />
+                <Typography variant="h6" fontWeight={600}>
+                  Default API Keys
+                </Typography>
+              </Box>
               <Divider sx={{ mb: 3 }} />
               
               <Typography variant="body2" paragraph>
@@ -166,9 +236,19 @@ const Settings = () => {
                 These will be used as defaults when creating new bots, but can be overridden for each bot.
               </Typography>
               
-              <Typography variant="body2" color="text.secondary">
-                Coming soon: Manage your OpenAI, Anthropic, and other API keys from this page.
-              </Typography>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  backgroundColor: alpha(theme.palette.info.main, 0.05),
+                  border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
+                  borderRadius: 2,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Coming soon: Manage your OpenAI, Anthropic, and other API keys from this page.
+                </Typography>
+              </Paper>
             </CardContent>
           </Card>
         </GridItem>
@@ -178,18 +258,42 @@ const Settings = () => {
       <Dialog
         open={logoutDialogOpen}
         onClose={() => setLogoutDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          elevation: 0,
+          sx: {
+            borderRadius: 2,
+          }
+        }}
       >
-        <DialogTitle>Confirm Logout</DialogTitle>
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          Confirm Logout
+        </DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to log out of your account?
+          <Typography variant="body2" color="text.secondary">
+            Are you sure you want to log out of your account? You'll need to log in again to access your bots and settings.
           </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLogoutDialogOpen(false)}>
+        <DialogActions sx={{ p: 2.5, pt: 2 }}>
+          <Button 
+            onClick={() => setLogoutDialogOpen(false)}
+            variant="outlined"
+            sx={{
+              borderWidth: 1.5,
+              '&:hover': {
+                borderWidth: 1.5,
+              }
+            }}
+          >
             Cancel
           </Button>
-          <Button onClick={handleLogout} color="error" autoFocus>
+          <Button 
+            onClick={handleLogout} 
+            color="error" 
+            variant="contained"
+            autoFocus
+          >
             Logout
           </Button>
         </DialogActions>

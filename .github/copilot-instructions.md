@@ -11,6 +11,8 @@
 - [Module Resolution](#module-resolution)
 - [API Type Troubleshooting](#api-type-troubleshooting)
 - [Project Status](#project-status)
+- [Using Context7](#using-context7)
+- [Troubleshooting Guide](#troubleshooting-guide)
 
 ## Core Mandates
 
@@ -19,7 +21,7 @@
 1.  **Single Source of Truth:** Define API types in `common/src/types/api/` with `@tsoaModel` JSDoc tag, and routes in TSOA controllers located in `common/src/controllers/`. Use route constants from `@discura/common/types/routes`.
 2.  **Use Generation Pipeline:** ALWAYS run `./generate-api-types.sh` from the project root after changing API types or controllers.
 3.  **NO Hard-Coding:** NEVER hard-code API paths or types. Use generated code and route constants.
-4.  **NO Editing Generated Files:** NEVER edit files created by the generation script (e.g., in `common/src/schema/`, `common/src/routes/`, `frontend/src/api/generated/`).
+4.  **NO Editing Generated Files:** NEVER edit files created by the generation script (e.g., in `common/src/schema/`, `common/src/routes/`, `frontend/src/api/generated/`, `frontend/src/api/schema.ts`).
 5.  **Common Package Centralization:** ALL code shared between frontend and backend MUST be in the `@discura/common` package. No exceptions.
 
 ## Architecture Overview
@@ -77,17 +79,17 @@ API types MUST follow this EXACT workflow:
      }
      ```
    
-   - STEP 2: Define/update TSOA controllers in `common/src/controllers/` that reference these API types. Controllers import API types from `@discura/common/schema/types`.
+   - STEP 2: Define/update TSOA controllers in `common/src/controllers/` that reference these API types. Controllers import API types from `../types`.
      ```typescript
      // EXAMPLE - common/src/controllers/llm.controller.ts
      import { Controller, Get, Route, Security, Tags } from 'tsoa';
-     import { LLMModelsResponseDto } from '@discura/common/schema/types'; // Correct import
-     import { ROUTES } from '@discura/common/types/routes';
+     import { LLMModelsResponseDto } from '../types'; // Current implementation
+     import { CONTROLLER_ROUTES } from '../types/routes;
 
-     @Route(ROUTES.LLM)
+     @Route(CONTROLLER_ROUTES.LLM)
      @Tags("LLM")
      export class LLMController extends Controller {
-       @Get(ROUTES.LLM_ENDPOINTS.MODELS)
+       @Get('models')
        @Security("jwt")
        public async getModels(): Promise<LLMModelsResponseDto> {
          // Controller methods in common define the API contract but not implementation
@@ -97,19 +99,23 @@ API types MUST follow this EXACT workflow:
      ```
      
    - STEP 3: Run `./generate-api-types.sh` from the project root. This script will:
-     - Execute `common/scripts/bootstrap-types.js` to scan `common/src/types/api` for `@tsoaModel` types and create initial placeholder definitions in `common/src/schema/types.ts`. This breaks circular dependencies.
-     - Execute `common/scripts/tsoa-bootstrap.js` which runs TSOA (using `common/tsoa.json`) to generate:
-        - `common/src/schema/swagger.json` (OpenAPI specification) based on controllers in `common/src/controllers/` and API types from `common/src/schema/types.ts` (initially placeholders).
-        - `common/src/routes/routes.ts` (TSOA-generated Express routes).
-     - Execute `common/scripts/sync-types.js` to read `common/src/schema/swagger.json` and generate the final, complete type definitions in `common/src/schema/types.ts`, replacing the placeholders.
-     - Build the `@discura/common` package.
-     - Generate the frontend API client code in `frontend/src/api/generated/` based on `common/src/schema/swagger.json`.
+     - Execute `common/scripts/bootstrap-types.js` to scan `common/src/types/api` for `@tsoaModel` types and create:
+       - Initial placeholder definitions in `common/src/schema/types.ts`
+       - An index file in `common/src/types/api` that re-exports all API types to help TSOA find them
+     - Execute `common/scripts/tsoa-bootstrap.js` which:
+       - Creates temporary helper files for type resolution
+       - Updates the TSOA configuration if necessary
+       - Runs TSOA (using `common/tsoa.json`) to generate `common/src/schema/swagger.json` (OpenAPI specification)
+     - Execute `common/scripts/sync-types.js` to read `common/src/schema/swagger.json` and generate the final, complete type definitions in `common/src/schema/types.ts`, replacing the placeholders
+     - Run TSOA again to generate `common/src/routes/routes.ts` (TSOA-generated Express routes)
+     - Build the `@discura/common` package
+     - Generate the frontend API client code in `frontend/src/api/generated/` and the schema in `frontend/src/api/schema.ts` based on `common/src/schema/swagger.json`
    
    - STEP 4: Import these API types:
      - In backend code (e.g., service implementations): `import { LLMModelData } from '@discura/common/schema/types';`
-     - In frontend code: `import { LLMModelData } from 'src/api';` (this path assumes `baseUrl: "src"` in `frontend/tsconfig.json` or a similar setup; adjust to `../api` or an alias like `@/api` as per your project's specific path resolution from `frontend/src/api/index.ts`).
+     - In frontend code: `import { LLMModelData } from 'src/api';` (this path assumes `baseUrl: "src"` in `frontend/tsconfig.json` or a similar setup; adjust to `../api` or an alias like `@/api` as per your project's specific path resolution from `frontend/src/api/index.ts` which should re-export all necessary types and client parts from `frontend/src/api/generated/`).
 
-   - CRITICAL: NEVER import API types directly from their original definition files (e.g., `common/src/types/api/llm.ts`) into controllers or application logic. ALWAYS use the generated paths.
+   - CRITICAL: NEVER import API types directly from their original definition files (e.g., `common/src/types/api/llm.ts`) into application logic. ALWAYS use the generated paths. Controllers within the common package should import from '../types', while frontend components should import API types and client functionalities *only* through the `frontend/src/api/index.ts` facade.
 
 #### 2. Non-API Shared Types (Used Internally for logic, constants, enums not part of HTTP bodies)
 Non-API shared types MUST follow this EXACT workflow:
@@ -183,7 +189,7 @@ The `./generate-api-types.sh` script performs these exact steps in the following
 ### Correct Process for API Changes
 
 1.  Define or modify API types in `common/src/types/api/` with the `@tsoaModel` decorator.
-2.  Update TSOA controllers in `common/src/controllers/` with new/modified routes referencing these API types (importing them from `@discura/common/schema/types`).
+2.  Update TSOA controllers in `common/src/controllers/` with new/modified routes referencing these API types (importing them from `../types`).
 3.  Run `./generate-api-types.sh` from the project root (MANDATORY).
 4.  Implement the actual controller logic in the backend package, extending or using the TSOA-generated routes and common controller definitions.
 5.  Use the generated types/API client in the frontend and backend as per the "Type System Flow".
@@ -195,9 +201,10 @@ The proper type definition workflow varies based on the type of type:
 #### For API Types (Request/Response Types):
 1.  Define types with `@tsoaModel` decorator in `common/src/types/api/`.
 2.  Generate using `./generate-api-types.sh`.
-3.  ALWAYS import these types from `@discura/common/schema/types` in backend code (including TSOA controllers in `common`).
-4.  ALWAYS import these types from `src/api` (or `../api` depending on the file location, leveraging `frontend/src/api/index.ts` which re-exports from `./generated`) in frontend code.
-5.  NEVER import API types directly from their original definition files (e.g., `common/src/types/api/mytype.ts`).
+3.  In TSOA controllers within `common/src/controllers/`, import API types from `../types`.
+4.  In backend service implementations, import API types from `@discura/common/schema/types`.
+5.  In frontend code, import API types from `src/api` (or `../api` depending on the file location, leveraging `frontend/src/api/index.ts` which re-exports from `./generated`).
+6.  NEVER import API types directly from their original definition files (e.g., `common/src/types/api/mytype.ts`) in application logic.
 
 #### For Non-API Shared Types:
 1.  Define types DIRECTLY in `common/src/types/` (not in the `/api` subfolder).
@@ -206,7 +213,8 @@ The proper type definition workflow varies based on the type of type:
 
 ### Debugging API Issues
 
--   Check `common/tsoa.json` (ensure `basePath` is `""` or correctly set if needed, `entryFile`, `controllerPathGlobs` are correct).
+-   Check `common/tsoa.json` (ensure `basePath` is `""` or correctly set if needed, `entryFile`, `controllerPathGlobs`, and `modelsPathGlobs` are correct).
+-   Check for debug information in temporary files if `DEBUG_MODE = true` is set in `common/scripts/tsoa-bootstrap.js`.
 -   Verify route registration in the backend (e.g., how `RegisterRoutes` from `common/src/routes/routes.ts` is used).
 -   Ensure frontend API calls use the `/api` prefix.
 -   Verify Vite proxy configuration in `frontend/vite.config.ts`.
@@ -230,33 +238,185 @@ The proper type definition workflow varies based on the type of type:
 
 ### Path Resolution for API Generation
 
-The `generate-api-types.sh` script depends on correct path resolution:
+The `generate-api-types.sh` script requires exact path resolution:
 
-1.  **Bootstrap Script (`common/scripts/bootstrap-types.js`)**: Must correctly resolve paths to `common/src/types/api` to find `@tsoaModel` types.
+1.  **Bootstrap Script (`common/scripts/bootstrap-types.js`)**: Resolves paths to `common/src/types/api` using this exact pattern:
     ```javascript
-    // Example path resolution in bootstrap-types.js:
+    // Path resolution in bootstrap-types.js:
     const rootDir = path.resolve(__dirname, '..', '..'); // Resolves to project root from common/scripts
     const typesApiDir = path.join(rootDir, 'common', 'src', 'types', 'api');
     const typesGlob = path.join(typesApiDir, '**/*.ts');
     ```
-2.  **TSOA Configuration (`common/tsoa.json`)**: Paths for `entryFile`, `controllerPathGlobs`, and output directories must be correct relative to the `common` package root (where TSOA is executed by `tsoa-bootstrap.js`).
-3.  **Type Discovery Issues**: If API types aren't being found or generated correctly:
-    *   Check path resolution in `bootstrap-types.js`.
-    *   Verify API type files exist in `common/src/types/api/`.
-    *   Ensure the `@tsoaModel` decorator is correctly applied in JSDoc comments.
-    *   Ensure controllers in `common/src/controllers` import API types from `@discura/common/schema/types`.
+2.  **TSOA Configuration (`common/tsoa.json`)**: All paths must be specified relative to the `common` package root:
+    ```json
+    {
+      "entryFile": "./src/index.ts",
+      "controllerPathGlobs": ["./src/controllers/**/*.ts"],
+      "routes": {
+        "routesDir": "./src/routes"
+      },
+      "spec": {
+        "outputDirectory": "./src/schema"
+      },
+      "modelsPathGlobs": ["./src/types/api/**/*.ts"]
+    }
+    ```
+3.  **When API Types Are Not Found During Generation**:
+    *   Verify path resolution in `bootstrap-types.js` matches the example above
+    *   Confirm API type files exist in `common/src/types/api/` folder
+    *   Ensure the `@tsoaModel` decorator is correctly formatted in JSDoc comments (see TSOA Decorator Detection section)
+    *   Verify controllers in `common/src/controllers` import API types from `../types`
+    *   Set `DEBUG_MODE = true` in `common/scripts/tsoa-bootstrap.js` and check the temporary files created
 
 ### Absolutely DO NOT
 
--   ❌ Edit any generated files (e.g., `frontend/src/api/generated/*`, `common/src/schema/*`, `common/src/routes/routes.ts`).
+-   ❌ Edit any generated files (e.g., `frontend/src/api/generated/*`, `frontend/src/api/schema.ts`, `common/src/schema/*`, `common/src/routes/routes.ts`).
 -   ❌ Hard-code API paths in frontend or backend code; use generated clients or route constants.
 -   ❌ Define API types outside of `common/src/types/api/`.
 -   ❌ Add leading slashes to TSOA `@Route` paths (e.g., use `@Route("bots")` not `@Route("/bots")`).
--   ❌ Import API types into the frontend directly from `@discura/common/schema/types` or `@discura/common/src/types/api/*`. Use the generated frontend client, accessed via `src/api` (or `../api`, from `frontend/src/api/index.ts`).
+-   ❌ Import API types into the frontend directly from `@discura/common/schema/types` or `@discura/common/src/types/api/*`. Use the generated frontend client, accessed via `src/api` (or `../api`, from `frontend/src/api/index.ts`). Avoid direct imports from `frontend/src/api/generated/**` in application code (pages, components); use the `frontend/src/api/index.ts` facade.
 -   ❌ Import types directly between controllers if they are API types; use `@discura/common/schema/types`.
 -   ❌ Duplicate type definitions across frontend, backend, or within common.
 -   ❌ Define shared logic or constants outside the `@discura/common` package.
 -   ❌ Define non-API shared types with the `@tsoaModel` decorator or place them in `common/src/types/api/`.
+
+### Frontend Import Patterns for API Types
+
+When importing API types in frontend code:
+
+1. **ALWAYS** import from the API facade:
+   ```typescript
+   // Correct import pattern for frontend components and pages
+   import { BotResponseDto, CreateBotRequest } from 'src/api'; 
+   // OR (depending on file location relative to src/api/index.ts)
+   import { BotResponseDto, CreateBotRequest } from '../api';
+   ```
+
+2. **NEVER** import directly from generated files:
+   ```typescript
+   // INCORRECT - DO NOT DO THIS
+   import { BotResponseDto } from 'src/api/generated/models/BotResponseDto';
+   import { CreateBotRequest } from 'src/api/generated/models/CreateBotRequest';
+   ```
+
+3. **NEVER** import API types from common directly in frontend code:
+   ```typescript
+   // INCORRECT - DO NOT DO THIS
+   import { BotResponseDto } from '@discura/common/schema/types';
+   import { CreateBotRequest } from '@discura/common/src/types/api/bot';
+   ```
+
+The `frontend/src/api/index.ts` file MUST re-export all needed API types and services from the generated code:
+
+```typescript
+// Example of correct frontend/src/api/index.ts facade
+export * from './generated/models/BotResponseDto';
+export * from './generated/models/CreateBotRequest';
+export * from './generated/services/BotService';
+// ...other exports
+```
+
+### Frontend API Integration Patterns
+
+When implementing frontend API integration, follow these exact patterns:
+
+1. **API Client Usage**:
+   ```typescript
+   // In a React component or store
+   import { BotsService, BotResponseDto } from 'src/api';
+   
+   // Fetch bots
+   const fetchBots = async () => {
+     try {
+       const response = await BotsService.getUserBots();
+       return response.bots;
+     } catch (error) {
+       // Handle error appropriately
+       console.error('Failed to fetch bots:', error);
+       throw error;
+     }
+   };
+   ```
+
+2. **Error Handling**:
+   ```typescript
+   import { ErrorResponseDto } from 'src/api';
+   
+   try {
+     await BotsService.createBot(newBot);
+   } catch (error) {
+     // The generated client provides typed error responses
+     if (error.status === 400) {
+       const errorData = error.body as ErrorResponseDto;
+       // Handle validation errors
+       setErrors(errorData.errors || {});
+     } else if (error.status === 401) {
+       // Handle unauthorized
+       authStore.redirectToLogin();
+     } else {
+       // Handle unexpected errors
+       showErrorToast('An unexpected error occurred');
+     }
+   }
+   ```
+
+3. **Request Cancellation**:
+   ```typescript
+   import { CancelablePromise } from 'src/api';
+   
+   // Store the promise to allow cancellation
+   let currentRequest: CancelablePromise<any> | null = null;
+   
+   const fetchData = () => {
+     // Cancel previous request if it exists
+     if (currentRequest) {
+       currentRequest.cancel();
+     }
+     
+     // Create new request
+     currentRequest = ApiService.getData();
+     
+     currentRequest
+       .then(response => {
+         setData(response);
+       })
+       .catch(error => {
+         if (error.isCancelled) {
+           // Request was cancelled, no need to handle
+           return;
+         }
+         // Handle actual errors
+         setError(error);
+       })
+       .finally(() => {
+         currentRequest = null;
+       });
+   };
+   
+   // Always cancel pending requests on component unmount
+   useEffect(() => {
+     return () => {
+       if (currentRequest) {
+         currentRequest.cancel();
+       }
+     };
+   }, []);
+   ```
+
+4. **File Upload**:
+   ```typescript
+   const uploadFile = async (file: File) => {
+     const formData = new FormData();
+     formData.append('file', file);
+     
+     // Use the generated API client for uploads
+     return await UploadService.uploadFile({
+       formData
+     });
+   };
+   ```
+
+These patterns leverage the type safety of the generated API client while maintaining clean, consistent code structure throughout the application.
 
 ## Common Patterns
 
@@ -280,13 +440,54 @@ The `generate-api-types.sh` script depends on correct path resolution:
 -   **Backend Controllers**: Catch service errors and map them to appropriate HTTP status codes and response DTOs (e.g., `ErrorResponseDto` from `@discura/common/schema/types`).
 -   **Frontend**: Handle API errors from the generated client, update UI accordingly (e.g., show toasts, error messages).
 
-## Module Resolution
+### Module Resolution Specifics
 
-### Common Package as Scoped Package
+The exact configuration for resolving `@discura/common` package in both frontend and backend:
 
-The "common" package is implemented as a scoped package `@discura/common` for both frontend and backend:
+1. **Project References Configuration**:
+   ```json
+   // In common/tsconfig.json
+   {
+     "compilerOptions": {
+       "composite": true,
+       // other options...
+     }
+   }
 
-1.  **Import Pattern**: Use the scoped package name for imports.
+   // In backend/tsconfig.json and frontend/tsconfig.json
+   {
+     "references": [
+       { "path": "../common" }
+     ]
+   }
+   ```
+
+2. **Path Mapping Configuration**:
+   ```json
+   // In backend/tsconfig.json and frontend/tsconfig.json
+   "compilerOptions": {
+     "baseUrl": "src",
+     "paths": {
+       "@discura/common": ["../../common/src"],
+       "@discura/common/*": ["../../common/src/*"] 
+     }
+   }
+   ```
+
+3. **Package Dependency Configuration**:
+   ```json
+   // In backend/package.json and frontend/package.json
+   "dependencies": {
+     "@discura/common": "file:../common"
+   }
+   ```
+
+These configurations MUST be maintained exactly as shown to ensure proper module resolution throughout the project.
+
+### Shared Code Pattern
+
+1.  **Define Once**: All shared code (types, constants, utilities, TSOA controller definitions) in `@discura/common`.
+2.  **Import Correctly**: Use the scoped package name for imports.
     ```typescript
     // Correct
     import { MyApiType } from "@discura/common/schema/types";
@@ -298,53 +499,6 @@ The "common" package is implemented as a scoped package `@discura/common` for bo
     // import { Something } from "../common/src/types";
     ```
 
-2.  **Package Configuration**: `backend/package.json` and `frontend/package.json` list `@discura/common` as a file dependency:
-    ```json
-    // backend/package.json and frontend/package.json
-    "dependencies": {
-      "@discura/common": "file:../common",
-      // other dependencies...
-    }
-    ```
-    After `npm install`, this creates a symlink in `node_modules/@discura/common`.
-
-3.  **Type Resolution (TypeScript `tsconfig.json`)**:
-    *   **`paths`**: Each package's `tsconfig.json` should configure `paths` to map `@discura/common` to its location. This is crucial for development when the symlink might not be immediately recognized by the editor or for build tools.
-        ```json
-        // In backend/tsconfig.json and frontend/tsconfig.json
-        {
-          "compilerOptions": {
-            "baseUrl": ".", // Or "src" if source files are in src
-            "paths": {
-              "@discura/common": ["../common"], // Points to the common package directory
-              "@discura/common/*": ["../common/src/*", "../common/dist/*"] // Specific sub-paths
-            }
-          }
-        }
-        ```
-    *   **`typeRoots`**: Include `../common/dist` (or the symlinked path via `node_modules/@discura/common/dist`) if necessary, though `paths` and project references are generally preferred. The main `typeRoots` are usually `./node_modules/@types`.
-        ```json
-        // In backend/tsconfig.json and frontend/tsconfig.json
-        "typeRoots": ["./node_modules/@types", "../common/dist"]
-        ```
-    *   **`references`**: Project references are key for monorepo setups. Each package (`backend`, `frontend`) should reference the `common` package. The root `tsconfig.json` can also manage these.
-        ```json
-        // In backend/tsconfig.json and frontend/tsconfig.json
-        "references": [{ "path": "../common" }]
-
-        // In root tsconfig.json (if using solution-style builds)
-        "references": [
-            { "path": "./common" },
-            { "path": "./backend" },
-            { "path": "./frontend" }
-        ]
-        ```
-    *   **`composite: true`**: Required in `tsconfig.json` for packages that are referenced by others. `common/tsconfig.json` must have this.
-
-### Shared Code Pattern
-
-1.  **Define Once**: All shared code (types, constants, utilities, TSOA controller definitions) in `@discura/common`.
-2.  **Import Correctly**: Use the scoped package import `@discura/common/*`.
 3.  **No Duplication**: Critical.
 4.  **No Direct Cross-Package Imports**: Apart from importing `@discura/common`.
 
@@ -376,13 +530,13 @@ The "common" package is implemented as a scoped package `@discura/common` for bo
 
 1.  **`tsconfig.base.json` (Root)**: Contains common compiler options inherited by all packages.
 2.  **Main Package Configurations**:
-    *   `common/tsconfig.json`: Extends base, `composite: true`, specific settings for common lib.
+    *   `common/tsconfig.json`: Extends base, requires `composite: true`, contains specific settings for common lib.
     *   `backend/tsconfig.json`: Extends base, references `common`.
-    *   `frontend/tsconfig.json`: Extends base, references `common`, ESM specific settings.
+    *   `frontend/tsconfig.json`: Extends base, references `common`, includes ESM specific settings.
 3.  **Special-Purpose Configurations**:
-    *   `common/tsconfig.tsoa.json`: Used by TSOA during generation, configured within `common/tsoa.json`. It should align with `common/tsconfig.json` but might have specific overrides for TSOA's needs (e.g., ensuring it can resolve types from `@discura/common/schema/types` during generation).
-    *   `frontend/tsconfig.node.json`: For Vite config file (`vite.config.ts`) itself, if it needs different settings (e.g., `module: CommonJS` if Vite config isn't ESM).
-    *   `frontend/tsconfig.app.json` (if present): Might be used by Vite for the application code, often similar to `frontend/tsconfig.json`.
+    *   `common/tsconfig.tsoa.json`: Used specifically by TSOA during generation, configured within `common/tsoa.json`. Contains overrides for TSOA's type resolution, including paths to ensure it can resolve types from `@discura/common/schema/types` during generation.
+    *   `frontend/tsconfig.node.json`: Used exclusively for the Vite config file (`vite.config.ts`), configured with `module: CommonJS`.
+    *   `frontend/tsconfig.app.json`: Used by Vite for the application code, mostly identical to `frontend/tsconfig.json` but with specific configuration for the React application.
 
 ### JS File Emission
 
@@ -421,7 +575,7 @@ The "common" package is implemented as a scoped package `@discura/common` for bo
 
 1.  **Controllers in Common Package**: `common/src/controllers/` define API contracts.
     *   Use TSOA decorators (`@Route`, `@Get`, `@Post`, `@Security`, `@Tags`, `@Request`, `@Body`, `@Path`, `@Query`, `@Header`).
-    *   Import API types from `@discura/common/schema/types`.
+    *   Import API types from `../types` (the current implementation).
     *   Import `Request as ExpressRequest` from `express` for `@Request()` decorator.
     *   Placeholder implementations: `throw new Error('Method not implemented in common package');`
 
@@ -437,73 +591,120 @@ The "common" package is implemented as a scoped package `@discura/common` for bo
     *   `"controllerPathGlobs": ["./src/controllers/**/*.ts"]`.
     *   `"routes.routesDir": "./src/routes"` (TSOA generates `routes.ts` here).
     *   `"spec.outputDirectory": "./src/schema"` (TSOA generates `swagger.json` here).
-    *   Ensure `compilerOptions` within `tsoa.json` are compatible and allow resolving `@discura/common/schema/types`.
+    *   `"modelsPathGlobs": ["./src/types/api/**/*.ts"]` (helps TSOA find all types with `@tsoaModel`).
+    *   `"jsdoc": { "enabled": true }` (ensures TSOA correctly processes JSDoc decorators).
 
-5.  **Working Directory**: `generate-api-types.sh` ensures TSOA runs via `common/scripts/tsoa-bootstrap.js`, which sets the working directory to `common/`.
+5.  **Debug Features**: `common/scripts/tsoa-bootstrap.js` includes debug features (controlled by a DEBUG_MODE flag) that create temporary files for troubleshooting TSOA issues. These include:
+    *   Creating a direct reference file that re-exports all API types
+    *   Creating a debug types file that contains all API type definitions
+    *   Patching controller imports temporarily during generation
+
+6.  **Working Directory**: `generate-api-types.sh` ensures TSOA runs via `common/scripts/tsoa-bootstrap.js`, which sets the working directory to `common/`.
+
+7.  **Route Path Patterns**: 
+    *   Class-level routes use route constants: `@Route(CONTROLLER_ROUTES.BOTS)` 
+    *   Individual endpoints can use either:
+        *   Constants for complex paths: `@Get(ROUTES.SOME_ENDPOINT)`
+        *   Simple strings for basic paths: `@Get('/')`, `@Get('{id}')`
+    *   Never use leading slashes in paths (e.g., use `@Get('users')` not `@Get('/users')`)
 
 ## API Type Troubleshooting
 
 ### Circular Dependencies
 
-1.  **Bootstrap Before TSOA**: `bootstrap-types.js` (creates placeholders in `common/src/schema/types.ts`) MUST run before TSOA generates routes. This is handled by `generate-api-types.sh`.
-2.  **Controller Imports**: Controllers in `common/src/controllers` MUST import API types from `@discura/common/schema/types` (which are initially placeholders).
-3.  **Non-API Type Dependencies**: If a Non-API shared type (defined in `common/src/types/`, not `common/src/types/api/`) needs to reference a type that originates from an API definition (i.e., defined in `common/src/types/api/` and later generated into `@discura/common/schema/types`), the Non-API type should import it from the generated path (`@discura/common/schema/types`) after the generation process. Direct imports from `common/src/types/api/*` into `common/src/types/*` files are problematic before generation. If such a dependency is needed for internal logic and might cause issues during the initial bootstrap phase (before `common/src/schema/types.ts` is fully populated), consider using a generic type (e.g., `string` for an enum) in the Non-API type as a temporary measure, or ensure the shared concept is primarily defined as a Non-API type if its use is broader than just the API contract.
+1.  **Bootstrap Before TSOA**: `bootstrap-types.js` creates placeholders in `common/src/schema/types.ts` and MUST run before TSOA generates routes. This is handled automatically by `generate-api-types.sh`.
+
+2.  **Controller Import Pattern**: Controllers in `common/src/controllers/` currently import API types from `../types`, not from `@discura/common/schema/types` as originally instructed. The `tsoa-bootstrap.js` script handles this by temporarily patching imports during generation to allow TSOA to properly resolve types.
+
+3.  **Temporary Helper Files**: During generation, several temporary files are created to assist with type resolution:
+    * A direct reference file in `common/src/types/api/tsoa-reference.ts` that re-exports all API types
+    * Debug type files in a temporary directory if `DEBUG_MODE = true` is set
+    * Backup copies of controllers before patching imports
+
+4.  **Non-API Type Dependencies**: If a Non-API shared type (defined in `common/src/types/`, not `common/src/types/api/`) needs to reference a type that originates from an API definition (defined in `common/src/types/api/`), the Non-API type should import it from the generated path (`@discura/common/schema/types`) after the generation process.
     ```typescript
     // common/src/types/index.ts
     // Example of a Non-API shared type
+    import { ApiSpecificStatus } from '@discura/common/schema/types';
+    
     export interface MyInternalDataObject { 
       id: string;
       name: string;
-      // If ApiSpecificStatus is an enum defined in common/src/types/api/ and generated to @discura/common/schema/types,
-      // import it from '@discura/common/schema/types' here.
-      // import { ApiSpecificStatus } from '@discura/common/schema/types'; // This is fine AFTER generation
-      // status: ApiSpecificStatus; 
-
-      // If direct import from common/src/types/api/* is attempted before generation, it can fail.
-      // For such cases, or if it's a truly internal status distinct from API:
-      internalStatus: string; // Or map to a dedicated Non-API MyInternalStatusEnum
+      status: ApiSpecificStatus; // Imported from generated schema/types
     }
     ```
-    The `BotStatus` enum example in the guidelines (defined in `common/src/types/index.ts`) is a Non-API shared type, which is the correct approach for enums/types used purely for internal logic across frontend/backend and not primarily as data structures for API request/responses.
+    
+5.  **Debugging Generation Issues**: If you encounter circular dependency issues:
+    * Set `DEBUG_MODE = true` in `common/scripts/tsoa-bootstrap.js` to preserve temporary files
+    * Check the temporary files in `common/src/temp/debug/` to see which types are being found
+    * Verify that `common/src/types/api/index.ts` correctly re-exports all API types
+    * Ensure controllers in `common/src/controllers/` import API types from `../types`
 
 ### TSOA Controller Import Issues
 
-Correct import patterns for `common/src/controllers/*.ts`:
+The exact import pattern requirements for `common/src/controllers/*.ts` files are:
+
 1.  **TSOA Components**: `import { Body, Controller, Get, ... } from 'tsoa';`
-2.  **API Types**: `import { UserResponseDto, CreateBotRequest } from '@discura/common/schema/types';` (CRITICAL)
-3.  **Non-API Shared Types**: `import { SomeInternalEnum } from '@discura/common/types';`
-4.  **Route Constants**: `import { ROUTES } from '@discura/common/types/routes';`
-5.  **Express Request**: `import { Request as ExpressRequest } from 'express';` (for `@Request()` decorator)
+2.  **API Types**: `import { UserResponseDto, CreateBotRequest } from '../types';` (Required current implementation)
+3.  **Non-API Shared Types**: `import { SomeInternalEnum } from '../types';`
+4.  **Route Constants**: `import { CONTROLLER_ROUTES, ROUTES } from '../types/routes';`
+5.  **Express Request**: `import { Request as ExpressRequest } from 'express';` (For `@Request()` decorator)
+
+The `tsoa-bootstrap.js` script temporarily patches these imports during generation to ensure proper type resolution. Do not modify this pattern as it will break the API generation process.
 
 ### Script Execution and Clean Build
 
-1.  **`./generate-api-types.sh`**: Always run from project root after changes to `common/src/types/api/` or `common/src/controllers/`.
-2.  **`common` prebuild script**: `common/package.json` has a `prebuild` script that attempts to run `generate-api-types.sh` if `src/schema` or `src/routes` are missing.
-3.  **Full Clean Build**:
+1.  **`./generate-api-types.sh`**: ALWAYS run from project root after ANY changes to `common/src/types/api/` or `common/src/controllers/`.
+2.  **`common` prebuild script**: `common/package.json` includes a `prebuild` script that runs `generate-api-types.sh` if `src/schema` or `src/routes` directories are missing.
+3.  **Full Clean Build Process**:
     ```bash
     npm run clean # In root, or per package
     npm run install # In root, to relink @discura/common
     ./generate-api-types.sh
     npm run build # In root (or common, then backend, then frontend)
     ```
-    The `common` package might have `npm run build:full` which does `npm run clean && cd .. && ./generate-api-types.sh && npm run build`.
+    The `common` package has a `npm run build:full` command that executes `npm run clean && cd .. && ./generate-api-types.sh && npm run build`.
 
-4.  **Missing Declaration Files (`.d.ts`) for `@discura/common`**:
-    *   Ensure `@discura/common` built successfully (`npm run build -w @discura/common` or via root build).
-    *   Check `common/dist` for `.d.ts` files.
-    *   Ensure `frontend/tsconfig.json` and `backend/tsconfig.json` correctly reference `common` (via `paths` and `references`).
-    *   The `auth.d.ts`, `routes.d.ts`, `schema.d.ts` files in `backend/src/types` and `frontend/src/types` (or `frontend/src/shims-*.d.ts`) are crucial for resolving implicit type library errors if `typeRoots` in `tsconfig.json` includes these directories for that purpose.
+4.  **Resolving Missing Declaration Files (`.d.ts`) for `@discura/common`**:
+    *   First, ensure `@discura/common` built successfully with `npm run build -w @discura/common` or via root build.
+    *   Verify that `.d.ts` files exist in `common/dist`.
+    *   Confirm that `frontend/tsconfig.json` and `backend/tsconfig.json` correctly reference `common` through `paths` and `references`.
+    *   Ensure the declaration files `auth.d.ts`, `routes.d.ts`, `schema.d.ts` exist in `backend/src/types` and `frontend/src/types` (or `frontend/src/shims-*.d.ts`).
 
 ### TSOA Decorator Detection
 
-1.  **JSDoc Format**: `@tsoaModel` must be in a JSDoc block:
-    ```typescript
-    /**
-     * My API Model.
-     * @tsoaModel
-     */
-    export interface MyApiModel { /* ... */ }
-    ```
+For API types to be properly detected during generation:
+
+1. **Required JSDoc Format**: The `@tsoaModel` tag MUST:
+   ```typescript
+   /**
+    * Description of your model (optional)
+    * @tsoaModel
+    */
+   export interface MyApiModel {
+     // properties here
+   }
+   ```
+
+2. **Common Detection Issues**:
+   - Tag must be within a JSDoc comment block (with `/**` and `*/`)
+   - Single-line comments `//` are NOT detected
+   - The tag must be exact: `@tsoaModel` (no spaces, lowercase "tsoa", uppercase "M")
+   - Export must be directly after the JSDoc block with no lines in between
+
+3. **Testing Detection**:
+   To verify your type is being detected properly:
+   ```bash
+   # Enable debug mode for type detection
+   sed -i '' 's/const DEBUG_MODE = false;/const DEBUG_MODE = true;/' common/scripts/tsoa-bootstrap.js
+   
+   # Run generation
+   ./generate-api-types.sh
+   
+   # Check debug files
+   ls -la common/src/temp/debug/
+   cat common/src/temp/debug/tsoa-reference.ts
+   ```
 
 ### Implicit Type Library Errors (TS2688 for 'auth', 'routes', 'schema')
 
@@ -540,7 +741,6 @@ These errors (e.g., "Cannot find type definition file for 'auth'") occur if Type
     *   Resolved module resolution errors.
 
 2.  **TSOA Migration to Common Package**: ✅ Completed.
-    *   TSOA controllers defined in `common/src/controllers`.
     *   Implementations in backend.
     *   Authentication module interface in `common`, implementation in `backend`.
     *   `generate-api-types.sh` script and TSOA configurations updated.
@@ -550,10 +750,11 @@ These errors (e.g., "Cannot find type definition file for 'auth'") occur if Type
     *   Addressed implicit type library errors (TS2688 for 'auth', 'routes', 'schema') with explicit `.d.ts` files in `backend/src/types` and `frontend/src/types` (or `frontend/src/shims.d.ts`).
     *   Build process ensures necessary generated files are present.
 
-4.  **API Type Generation Pipeline**: ✅ Completed.
-    *   `bootstrap-types.js` correctly detects `@tsoaModel`.
-    *   Circular dependencies in generation process resolved.
-    *   Build order (bootstrap -> TSOA spec/routes -> sync types -> build common -> gen frontend client) is correct.
+4.  **API Type Generation Pipeline**: ✅ Completed and Stabilized.
+    *   `bootstrap-types.js` correctly detects `@tsoaModel` for all API types.
+    *   TSOA controllers correctly reference API types and define routes, ensuring accurate schema generation (e.g., for types like `LLMProvider`, `ImageProvider`).
+    *   Circular dependencies in generation process resolved by the established bootstrap mechanism.
+    *   Build order (bootstrap -> TSOA spec/routes -> sync types -> build common -> gen frontend client) is confirmed correct and operational.
 
 5.  **Frontend Type Definition Alignment**: ✅ Completed.
     *   Ensured frontend types (e.g., for Bot, User) directly use or correctly alias generated API types via `frontend/src/api/index.ts`, eliminating local overrides and adhering to single source of truth.
@@ -579,6 +780,29 @@ These errors (e.g., "Cannot find type definition file for 'auth'") occur if Type
 6.  Further enhance error handling and user feedback mechanisms.
 7.  Complete all necessary documentation.
 
+## Using Context7
+
+When you're uncertain about how to use a specific program, tool, framework, component, class, or API within the Discura project, leverage Context7 to get up-to-date documentation:
+
+1. **Activate Context7**: Add the phrase `use context7` at the end of your query when asking about any library, API, or framework you're unsure about. For example:
+   - "How do I implement TSOA controllers in the common package? use context7"
+   - "What's the best way to define API types with @tsoaModel? use context7"
+   - "How to use Zustand for state management in our frontend? use context7"
+
+2. **Benefits of Context7**:
+   - Retrieves current, version-specific documentation directly from source
+   - Provides relevant code examples that work with our project structure
+   - Eliminates outdated or hallucinated API references
+   - Ensures compatibility with our architecture
+
+3. **When to Use Context7**:
+   - When implementing a new feature using an unfamiliar library
+   - When troubleshooting API integration issues
+   - When uncertain about the correct syntax or usage pattern
+   - When documentation from other sources seems outdated or contradictory
+
+Context7 is particularly valuable for understanding correct implementation patterns for TSOA, Sequelize, Discord.js, and other libraries central to our project architecture.
+
 ---
 
 **REMEMBER:** The golden rule is to maintain a single source of truth. Define API types in `common/src/types/api/` with `@tsoaModel` decorator, run the generation script, and use the generated files.
@@ -588,3 +812,47 @@ These errors (e.g., "Cannot find type definition file for 'auth'") occur if Type
 **Note**: NEVER encode hard coded paths, schema, etc. ABSOLUTELY NO hard-coded paths, schema, etc. should exist in files other than the generation files. EVERYTHING of such nature must be generated to keep ONLY and ONLY a single source of truth.
 
 NEVER edit generated files (e.g., `frontend/src/api/generated/`, `frontend/src/api/schema.ts`, `common/src/schema/*`, `common/src/routes/*`). ONLY edit the source of truth (`common/src/types/api/` for API types, `common/src/controllers/` for routes) so the changes will be reflected in the generated files after running `./generate-api-types.sh`.
+
+## Troubleshooting Guide
+
+### Common API Generation Issues
+
+1. **API Types Not Detected**
+   * **Problem**: Types with `@tsoaModel` are not being included in generated schema
+   * **Solutions**:
+     1. Verify the JSDoc format is exactly correct: `/** @tsoaModel */`
+     2. Confirm types are in `common/src/types/api/` directory
+     3. Set `DEBUG_MODE = true` in `common/scripts/tsoa-bootstrap.js` and run generation again
+     4. Check generated temporary files in `common/src/temp/debug/`
+
+2. **TSOA Not Finding Controllers**
+   * **Problem**: Routes not generated or missing endpoints
+   * **Solutions**:
+     1. Ensure controllers are in `common/src/controllers/`
+     2. Verify controller class has `@Route()` decorator
+     3. Check each endpoint has `@Get()`, `@Post()`, etc. decorators
+     4. Confirm `controllerPathGlobs` in `common/tsoa.json` is correct
+
+3. **Import Errors After Generation**
+   * **Problem**: TypeScript errors when importing generated types
+   * **Solutions**:
+     1. **Backend**: Use `import { Type } from '@discura/common/schema/types';`
+     2. **Frontend**: Use `import { Type } from 'src/api';` (or path to `frontend/src/api/index.ts`)
+     3. Check that `common/dist` contains declaration files
+     4. Verify `package.json` dependencies include `"@discura/common": "file:../common"`
+
+4. **API Calls Failing**
+   * **Problem**: Frontend API calls return 404 Not Found
+   * **Solutions**:
+     1. Ensure frontend uses `/api` prefix for all requests
+     2. Verify Vite proxy configuration in `frontend/vite.config.ts`
+     3. Check backend router registration for `common/dist/routes/routes.js`
+     4. Confirm controllers are properly implemented in backend
+
+5. **Type Discrepancies**
+   * **Problem**: Frontend and backend have different type definitions
+   * **Solutions**:
+     1. NEVER define duplicate types
+     2. Run `./generate-api-types.sh` after ANY change to API types
+     3. Ensure frontend imports ONLY from `frontend/src/api/index.ts`
+     4. Verify backend imports from `@discura/common/schema/types`

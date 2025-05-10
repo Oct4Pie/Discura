@@ -21,10 +21,10 @@ import {
   BotStatus,
   CreateBotRequest,
   UpdateBotRequest,
-  LLMProvider,
   ErrorResponseDto,
   MessageResponseDto
-  } from "../schema/types";
+} from "../types";
+
 
 /**
  * Controller for managing Discord bots

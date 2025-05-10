@@ -1,11 +1,11 @@
 /**
- * Bot Configuration API Types
+ * Image Provider Enum
  * @tsoaModel
  */
 export enum ImageProvider {
-  OPENAI = 'openai',
-  STABILITY = 'stability',
-  MIDJOURNEY = 'midjourney'
+  OPENAI = "openai",
+  STABILITY = "stability",
+  MIDJOURNEY = "midjourney",
 }
 
 /**
@@ -13,7 +13,7 @@ export enum ImageProvider {
  */
 export interface ImageGenerationConfig {
   enabled: boolean;
-  provider: ImageProvider; // Changed from string literal to ImageProvider enum
+  provider: ImageProvider;
   apiKey?: string;
   model?: string;
 }
@@ -25,7 +25,7 @@ export interface KnowledgeBase {
   id: string;
   name: string;
   content: string;
-  type: 'text' | 'file';
+  type: "text" | "file";
   source?: string;
 }
 
@@ -51,6 +51,17 @@ export interface Tool {
 }
 
 /**
+ * LLM Provider Enum
+ * @tsoaModel
+ */
+export enum LLMProvider {
+  OPENAI = "openai",
+  ANTHROPIC = "anthropic",
+  GOOGLE = "google",
+  CUSTOM = "custom",
+}
+
+/**
  * Bot Configuration Structure
  * @tsoaModel
  */
@@ -59,7 +70,7 @@ export interface BotConfiguration {
   personality: string;
   traits: string[];
   backstory: string;
-  llmProvider: 'openai' | 'anthropic' | 'google' | 'custom'; // This was a string literal, keeping as is for now. Could be an enum.
+  llmProvider: LLMProvider;
   llmModel: string;
   apiKey: string; // Assuming this is the LLM API Key
   knowledge: KnowledgeBase[];

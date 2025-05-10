@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { ImageGenerationConfig } from './ImageGenerationConfig';
 import type { KnowledgeBase } from './KnowledgeBase';
+import type { LLMProvider } from './LLMProvider';
 import type { Tool } from './Tool';
 /**
  * Placeholder interface for BotConfiguration
@@ -14,7 +15,7 @@ export type BotConfiguration = {
     personality: string;
     traits: Array<string>;
     backstory: string;
-    llmProvider: BotConfiguration.llmProvider;
+    llmProvider: LLMProvider;
     llmModel: string;
     apiKey: string;
     knowledge: Array<KnowledgeBase>;
@@ -22,12 +23,4 @@ export type BotConfiguration = {
     toolsEnabled: boolean;
     tools: Array<Tool>;
 };
-export namespace BotConfiguration {
-    export enum llmProvider {
-        OPENAI = 'openai',
-        ANTHROPIC = 'anthropic',
-        GOOGLE = 'google',
-        CUSTOM = 'custom',
-    }
-}
 

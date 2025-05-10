@@ -1,13 +1,10 @@
 /**
- * Reference declaration file to help TypeScript resolve 'schema' module paths
- * if they are being treated as implicit type libraries.
+ * Schema type definitions
  * 
- * Following Discura Project Guidelines to maintain a single source of truth
+ * This file re-exports types from the generated API models
  */
 
-/// <reference types="@discura/common/schema" />
-
-// Export all types from @discura/common/schema
-declare module 'schema' {
-  export * from '@discura/common/schema';
+declare namespace Schema {
+  // Export all types from generated API models
+  export * from '../api/generated';
 }

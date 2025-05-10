@@ -5,6 +5,7 @@
 import type { LLMCompletionRequestDto } from '../models/LLMCompletionRequestDto';
 import type { LLMCompletionResponseDto } from '../models/LLMCompletionResponseDto';
 import type { LLMModelsResponseDto } from '../models/LLMModelsResponseDto';
+import type { LLMProvider } from '../models/LLMProvider';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -48,6 +49,50 @@ export class LlmService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid Request`,
+                500: `Server Error`,
+            },
+        });
+    }
+    /**
+     * Get available LLM providers
+     *
+     * Returns the list of supported LLM providers in the system.
+     * This helps clients know which providers are available.
+     * @returns any Ok
+     * @throws ApiError
+     */
+    public static getProviders(): CancelablePromise<{
+        providers: Array<LLMProvider>;
+    }> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/undefined/providers',
+            errors: {
+                500: `Server Error`,
+            },
+        });
+    }
+    /**
+     * Check if a specific provider is available
+     *
+     * Validates if the requested LLM provider is supported and available.
+     * @param provider
+     * @returns any Ok
+     * @throws ApiError
+     */
+    public static checkProviderAvailability(
+        provider: LLMProvider,
+    ): CancelablePromise<{
+        available: boolean;
+    }> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/undefined/providers/{provider}',
+            path: {
+                'provider': provider,
+            },
+            errors: {
+                404: `Provider Not Found`,
                 500: `Server Error`,
             },
         });

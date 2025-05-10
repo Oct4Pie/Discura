@@ -7,7 +7,8 @@ import {
   Security,
   Tags,
   Request,
-  Response
+  Response,
+  Path,
 } from "tsoa";
 import { ROUTES } from "../types/routes";
 import {
@@ -16,9 +17,9 @@ import {
   LLMCompletionMessage,
   LLMCompletionRequestDto,
   LLMCompletionResponseDto,
+  ErrorResponseDto,
   LLMProvider,
-  ErrorResponseDto
- } from "../schema/types";
+} from "../types";
 import { Request as ExpressRequest } from "express";
 
 /**
@@ -38,10 +39,10 @@ export class LLMController extends Controller {
    */
   @Get(ROUTES.LLM_ENDPOINTS.MODELS)
   @Security("jwt")
-  @Response<ErrorResponseDto>(500, 'Server Error')
+  @Response<ErrorResponseDto>(500, "Server Error")
   public async getModels(): Promise<LLMModelsResponseDto> {
     // Implementation will be provided by backend
-    throw new Error('Method not implemented in common package');
+    throw new Error("Method not implemented in common package");
   }
 
   /**
@@ -55,13 +56,51 @@ export class LLMController extends Controller {
    */
   @Post(ROUTES.LLM_ENDPOINTS.COMPLETION)
   @Security("jwt")
-  @Response<ErrorResponseDto>(400, 'Invalid Request')
-  @Response<ErrorResponseDto>(500, 'Server Error')
+  @Response<ErrorResponseDto>(400, "Invalid Request")
+  @Response<ErrorResponseDto>(500, "Server Error")
   public async createChatCompletion(
     @Body() requestBody: LLMCompletionRequestDto,
     @Request() request: ExpressRequest
   ): Promise<LLMCompletionResponseDto> {
     // Implementation will be provided by backend
-    throw new Error('Method not implemented in common package');
+    throw new Error("Method not implemented in common package");
+  }
+
+  /**
+   * Get available LLM providers
+   *
+   * Returns the list of supported LLM providers in the system.
+   * This helps clients know which providers are available.
+   */
+  @Get(ROUTES.LLM_ENDPOINTS.PROVIDERS)
+  @Security("jwt")
+  @Response<ErrorResponseDto>(500, "Server Error")
+  public async getProviders(): Promise<{ providers: LLMProvider[] }> {
+    // This endpoint explicitly uses LLMProvider to ensure it's included in generated types
+    return {
+      providers: [
+        LLMProvider.OPENAI,
+        LLMProvider.ANTHROPIC,
+        LLMProvider.GOOGLE,
+        LLMProvider.CUSTOM,
+      ],
+    };
+  }
+
+  /**
+   * Check if a specific provider is available
+   *
+   * Validates if the requested LLM provider is supported and available.
+   */
+  @Get(ROUTES.LLM_ENDPOINTS.PROVIDER_BY_ID)
+  @Security("jwt")
+  @Response<ErrorResponseDto>(404, "Provider Not Found")
+  @Response<ErrorResponseDto>(500, "Server Error")
+  public async checkProviderAvailability(
+    @Path("provider") provider: LLMProvider
+  ): Promise<{ available: boolean }> {
+    // Implementation will be provided by backend
+    // This parameter explicitly uses LLMProvider to ensure it's included in generated types
+    throw new Error("Method not implemented in common package");
   }
 }

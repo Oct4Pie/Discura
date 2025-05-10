@@ -13,6 +13,7 @@ export const ROUTES = {
   BOTS: 'bots',
   LLM: 'llm',
   KNOWLEDGE: 'knowledge',
+  CONSTANTS: 'constants',
   
   // Auth-related endpoints
   AUTH_ENDPOINTS: {
@@ -34,7 +35,9 @@ export const ROUTES = {
   // LLM-related endpoints
   LLM_ENDPOINTS: {
     MODELS: 'models',
-    COMPLETION: 'chat/completions'
+    COMPLETION: 'chat/completions',
+    PROVIDERS: 'providers',
+    PROVIDER_BY_ID: 'providers/{provider}'
   }
 };
 
@@ -65,7 +68,14 @@ export const API_ROUTES = {
   LLM: {
     BASE: `/api/${ROUTES.LLM}`,
     MODELS: `/api/${ROUTES.LLM}/${ROUTES.LLM_ENDPOINTS.MODELS}`,
-    COMPLETION: `/api/${ROUTES.LLM}/${ROUTES.LLM_ENDPOINTS.COMPLETION}`
+    COMPLETION: `/api/${ROUTES.LLM}/${ROUTES.LLM_ENDPOINTS.COMPLETION}`,
+    PROVIDERS: `/api/${ROUTES.LLM}/${ROUTES.LLM_ENDPOINTS.PROVIDERS}`,
+    PROVIDER_BY_ID: (provider: string) => `/api/${ROUTES.LLM}/${ROUTES.LLM_ENDPOINTS.PROVIDERS}/${provider}`
+  },
+
+  // Constants route
+  CONSTANTS: {
+    BASE: `/api/${ROUTES.CONSTANTS}`
   }
 };
 
@@ -74,9 +84,8 @@ export const CONTROLLER_ROUTES = {
   AUTH: ROUTES.AUTH,
   BOTS: ROUTES.BOTS,
   LLM: ROUTES.LLM,
-  // Fix: Change the Knowledge route to use a path without parameters
-  // This will work better with the TSOA controller implementation
+  CONSTANTS: ROUTES.CONSTANTS, 
   KNOWLEDGE: `${ROUTES.BOTS}/{botId}/${ROUTES.KNOWLEDGE}`
 };
 
-export * from '../routes/routes';
+// Note: Removed redundant export from routes/routes.ts to avoid circular dependency

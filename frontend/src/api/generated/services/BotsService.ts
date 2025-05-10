@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { BotResponseDto } from '../models/BotResponseDto';
-import type { BotsResponseDto } from '../models/BotsResponseDto';
 import type { CreateBotRequest } from '../models/CreateBotRequest';
 import type { MessageResponseDto } from '../models/MessageResponseDto';
 import type { UpdateBotRequest } from '../models/UpdateBotRequest';
@@ -11,20 +10,6 @@ import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class BotsService {
-    /**
-     * List all bots for the authenticated user
-     *
-     * Returns a list of Discord bots owned by the authenticated user,
-     * including their configuration and status.
-     * @returns BotsResponseDto Ok
-     * @throws ApiError
-     */
-    public static getUserBots(): CancelablePromise<BotsResponseDto> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/undefined',
-        });
-    }
     /**
      * Create a new bot
      *

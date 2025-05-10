@@ -1,13 +1,12 @@
 /**
- * Reference declaration file to help TypeScript resolve 'auth' module paths
- * if they are being treated as implicit type libraries.
+ * Auth type definitions
  * 
- * Following Discura Project Guidelines to maintain a single source of truth
+ * This file re-exports authentication-related types from the generated API models
  */
 
-/// <reference types="@discura/common/auth" />
-
-// Export all types from @discura/common/auth
-declare module 'auth' {
-  export * from '@discura/common/auth';
+declare namespace Auth {
+  // Export authentication-related types from generated API
+  export * from '../api/generated/models/UserProfileResponseDto';
+  export * from '../api/generated/models/UserResponseDto';
+  export * from '../api/generated/services/AuthenticationService';
 }

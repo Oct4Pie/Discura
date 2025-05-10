@@ -6,7 +6,7 @@ import {
   LLMCompletionRequestDto, 
   LLMCompletionResponseDto,
   LLMModelData
-} from '@discura/common/types/api';
+} from '@discura/common';
 import { BotAdapter } from '../models/adapters/bot.adapter';
 
 // Interface for LLM response

@@ -5,8 +5,8 @@
  * Discura Project Guidelines to maintain a single source of truth.
  */
 
-// Re-export all common types
-export * from '@discura/common';
+// Export types from generated API
+export * from '../api/generated';
 
 // Re-export API-generated types with frontend-specific names for backward compatibility
 // The Bot type is now just a direct alias to BotResponseDto in bot.ts
@@ -17,8 +17,7 @@ export { toBotModel, toBotModels, BotStatus } from './bot';
 export type { User } from './user';
 export { toUserModel } from './user';
 
-// Additional frontend-specific types can be defined here
-// These are UI-specific types that don't represent shared business entities
+// Define custom types specific to frontend
 export interface TabPanelProps {
   children?: React.ReactNode;
   index: number;

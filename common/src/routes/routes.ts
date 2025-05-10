@@ -4,13 +4,15 @@
 import type { TsoaRoute } from '@tsoa/runtime';
 import {  fetchMiddlewares, ExpressTemplateService } from '@tsoa/runtime';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-import { LLMController } from './../controllers/llm.controller';
-// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-import { KnowledgeController } from './../controllers/knowledge.controller';
-// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AuthController } from './../controllers/auth.controller';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { BotController } from './../controllers/bot.controller';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { KnowledgeController } from './../controllers/knowledge.controller';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { ConstantsController } from './../controllers/constants.controller';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { LLMController } from './../controllers/llm.controller';
 import { expressAuthentication } from './../auth/authentication';
 // @ts-ignore - no great way to install types from subpackage
 import type { Request as ExRequest, Response as ExResponse, RequestHandler, Router } from 'express';
@@ -21,6 +23,316 @@ const expressAuthenticationRecasted = expressAuthentication as (req: ExRequest, 
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
 const models: TsoaRoute.Models = {
+    "UserResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "discordId": {"dataType":"string","required":true},
+            "username": {"dataType":"string","required":true},
+            "discriminator": {"dataType":"string","required":true},
+            "avatar": {"dataType":"string","required":true},
+            "email": {"dataType":"string","required":true},
+            "bots": {"dataType":"array","array":{"dataType":"string"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ErrorResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "message": {"dataType":"string","required":true},
+            "error": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "UserProfileResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "user": {"ref":"UserResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "MessageResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "message": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BotStatus": {
+        "dataType": "refEnum",
+        "enums": ["offline","online","error"],
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "LLMProvider": {
+        "dataType": "refEnum",
+        "enums": ["openai","anthropic","google","custom"],
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "KnowledgeBase": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+            "content": {"dataType":"string","required":true},
+            "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["text"]},{"dataType":"enum","enums":["file"]}],"required":true},
+            "source": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ImageProvider": {
+        "dataType": "refEnum",
+        "enums": ["openai","stability","midjourney"],
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ImageGenerationConfig": {
+        "dataType": "refObject",
+        "properties": {
+            "enabled": {"dataType":"boolean","required":true},
+            "provider": {"ref":"ImageProvider","required":true},
+            "apiKey": {"dataType":"string"},
+            "model": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ToolParameter": {
+        "dataType": "refObject",
+        "properties": {
+            "name": {"dataType":"string","required":true},
+            "type": {"dataType":"string","required":true},
+            "description": {"dataType":"string","required":true},
+            "required": {"dataType":"boolean","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "Tool": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+            "description": {"dataType":"string","required":true},
+            "parameters": {"dataType":"array","array":{"dataType":"refObject","ref":"ToolParameter"},"required":true},
+            "implementation": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BotConfiguration": {
+        "dataType": "refObject",
+        "properties": {
+            "systemPrompt": {"dataType":"string","required":true},
+            "personality": {"dataType":"string","required":true},
+            "traits": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "backstory": {"dataType":"string","required":true},
+            "llmProvider": {"ref":"LLMProvider","required":true},
+            "llmModel": {"dataType":"string","required":true},
+            "apiKey": {"dataType":"string","required":true},
+            "knowledge": {"dataType":"array","array":{"dataType":"refObject","ref":"KnowledgeBase"},"required":true},
+            "imageGeneration": {"ref":"ImageGenerationConfig","required":true},
+            "toolsEnabled": {"dataType":"boolean","required":true},
+            "tools": {"dataType":"array","array":{"dataType":"refObject","ref":"Tool"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BotResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "userId": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+            "discordToken": {"dataType":"string"},
+            "applicationId": {"dataType":"string","required":true},
+            "status": {"ref":"BotStatus","required":true},
+            "intents": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "configuration": {"ref":"BotConfiguration","required":true},
+            "createdAt": {"dataType":"string","required":true},
+            "updatedAt": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BotsResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "bots": {"dataType":"array","array":{"dataType":"refObject","ref":"BotResponseDto"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CreateBotRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "name": {"dataType":"string","required":true},
+            "discordToken": {"dataType":"string","required":true},
+            "applicationId": {"dataType":"string","required":true},
+            "intents": {"dataType":"array","array":{"dataType":"string"}},
+            "configuration": {"ref":"BotConfiguration"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "UpdateBotRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "name": {"dataType":"string"},
+            "discordToken": {"dataType":"string"},
+            "applicationId": {"dataType":"string"},
+            "intents": {"dataType":"array","array":{"dataType":"string"}},
+            "status": {"ref":"BotStatus"},
+            "configuration": {"ref":"BotConfiguration"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "KnowledgeItemDto": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"double","required":true},
+            "title": {"dataType":"string","required":true},
+            "content": {"dataType":"string","required":true},
+            "type": {"dataType":"string","required":true},
+            "priority": {"dataType":"double","required":true},
+            "createdAt": {"dataType":"string","required":true},
+            "updatedAt": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "KnowledgeBaseResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "botId": {"dataType":"string","required":true},
+            "items": {"dataType":"array","array":{"dataType":"refObject","ref":"KnowledgeItemDto"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BotStatusConstants": {
+        "dataType": "refObject",
+        "properties": {
+            "OFFLINE": {"dataType":"string","required":true},
+            "ONLINE": {"dataType":"string","required":true},
+            "ERROR": {"dataType":"string","required":true},
+            "LABELS": {"dataType":"nestedObjectLiteral","nestedProperties":{"error":{"dataType":"string","required":true},"online":{"dataType":"string","required":true},"offline":{"dataType":"string","required":true}},"required":true},
+            "COLORS": {"dataType":"nestedObjectLiteral","nestedProperties":{"error":{"dataType":"string","required":true},"online":{"dataType":"string","required":true},"offline":{"dataType":"string","required":true}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "LlmProviderConstants": {
+        "dataType": "refObject",
+        "properties": {
+            "OPENAI": {"dataType":"string","required":true},
+            "ANTHROPIC": {"dataType":"string","required":true},
+            "GOOGLE": {"dataType":"string","required":true},
+            "CUSTOM": {"dataType":"string","required":true},
+            "LABELS": {"dataType":"nestedObjectLiteral","nestedProperties":{"custom":{"dataType":"string","required":true},"google":{"dataType":"string","required":true},"anthropic":{"dataType":"string","required":true},"openai":{"dataType":"string","required":true}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ImageProviderConstants": {
+        "dataType": "refObject",
+        "properties": {
+            "OPENAI": {"dataType":"string","required":true},
+            "STABILITY": {"dataType":"string","required":true},
+            "MIDJOURNEY": {"dataType":"string","required":true},
+            "LABELS": {"dataType":"nestedObjectLiteral","nestedProperties":{"midjourney":{"dataType":"string","required":true},"stability":{"dataType":"string","required":true},"openai":{"dataType":"string","required":true}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "HttpStatusConstants": {
+        "dataType": "refObject",
+        "properties": {
+            "OK": {"dataType":"double","required":true},
+            "CREATED": {"dataType":"double","required":true},
+            "BAD_REQUEST": {"dataType":"double","required":true},
+            "UNAUTHORIZED": {"dataType":"double","required":true},
+            "FORBIDDEN": {"dataType":"double","required":true},
+            "NOT_FOUND": {"dataType":"double","required":true},
+            "INTERNAL_SERVER_ERROR": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "StorageKeysConstants": {
+        "dataType": "refObject",
+        "properties": {
+            "AUTH_STORAGE": {"dataType":"string","required":true},
+            "USER_PREFERENCES": {"dataType":"string","required":true},
+            "THEME_MODE": {"dataType":"string","required":true},
+            "AUTH_TOKEN": {"dataType":"string","required":true},
+            "USER_PROFILE": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "DefaultsConstants": {
+        "dataType": "refObject",
+        "properties": {
+            "BOT": {"dataType":"nestedObjectLiteral","nestedProperties":{"LLM_MODEL":{"dataType":"string","required":true},"LLM_PROVIDER":{"dataType":"string","required":true},"TRAITS":{"dataType":"array","array":{"dataType":"string"},"required":true},"PERSONALITY":{"dataType":"string","required":true},"SYSTEM_PROMPT":{"dataType":"string","required":true}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "EnvVarsConstants": {
+        "dataType": "refObject",
+        "properties": {
+            "API_URL": {"dataType":"string","required":true},
+            "NODE_ENV": {"dataType":"string","required":true},
+            "PORT": {"dataType":"string","required":true},
+            "DB_PATH": {"dataType":"string","required":true},
+            "JWT_SECRET": {"dataType":"string","required":true},
+            "DISCORD_CLIENT_ID": {"dataType":"string","required":true},
+            "DISCORD_CLIENT_SECRET": {"dataType":"string","required":true},
+            "DISCORD_CALLBACK_URL": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "DiscordApiConstants": {
+        "dataType": "refObject",
+        "properties": {
+            "BASE_URL": {"dataType":"string","required":true},
+            "OAUTH2_URL": {"dataType":"string","required":true},
+            "PERMISSIONS": {"dataType":"nestedObjectLiteral","nestedProperties":{"EMBED_LINKS":{"dataType":"string","required":true},"ATTACH_FILES":{"dataType":"string","required":true},"READ_MESSAGE_HISTORY":{"dataType":"string","required":true},"VIEW_CHANNEL":{"dataType":"string","required":true},"SEND_MESSAGES":{"dataType":"string","required":true}},"required":true},
+            "SCOPES": {"dataType":"nestedObjectLiteral","nestedProperties":{"APPLICATIONS_COMMANDS":{"dataType":"string","required":true},"BOT":{"dataType":"string","required":true}},"required":true},
+            "PERMISSION_INTEGERS": {"dataType":"nestedObjectLiteral","nestedProperties":{"BASIC_BOT":{"dataType":"string","required":true}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "Constants": {
+        "dataType": "refObject",
+        "properties": {
+            "BOT_STATUS": {"ref":"BotStatusConstants","required":true},
+            "LLM_PROVIDER": {"ref":"LlmProviderConstants","required":true},
+            "IMAGE_PROVIDER": {"ref":"ImageProviderConstants","required":true},
+            "HTTP_STATUS": {"ref":"HttpStatusConstants","required":true},
+            "STORAGE_KEYS": {"ref":"StorageKeysConstants","required":true},
+            "DEFAULTS": {"ref":"DefaultsConstants","required":true},
+            "ENV_VARS": {"ref":"EnvVarsConstants","required":true},
+            "DISCORD_API": {"ref":"DiscordApiConstants","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ConstantsResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "constants": {"ref":"Constants","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "LLMModelData": {
         "dataType": "refObject",
         "properties": {
@@ -37,15 +349,6 @@ const models: TsoaRoute.Models = {
         "properties": {
             "object": {"dataType":"string","required":true},
             "data": {"dataType":"array","array":{"dataType":"refObject","ref":"LLMModelData"},"required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "ErrorResponseDto": {
-        "dataType": "refObject",
-        "properties": {
-            "message": {"dataType":"string","required":true},
-            "error": {"dataType":"string"},
         },
         "additionalProperties": false,
     },
@@ -111,183 +414,6 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "KnowledgeItemDto": {
-        "dataType": "refObject",
-        "properties": {
-            "id": {"dataType":"double","required":true},
-            "title": {"dataType":"string","required":true},
-            "content": {"dataType":"string","required":true},
-            "type": {"dataType":"string","required":true},
-            "priority": {"dataType":"double","required":true},
-            "createdAt": {"dataType":"string","required":true},
-            "updatedAt": {"dataType":"string","required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "KnowledgeBaseResponseDto": {
-        "dataType": "refObject",
-        "properties": {
-            "botId": {"dataType":"string","required":true},
-            "items": {"dataType":"array","array":{"dataType":"refObject","ref":"KnowledgeItemDto"},"required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "MessageResponseDto": {
-        "dataType": "refObject",
-        "properties": {
-            "message": {"dataType":"string","required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "UserResponseDto": {
-        "dataType": "refObject",
-        "properties": {
-            "id": {"dataType":"string","required":true},
-            "discordId": {"dataType":"string","required":true},
-            "username": {"dataType":"string","required":true},
-            "discriminator": {"dataType":"string","required":true},
-            "avatar": {"dataType":"string","required":true},
-            "email": {"dataType":"string","required":true},
-            "bots": {"dataType":"array","array":{"dataType":"string"},"required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "UserProfileResponseDto": {
-        "dataType": "refObject",
-        "properties": {
-            "user": {"ref":"UserResponseDto","required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "BotStatus": {
-        "dataType": "refEnum",
-        "enums": ["offline","online","error"],
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "KnowledgeBase": {
-        "dataType": "refObject",
-        "properties": {
-            "id": {"dataType":"string","required":true},
-            "name": {"dataType":"string","required":true},
-            "content": {"dataType":"string","required":true},
-            "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["text"]},{"dataType":"enum","enums":["file"]}],"required":true},
-            "source": {"dataType":"string"},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "ImageProvider": {
-        "dataType": "refEnum",
-        "enums": ["openai","stability","midjourney"],
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "ImageGenerationConfig": {
-        "dataType": "refObject",
-        "properties": {
-            "enabled": {"dataType":"boolean","required":true},
-            "provider": {"ref":"ImageProvider","required":true},
-            "apiKey": {"dataType":"string"},
-            "model": {"dataType":"string"},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "ToolParameter": {
-        "dataType": "refObject",
-        "properties": {
-            "name": {"dataType":"string","required":true},
-            "type": {"dataType":"string","required":true},
-            "description": {"dataType":"string","required":true},
-            "required": {"dataType":"boolean","required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "Tool": {
-        "dataType": "refObject",
-        "properties": {
-            "id": {"dataType":"string","required":true},
-            "name": {"dataType":"string","required":true},
-            "description": {"dataType":"string","required":true},
-            "parameters": {"dataType":"array","array":{"dataType":"refObject","ref":"ToolParameter"},"required":true},
-            "implementation": {"dataType":"string","required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "BotConfiguration": {
-        "dataType": "refObject",
-        "properties": {
-            "systemPrompt": {"dataType":"string","required":true},
-            "personality": {"dataType":"string","required":true},
-            "traits": {"dataType":"array","array":{"dataType":"string"},"required":true},
-            "backstory": {"dataType":"string","required":true},
-            "llmProvider": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["openai"]},{"dataType":"enum","enums":["anthropic"]},{"dataType":"enum","enums":["google"]},{"dataType":"enum","enums":["custom"]}],"required":true},
-            "llmModel": {"dataType":"string","required":true},
-            "apiKey": {"dataType":"string","required":true},
-            "knowledge": {"dataType":"array","array":{"dataType":"refObject","ref":"KnowledgeBase"},"required":true},
-            "imageGeneration": {"ref":"ImageGenerationConfig","required":true},
-            "toolsEnabled": {"dataType":"boolean","required":true},
-            "tools": {"dataType":"array","array":{"dataType":"refObject","ref":"Tool"},"required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "BotResponseDto": {
-        "dataType": "refObject",
-        "properties": {
-            "id": {"dataType":"string","required":true},
-            "userId": {"dataType":"string","required":true},
-            "name": {"dataType":"string","required":true},
-            "discordToken": {"dataType":"string"},
-            "applicationId": {"dataType":"string","required":true},
-            "status": {"ref":"BotStatus","required":true},
-            "intents": {"dataType":"array","array":{"dataType":"string"},"required":true},
-            "configuration": {"ref":"BotConfiguration","required":true},
-            "createdAt": {"dataType":"string","required":true},
-            "updatedAt": {"dataType":"string","required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "BotsResponseDto": {
-        "dataType": "refObject",
-        "properties": {
-            "bots": {"dataType":"array","array":{"dataType":"refObject","ref":"BotResponseDto"},"required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "CreateBotRequest": {
-        "dataType": "refObject",
-        "properties": {
-            "name": {"dataType":"string","required":true},
-            "discordToken": {"dataType":"string","required":true},
-            "applicationId": {"dataType":"string","required":true},
-            "intents": {"dataType":"array","array":{"dataType":"string"}},
-            "configuration": {"ref":"BotConfiguration"},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "UpdateBotRequest": {
-        "dataType": "refObject",
-        "properties": {
-            "name": {"dataType":"string"},
-            "discordToken": {"dataType":"string"},
-            "applicationId": {"dataType":"string"},
-            "intents": {"dataType":"array","array":{"dataType":"string"}},
-            "status": {"ref":"BotStatus"},
-            "configuration": {"ref":"BotConfiguration"},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 };
 const templateService = new ExpressTemplateService(models, {"noImplicitAdditionalProperties":"throw-on-extras","bodyCoercion":true});
 
@@ -305,200 +431,6 @@ export function RegisterRoutes(app: Router) {
 
 
     
-        const argsLLMController_getModels: Record<string, TsoaRoute.ParameterSchema> = {
-        };
-        app.get('/undefined/models',
-            authenticateMiddleware([{"jwt":[]}]),
-            ...(fetchMiddlewares<RequestHandler>(LLMController)),
-            ...(fetchMiddlewares<RequestHandler>(LLMController.prototype.getModels)),
-
-            async function LLMController_getModels(request: ExRequest, response: ExResponse, next: any) {
-
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-
-            let validatedArgs: any[] = [];
-            try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsLLMController_getModels, request, response });
-
-                const controller = new LLMController();
-
-              await templateService.apiHandler({
-                methodName: 'getModels',
-                controller,
-                response,
-                next,
-                validatedArgs,
-                successStatus: undefined,
-              });
-            } catch (err) {
-                return next(err);
-            }
-        });
-        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-        const argsLLMController_createChatCompletion: Record<string, TsoaRoute.ParameterSchema> = {
-                requestBody: {"in":"body","name":"requestBody","required":true,"ref":"LLMCompletionRequestDto"},
-                request: {"in":"request","name":"request","required":true,"dataType":"object"},
-        };
-        app.post('/undefined/chat/completions',
-            authenticateMiddleware([{"jwt":[]}]),
-            ...(fetchMiddlewares<RequestHandler>(LLMController)),
-            ...(fetchMiddlewares<RequestHandler>(LLMController.prototype.createChatCompletion)),
-
-            async function LLMController_createChatCompletion(request: ExRequest, response: ExResponse, next: any) {
-
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-
-            let validatedArgs: any[] = [];
-            try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsLLMController_createChatCompletion, request, response });
-
-                const controller = new LLMController();
-
-              await templateService.apiHandler({
-                methodName: 'createChatCompletion',
-                controller,
-                response,
-                next,
-                validatedArgs,
-                successStatus: undefined,
-              });
-            } catch (err) {
-                return next(err);
-            }
-        });
-        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-        const argsKnowledgeController_getKnowledgeItems: Record<string, TsoaRoute.ParameterSchema> = {
-                botId: {"in":"path","name":"botId","required":true,"dataType":"string"},
-                request: {"in":"request","name":"request","required":true,"dataType":"object"},
-        };
-        app.get('/undefined/:botId/knowledge',
-            authenticateMiddleware([{"jwt":[]}]),
-            ...(fetchMiddlewares<RequestHandler>(KnowledgeController)),
-            ...(fetchMiddlewares<RequestHandler>(KnowledgeController.prototype.getKnowledgeItems)),
-
-            async function KnowledgeController_getKnowledgeItems(request: ExRequest, response: ExResponse, next: any) {
-
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-
-            let validatedArgs: any[] = [];
-            try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsKnowledgeController_getKnowledgeItems, request, response });
-
-                const controller = new KnowledgeController();
-
-              await templateService.apiHandler({
-                methodName: 'getKnowledgeItems',
-                controller,
-                response,
-                next,
-                validatedArgs,
-                successStatus: undefined,
-              });
-            } catch (err) {
-                return next(err);
-            }
-        });
-        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-        const argsKnowledgeController_addKnowledgeItem: Record<string, TsoaRoute.ParameterSchema> = {
-                botId: {"in":"path","name":"botId","required":true,"dataType":"string"},
-                item: {"in":"body","name":"item","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"priority":{"dataType":"double"},"type":{"dataType":"string","required":true},"content":{"dataType":"string","required":true},"title":{"dataType":"string","required":true}}},
-                request: {"in":"request","name":"request","required":true,"dataType":"object"},
-        };
-        app.post('/undefined/:botId/knowledge',
-            authenticateMiddleware([{"jwt":[]}]),
-            ...(fetchMiddlewares<RequestHandler>(KnowledgeController)),
-            ...(fetchMiddlewares<RequestHandler>(KnowledgeController.prototype.addKnowledgeItem)),
-
-            async function KnowledgeController_addKnowledgeItem(request: ExRequest, response: ExResponse, next: any) {
-
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-
-            let validatedArgs: any[] = [];
-            try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsKnowledgeController_addKnowledgeItem, request, response });
-
-                const controller = new KnowledgeController();
-
-              await templateService.apiHandler({
-                methodName: 'addKnowledgeItem',
-                controller,
-                response,
-                next,
-                validatedArgs,
-                successStatus: undefined,
-              });
-            } catch (err) {
-                return next(err);
-            }
-        });
-        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-        const argsKnowledgeController_updateKnowledgeItem: Record<string, TsoaRoute.ParameterSchema> = {
-                botId: {"in":"path","name":"botId","required":true,"dataType":"string"},
-                itemId: {"in":"path","name":"itemId","required":true,"dataType":"string"},
-                item: {"in":"body","name":"item","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"priority":{"dataType":"double"},"type":{"dataType":"string"},"content":{"dataType":"string"},"title":{"dataType":"string"}}},
-                request: {"in":"request","name":"request","required":true,"dataType":"object"},
-        };
-        app.put('/undefined/:botId/knowledge/:itemId',
-            authenticateMiddleware([{"jwt":[]}]),
-            ...(fetchMiddlewares<RequestHandler>(KnowledgeController)),
-            ...(fetchMiddlewares<RequestHandler>(KnowledgeController.prototype.updateKnowledgeItem)),
-
-            async function KnowledgeController_updateKnowledgeItem(request: ExRequest, response: ExResponse, next: any) {
-
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-
-            let validatedArgs: any[] = [];
-            try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsKnowledgeController_updateKnowledgeItem, request, response });
-
-                const controller = new KnowledgeController();
-
-              await templateService.apiHandler({
-                methodName: 'updateKnowledgeItem',
-                controller,
-                response,
-                next,
-                validatedArgs,
-                successStatus: undefined,
-              });
-            } catch (err) {
-                return next(err);
-            }
-        });
-        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-        const argsKnowledgeController_deleteKnowledgeItem: Record<string, TsoaRoute.ParameterSchema> = {
-                botId: {"in":"path","name":"botId","required":true,"dataType":"string"},
-                itemId: {"in":"path","name":"itemId","required":true,"dataType":"string"},
-                request: {"in":"request","name":"request","required":true,"dataType":"object"},
-        };
-        app.delete('/undefined/:botId/knowledge/:itemId',
-            authenticateMiddleware([{"jwt":[]}]),
-            ...(fetchMiddlewares<RequestHandler>(KnowledgeController)),
-            ...(fetchMiddlewares<RequestHandler>(KnowledgeController.prototype.deleteKnowledgeItem)),
-
-            async function KnowledgeController_deleteKnowledgeItem(request: ExRequest, response: ExResponse, next: any) {
-
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-
-            let validatedArgs: any[] = [];
-            try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsKnowledgeController_deleteKnowledgeItem, request, response });
-
-                const controller = new KnowledgeController();
-
-              await templateService.apiHandler({
-                methodName: 'deleteKnowledgeItem',
-                controller,
-                response,
-                next,
-                validatedArgs,
-                successStatus: undefined,
-              });
-            } catch (err) {
-                return next(err);
-            }
-        });
-        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsAuthController_login: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
@@ -866,6 +798,290 @@ export function RegisterRoutes(app: Router) {
 
               await templateService.apiHandler({
                 methodName: 'generateInviteLink',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsKnowledgeController_getKnowledgeItems: Record<string, TsoaRoute.ParameterSchema> = {
+                botId: {"in":"path","name":"botId","required":true,"dataType":"string"},
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.get('/undefined/:botId/knowledge',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(KnowledgeController)),
+            ...(fetchMiddlewares<RequestHandler>(KnowledgeController.prototype.getKnowledgeItems)),
+
+            async function KnowledgeController_getKnowledgeItems(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsKnowledgeController_getKnowledgeItems, request, response });
+
+                const controller = new KnowledgeController();
+
+              await templateService.apiHandler({
+                methodName: 'getKnowledgeItems',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsKnowledgeController_addKnowledgeItem: Record<string, TsoaRoute.ParameterSchema> = {
+                botId: {"in":"path","name":"botId","required":true,"dataType":"string"},
+                item: {"in":"body","name":"item","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"priority":{"dataType":"double"},"type":{"dataType":"string","required":true},"content":{"dataType":"string","required":true},"title":{"dataType":"string","required":true}}},
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.post('/undefined/:botId/knowledge',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(KnowledgeController)),
+            ...(fetchMiddlewares<RequestHandler>(KnowledgeController.prototype.addKnowledgeItem)),
+
+            async function KnowledgeController_addKnowledgeItem(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsKnowledgeController_addKnowledgeItem, request, response });
+
+                const controller = new KnowledgeController();
+
+              await templateService.apiHandler({
+                methodName: 'addKnowledgeItem',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsKnowledgeController_updateKnowledgeItem: Record<string, TsoaRoute.ParameterSchema> = {
+                botId: {"in":"path","name":"botId","required":true,"dataType":"string"},
+                itemId: {"in":"path","name":"itemId","required":true,"dataType":"string"},
+                item: {"in":"body","name":"item","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"priority":{"dataType":"double"},"type":{"dataType":"string"},"content":{"dataType":"string"},"title":{"dataType":"string"}}},
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.put('/undefined/:botId/knowledge/:itemId',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(KnowledgeController)),
+            ...(fetchMiddlewares<RequestHandler>(KnowledgeController.prototype.updateKnowledgeItem)),
+
+            async function KnowledgeController_updateKnowledgeItem(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsKnowledgeController_updateKnowledgeItem, request, response });
+
+                const controller = new KnowledgeController();
+
+              await templateService.apiHandler({
+                methodName: 'updateKnowledgeItem',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsKnowledgeController_deleteKnowledgeItem: Record<string, TsoaRoute.ParameterSchema> = {
+                botId: {"in":"path","name":"botId","required":true,"dataType":"string"},
+                itemId: {"in":"path","name":"itemId","required":true,"dataType":"string"},
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.delete('/undefined/:botId/knowledge/:itemId',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(KnowledgeController)),
+            ...(fetchMiddlewares<RequestHandler>(KnowledgeController.prototype.deleteKnowledgeItem)),
+
+            async function KnowledgeController_deleteKnowledgeItem(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsKnowledgeController_deleteKnowledgeItem, request, response });
+
+                const controller = new KnowledgeController();
+
+              await templateService.apiHandler({
+                methodName: 'deleteKnowledgeItem',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsConstantsController_getConstants: Record<string, TsoaRoute.ParameterSchema> = {
+        };
+        app.get('/undefined',
+            ...(fetchMiddlewares<RequestHandler>(ConstantsController)),
+            ...(fetchMiddlewares<RequestHandler>(ConstantsController.prototype.getConstants)),
+
+            async function ConstantsController_getConstants(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsConstantsController_getConstants, request, response });
+
+                const controller = new ConstantsController();
+
+              await templateService.apiHandler({
+                methodName: 'getConstants',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsLLMController_getModels: Record<string, TsoaRoute.ParameterSchema> = {
+        };
+        app.get('/undefined/models',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(LLMController)),
+            ...(fetchMiddlewares<RequestHandler>(LLMController.prototype.getModels)),
+
+            async function LLMController_getModels(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsLLMController_getModels, request, response });
+
+                const controller = new LLMController();
+
+              await templateService.apiHandler({
+                methodName: 'getModels',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsLLMController_createChatCompletion: Record<string, TsoaRoute.ParameterSchema> = {
+                requestBody: {"in":"body","name":"requestBody","required":true,"ref":"LLMCompletionRequestDto"},
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.post('/undefined/chat/completions',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(LLMController)),
+            ...(fetchMiddlewares<RequestHandler>(LLMController.prototype.createChatCompletion)),
+
+            async function LLMController_createChatCompletion(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsLLMController_createChatCompletion, request, response });
+
+                const controller = new LLMController();
+
+              await templateService.apiHandler({
+                methodName: 'createChatCompletion',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsLLMController_getProviders: Record<string, TsoaRoute.ParameterSchema> = {
+        };
+        app.get('/undefined/providers',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(LLMController)),
+            ...(fetchMiddlewares<RequestHandler>(LLMController.prototype.getProviders)),
+
+            async function LLMController_getProviders(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsLLMController_getProviders, request, response });
+
+                const controller = new LLMController();
+
+              await templateService.apiHandler({
+                methodName: 'getProviders',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsLLMController_checkProviderAvailability: Record<string, TsoaRoute.ParameterSchema> = {
+                provider: {"in":"path","name":"provider","required":true,"ref":"LLMProvider"},
+        };
+        app.get('/undefined/providers/:provider',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(LLMController)),
+            ...(fetchMiddlewares<RequestHandler>(LLMController.prototype.checkProviderAvailability)),
+
+            async function LLMController_checkProviderAvailability(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsLLMController_checkProviderAvailability, request, response });
+
+                const controller = new LLMController();
+
+              await templateService.apiHandler({
+                methodName: 'checkProviderAvailability',
                 controller,
                 response,
                 next,

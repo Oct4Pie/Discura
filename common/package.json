@@ -21,16 +21,6 @@
       "import": "./dist/constants.js",
       "require": "./dist/constants.js"
     },
-    "./types/routes": {
-      "types": "./dist/types/routes.d.ts",
-      "import": "./dist/types/routes.js",
-      "require": "./dist/types/routes.js"
-    },
-    "./types/api": {
-      "types": "./dist/types/api.d.ts",
-      "import": "./dist/types/api.js",
-      "require": "./dist/types/api.js"
-    },
     "./schema/types": {
       "types": "./dist/schema/types.d.ts",
       "import": "./dist/schema/types.js",
@@ -42,7 +32,7 @@
       "require": "./dist/types/auth.js"
     },
     "./auth": {
-      "types": "./dist/types/auth.d.ts",
+      "types": "./dist/auth/authentication.d.ts",
       "import": "./dist/auth/authentication.js",
       "require": "./dist/auth/authentication.js"
     },
@@ -52,19 +42,9 @@
       "require": "./dist/controllers/index.js"
     },
     "./routes": {
-      "types": "./dist/types/routes.d.ts",
-      "import": "./dist/routes/routes.js",
-      "require": "./dist/routes/routes.js"
-    },
-    "./routes/routes": {
       "types": "./dist/routes/routes.d.ts",
       "import": "./dist/routes/routes.js",
       "require": "./dist/routes/routes.js"
-    },
-    "./schema": {
-      "types": "./dist/types/schema.d.ts",
-      "import": "./dist/schema/types.js",
-      "require": "./dist/schema/types.js"
     }
   },
   "scripts": {

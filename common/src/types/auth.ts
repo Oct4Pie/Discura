@@ -5,8 +5,6 @@
  * These types are used by the backend JWT implementation and by TSOA controllers.
  */
 
-export * from '../auth/authentication';
-
 // Define our custom JWT payload - abstract from backend implementation
 export interface JwtPayload {
   id: string; 
@@ -23,3 +21,6 @@ export type AuthenticationFunction = (
   securityName: string,
   scopes?: string[]
 ) => Promise<any>;
+
+// Re-export any needed authentication types used throughout the app
+// Note: No longer importing from auth/authentication.ts to avoid circular dependency

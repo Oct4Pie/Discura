@@ -30,9 +30,14 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use the generated API service
-      const response = await BotsService.getUserBots();
-      set({ bots: toBotModels(response.bots), isLoading: false });
+      // Call directly to the API endpoint since getUserBots is not in the generated API
+      // The GET / route is supposed to return the list of bots for the current user
+      const response = await fetch('/api/bots');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      set({ bots: toBotModels(data.bots), isLoading: false });
     } catch (error) {
       console.error('Error fetching bots:', error);
       set({ error: 'Failed to fetch bots', isLoading: false });

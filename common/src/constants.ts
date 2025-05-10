@@ -1,5 +1,17 @@
+import { 
+  BotStatusConstants, 
+  LlmProviderConstants,
+  ImageProviderConstants,
+  HttpStatusConstants,
+  StorageKeysConstants,
+  DefaultsConstants,
+  EnvVarsConstants,
+  DiscordApiConstants,
+  Constants
+} from './types/api/';
+
 // Bot Status Constants
-export const BOT_STATUS = {
+export const BOT_STATUS: BotStatusConstants = {
   // Enum values (for database and API)
   OFFLINE: 'offline',
   ONLINE: 'online',
@@ -21,7 +33,7 @@ export const BOT_STATUS = {
 };
 
 // LLM Provider Constants
-export const LLM_PROVIDER = {
+export const LLM_PROVIDER: LlmProviderConstants = {
   // Enum values
   OPENAI: 'openai',
   ANTHROPIC: 'anthropic',
@@ -38,7 +50,7 @@ export const LLM_PROVIDER = {
 };
 
 // Image Provider Constants
-export const IMAGE_PROVIDER = {
+export const IMAGE_PROVIDER: ImageProviderConstants = {
   OPENAI: 'openai',
   STABILITY: 'stability',
   MIDJOURNEY: 'midjourney',
@@ -52,7 +64,7 @@ export const IMAGE_PROVIDER = {
 };
 
 // Common HTTP Status Codes
-export const HTTP_STATUS = {
+export const HTTP_STATUS: HttpStatusConstants = {
   OK: 200,
   CREATED: 201,
   BAD_REQUEST: 400,
@@ -63,7 +75,7 @@ export const HTTP_STATUS = {
 };
 
 // Local Storage Keys
-export const STORAGE_KEYS = {
+export const STORAGE_KEYS: StorageKeysConstants = {
   AUTH_STORAGE: 'auth-storage', // Used by frontend for storing auth related data
   USER_PREFERENCES: 'user-preferences', // Used by frontend for user specific preferences
   THEME_MODE: 'theme-mode', // Used by frontend for theme preference
@@ -72,7 +84,7 @@ export const STORAGE_KEYS = {
 };
 
 // Default Values
-export const DEFAULTS = {
+export const DEFAULTS: DefaultsConstants = {
   BOT: {
     SYSTEM_PROMPT: 'You are a helpful Discord bot assistant.',
     PERSONALITY: 'Friendly and helpful',
@@ -83,7 +95,7 @@ export const DEFAULTS = {
 };
 
 // Environment Variable Names
-export const ENV_VARS = {
+export const ENV_VARS: EnvVarsConstants = {
   API_URL: 'VITE_API_URL',
   NODE_ENV: 'NODE_ENV',
   PORT: 'PORT',
@@ -95,7 +107,7 @@ export const ENV_VARS = {
 };
 
 // Discord API Constants
-export const DISCORD_API = {
+export const DISCORD_API: DiscordApiConstants = {
   BASE_URL: 'https://discord.com/api',
   OAUTH2_URL: 'https://discord.com/api/oauth2/authorize',
   PERMISSIONS: {
@@ -113,4 +125,18 @@ export const DISCORD_API = {
   PERMISSION_INTEGERS: {
     BASIC_BOT: '277025459200' // SendMessages, ViewChannel, ReadMessageHistory, AttachFiles, EmbedLinks
   }
+};
+
+/**
+ * Combined constants object for API export
+ */
+export const CONSTANTS: Constants = {
+  BOT_STATUS,
+  LLM_PROVIDER,
+  IMAGE_PROVIDER,
+  HTTP_STATUS,
+  STORAGE_KEYS,
+  DEFAULTS,
+  ENV_VARS,
+  DISCORD_API
 };

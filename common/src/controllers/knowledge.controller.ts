@@ -19,7 +19,7 @@ import {
   MessageResponseDto,
   KnowledgeItemDto,
   KnowledgeBaseResponseDto
-  } from "../schema/types";
+  } from "../types";
 
 /**
  * Knowledge Base Controller

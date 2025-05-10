@@ -4,7 +4,7 @@ import { generateImage } from './image.service';
 import { callLLM } from './llm.service';
 import { executeTools } from './tool.service';
 import { BotAdapter, Bot } from '../models/adapters/bot.adapter';
-import { Tool } from '@discura/common/types'; // Updated import for Tool type
+import { Tool, ImageProvider } from '@discura/common';
 
 // Type for LLM response
 interface LLMResponse {
@@ -594,14 +594,24 @@ function adaptImageGenerationConfig(config: {
   apiKey?: string;
   model?: string;
 }) {
-  // Map any provider string to one of the allowed enum values
-  let provider: "openai" | "stability" | "midjourney" = "openai";
+  // Map the string provider to the enum value
+  let provider: ImageProvider;
   
-  // If the provided value is already one of the allowed types, use it
-  if (config.provider === "openai" || config.provider === "stability" || config.provider === "midjourney") {
-    provider = config.provider;
-  } 
-  // Otherwise default to openai since we're standardizing on OpenAI-compatible APIs
+  // Try to map the string provider to the enum value
+  switch(config.provider.toLowerCase()) {
+    case 'openai':
+      provider = ImageProvider.OPENAI;
+      break;
+    case 'stability':
+      provider = ImageProvider.STABILITY;
+      break;
+    case 'midjourney':
+      provider = ImageProvider.MIDJOURNEY;
+      break;
+    default:
+      // Default to OpenAI if provider not recognized
+      provider = ImageProvider.OPENAI;
+  }
   
   return {
     enabled: config.enabled,
