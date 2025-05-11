@@ -15,7 +15,7 @@ export class ConstantsService {
     public static getConstants(): CancelablePromise<ConstantsResponseDto> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/undefined',
+            url: '/constants',
         });
     }
 }

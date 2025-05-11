@@ -1,6 +1,5 @@
 import axios, { AxiosError } from 'axios';
-// Import storage keys from models in generated API
-import { OpenAPI } from '../api/generated';
+import { useAuthStore } from '../stores/authStore';
 
 // Define storage keys constants
 const STORAGE_KEYS = {
@@ -13,43 +12,44 @@ const STORAGE_KEYS = {
 
 /**
  * Set the authentication token for API requests
+ * This updates both the axios instance and ensures the OpenAPI client
+ * can access the token through the resolver function
  */
 export const setAuthToken = (token: string | null) => {
   if (token) {
-    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
-    OpenAPI.TOKEN = token;
+    // For axios requests
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    // For OpenAPI client, update the authStore which the resolver function uses
+    // DO NOT directly set OpenAPI.TOKEN as it would override the resolver function
+    const updateAuth = useAuthStore.setState;
+    updateAuth({ token });
+    
+    console.log('API token set successfully');
   } else {
-    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-    OpenAPI.TOKEN = '';
+    // Clear token from axios
+    delete axios.defaults.headers.common['Authorization'];
+    delete api.defaults.headers.common['Authorization'];
+    
+    // Clear token from authStore
+    const updateAuth = useAuthStore.setState;
+    updateAuth({ token: null });
+    
+    console.log('API token cleared');
   }
 };
 
 /**
- * Get the authentication token
+ * Get the authentication token directly from the auth store
  */
 export const getAuthToken = (): string | null => {
-  return localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+  return useAuthStore.getState().token;
 };
-
-/**
- * Initialize the API configuration
- */
-export const initApiConfig = () => {
-  const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-  if (token) {
-    OpenAPI.TOKEN = token;
-  }
-  
-  // Set base URL for API calls
-  OpenAPI.BASE = '/api';
-};
-
-// Initialize on import
-initApiConfig();
 
 // Create a configured axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -59,18 +59,11 @@ const api = axios.create({
 // Add authorization token to each request
 api.interceptors.request.use(
   (config) => {
-    // Use constant for local storage key
-    const token = getAuthToken();
+    // Get token directly from auth store
+    const token = useAuthStore.getState().token;
     
     if (token) {
-      try {
-        const parsedToken = JSON.parse(token);
-        if (parsedToken.state?.token) {
-          config.headers.Authorization = `Bearer ${parsedToken.state.token}`;
-        }
-      } catch (e) {
-        console.error('Failed to parse auth token:', e);
-      }
+      config.headers.Authorization = `Bearer ${token}`;
     }
     
     return config;
@@ -83,7 +76,7 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Use constant for local storage key
+      // Use setAuthToken to clear token in all places
       setAuthToken(null);
       window.location.href = '/login';
     }

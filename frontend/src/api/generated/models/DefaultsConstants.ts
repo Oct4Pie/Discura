@@ -3,15 +3,14 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Default values structure for API
+ * Placeholder interface for DefaultsConstants
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type DefaultsConstants = {
-    BOT: {
-        LLM_MODEL: string;
-        LLM_PROVIDER: string;
-        TRAITS: Array<string>;
-        PERSONALITY: string;
-        SYSTEM_PROMPT: string;
-    };
+    SYSTEM_PROMPT: string;
+    PERSONALITY: string;
+    TRAITS: Array<string>;
+    LLM_PROVIDER: string;
+    LLM_MODEL: string;
 };
 

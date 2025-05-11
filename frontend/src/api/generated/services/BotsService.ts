@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { BotResponseDto } from '../models/BotResponseDto';
+import type { BotsResponseDto } from '../models/BotsResponseDto';
 import type { CreateBotRequest } from '../models/CreateBotRequest';
 import type { MessageResponseDto } from '../models/MessageResponseDto';
 import type { UpdateBotRequest } from '../models/UpdateBotRequest';
@@ -10,6 +11,20 @@ import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class BotsService {
+    /**
+     * List all bots for the authenticated user
+     *
+     * Returns a list of Discord bots owned by the authenticated user,
+     * including their configuration and status.
+     * @returns BotsResponseDto Ok
+     * @throws ApiError
+     */
+    public static getUserBots(): CancelablePromise<BotsResponseDto> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/bots',
+        });
+    }
     /**
      * Create a new bot
      *
@@ -24,7 +39,7 @@ export class BotsService {
     ): CancelablePromise<BotResponseDto> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/undefined',
+            url: '/bots',
             body: requestBody,
             mediaType: 'application/json',
         });
@@ -44,7 +59,7 @@ export class BotsService {
     }> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/undefined/{id}',
+            url: '/bots/{id}',
             path: {
                 'id': id,
             },
@@ -65,7 +80,7 @@ export class BotsService {
     ): CancelablePromise<BotResponseDto> {
         return __request(OpenAPI, {
             method: 'PUT',
-            url: '/undefined/{id}',
+            url: '/bots/{id}',
             path: {
                 'id': id,
             },
@@ -87,7 +102,7 @@ export class BotsService {
     ): CancelablePromise<MessageResponseDto> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/undefined/{id}',
+            url: '/bots/{id}',
             path: {
                 'id': id,
             },
@@ -106,7 +121,7 @@ export class BotsService {
     ): CancelablePromise<BotResponseDto> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/undefined/{id}/start',
+            url: '/bots/{id}/start',
             path: {
                 'id': id,
             },
@@ -125,7 +140,7 @@ export class BotsService {
     ): CancelablePromise<BotResponseDto> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/undefined/{id}/stop',
+            url: '/bots/{id}/stop',
             path: {
                 'id': id,
             },
@@ -147,7 +162,7 @@ export class BotsService {
     }> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/undefined/{id}/invite',
+            url: '/bots/{id}/invite',
             path: {
                 'id': id,
             },

@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/undefined/login": {
+    "/auth/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -13,6 +13,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Login with credentials */
         post: operations["Login"];
         delete?: never;
         options?: never;
@@ -20,7 +21,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/register": {
+    "/auth/register": {
         parameters: {
             query?: never;
             header?: never;
@@ -29,6 +30,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Register a new user */
         post: operations["Register"];
         delete?: never;
         options?: never;
@@ -36,13 +38,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/profile": {
+    "/auth/profile": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
+        /** @description Get current user profile */
         get: operations["GetProfile"];
         put?: never;
         post?: never;
@@ -52,7 +55,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/logout": {
+    "/auth/logout": {
         parameters: {
             query?: never;
             header?: never;
@@ -61,6 +64,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Logout current user */
         post: operations["Logout"];
         delete?: never;
         options?: never;
@@ -68,15 +72,18 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined": {
+    "/bots": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** @description Get all application constants */
-        get: operations["GetConstants"];
+        /** @description List all bots for the authenticated user
+         *
+         *     Returns a list of Discord bots owned by the authenticated user,
+         *     including their configuration and status. */
+        get: operations["GetUserBots"];
         put?: never;
         /** @description Create a new bot
          *
@@ -89,7 +96,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/{id}": {
+    "/bots/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -115,7 +122,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/{id}/start": {
+    "/bots/{id}/start": {
         parameters: {
             query?: never;
             header?: never;
@@ -134,7 +141,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/{id}/stop": {
+    "/bots/{id}/stop": {
         parameters: {
             query?: never;
             header?: never;
@@ -153,7 +160,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/{id}/invite": {
+    "/bots/{id}/invite": {
         parameters: {
             query?: never;
             header?: never;
@@ -173,7 +180,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/{botId}/knowledge": {
+    "/bots/{botId}/knowledge": {
         parameters: {
             query?: never;
             header?: never;
@@ -191,7 +198,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/{botId}/knowledge/{itemId}": {
+    "/bots/{botId}/knowledge/{itemId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -209,7 +216,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/models": {
+    "/constants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get all application constants */
+        get: operations["GetConstants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm/models": {
         parameters: {
             query?: never;
             header?: never;
@@ -229,7 +253,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/chat/completions": {
+    "/llm/chat/completions": {
         parameters: {
             query?: never;
             header?: never;
@@ -252,7 +276,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/providers": {
+    "/llm/providers": {
         parameters: {
             query?: never;
             header?: never;
@@ -272,7 +296,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/undefined/providers/{provider}": {
+    "/llm/providers/{provider}": {
         parameters: {
             query?: never;
             header?: never;
@@ -447,47 +471,40 @@ export interface components {
             botId: string;
             items: components["schemas"]["KnowledgeItemDto"][];
         };
-        /** @description Bot status structure for API */
+        /** @description Placeholder interface for BotStatusConstants
+         *     This will be replaced with the actual definition by sync-types.js */
         BotStatusConstants: {
             OFFLINE: string;
             ONLINE: string;
             ERROR: string;
-            LABELS: {
-                error: string;
-                online: string;
-                offline: string;
-            };
-            COLORS: {
-                error: string;
-                online: string;
-                offline: string;
-            };
+            offline: string;
+            online: string;
+            error: string;
         };
-        /** @description LLM provider structure for API */
+        /** @description Placeholder interface for LlmProviderConstants
+         *     This will be replaced with the actual definition by sync-types.js */
         LlmProviderConstants: {
             OPENAI: string;
             ANTHROPIC: string;
             GOOGLE: string;
             CUSTOM: string;
-            LABELS: {
-                custom: string;
-                google: string;
-                anthropic: string;
-                openai: string;
-            };
+            openai: string;
+            anthropic: string;
+            google: string;
+            custom: string;
         };
-        /** @description Image provider structure for API */
+        /** @description Placeholder interface for ImageProviderConstants
+         *     This will be replaced with the actual definition by sync-types.js */
         ImageProviderConstants: {
             OPENAI: string;
             STABILITY: string;
             MIDJOURNEY: string;
-            LABELS: {
-                midjourney: string;
-                stability: string;
-                openai: string;
-            };
+            openai: string;
+            stability: string;
+            midjourney: string;
         };
-        /** @description HTTP status codes structure for API */
+        /** @description Placeholder interface for HttpStatusConstants
+         *     This will be replaced with the actual definition by sync-types.js */
         HttpStatusConstants: {
             /** Format: double */
             OK: number;
@@ -504,7 +521,8 @@ export interface components {
             /** Format: double */
             INTERNAL_SERVER_ERROR: number;
         };
-        /** @description Storage keys structure for API */
+        /** @description Placeholder interface for StorageKeysConstants
+         *     This will be replaced with the actual definition by sync-types.js */
         StorageKeysConstants: {
             AUTH_STORAGE: string;
             USER_PREFERENCES: string;
@@ -512,17 +530,17 @@ export interface components {
             AUTH_TOKEN: string;
             USER_PROFILE: string;
         };
-        /** @description Default values structure for API */
+        /** @description Placeholder interface for DefaultsConstants
+         *     This will be replaced with the actual definition by sync-types.js */
         DefaultsConstants: {
-            BOT: {
-                LLM_MODEL: string;
-                LLM_PROVIDER: string;
-                TRAITS: string[];
-                PERSONALITY: string;
-                SYSTEM_PROMPT: string;
-            };
+            SYSTEM_PROMPT: string;
+            PERSONALITY: string;
+            TRAITS: string[];
+            LLM_PROVIDER: string;
+            LLM_MODEL: string;
         };
-        /** @description Environment variable names structure for API */
+        /** @description Placeholder interface for EnvVarsConstants
+         *     This will be replaced with the actual definition by sync-types.js */
         EnvVarsConstants: {
             API_URL: string;
             NODE_ENV: string;
@@ -533,26 +551,19 @@ export interface components {
             DISCORD_CLIENT_SECRET: string;
             DISCORD_CALLBACK_URL: string;
         };
-        /** @description Discord API constants structure for API */
+        /** @description Placeholder interface for DiscordApiConstants
+         *     This will be replaced with the actual definition by sync-types.js */
         DiscordApiConstants: {
             BASE_URL: string;
             OAUTH2_URL: string;
-            PERMISSIONS: {
-                EMBED_LINKS: string;
-                ATTACH_FILES: string;
-                READ_MESSAGE_HISTORY: string;
-                VIEW_CHANNEL: string;
-                SEND_MESSAGES: string;
-            };
-            SCOPES: {
-                APPLICATIONS_COMMANDS: string;
-                BOT: string;
-            };
-            PERMISSION_INTEGERS: {
-                BASIC_BOT: string;
-            };
+            SEND_MESSAGES: string;
+            VIEW_CHANNEL: string;
+            READ_MESSAGE_HISTORY: string;
+            ATTACH_FILES: string;
+            EMBED_LINKS: string;
         };
-        /** @description Constants exported from common for frontend use */
+        /** @description Placeholder interface for Constants
+         *     This will be replaced with the actual definition by sync-types.js */
         Constants: {
             BOT_STATUS: components["schemas"]["BotStatusConstants"];
             LLM_PROVIDER: components["schemas"]["LlmProviderConstants"];
@@ -563,7 +574,8 @@ export interface components {
             ENV_VARS: components["schemas"]["EnvVarsConstants"];
             DISCORD_API: components["schemas"]["DiscordApiConstants"];
         };
-        /** @description Response DTO for constants */
+        /** @description Placeholder interface for ConstantsResponseDto
+         *     This will be replaced with the actual definition by sync-types.js */
         ConstantsResponseDto: {
             constants: components["schemas"]["Constants"];
         };
@@ -728,7 +740,7 @@ export interface operations {
             };
         };
     };
-    GetConstants: {
+    GetUserBots: {
         parameters: {
             query?: never;
             header?: never;
@@ -743,7 +755,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ConstantsResponseDto"];
+                    "application/json": components["schemas"]["BotsResponseDto"];
                 };
             };
         };
@@ -1030,6 +1042,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MessageResponseDto"];
+                };
+            };
+        };
+    };
+    GetConstants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConstantsResponseDto"];
                 };
             };
         };

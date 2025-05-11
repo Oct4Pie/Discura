@@ -3,7 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Environment variable names structure for API
+ * Placeholder interface for EnvVarsConstants
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type EnvVarsConstants = {
     API_URL: string;

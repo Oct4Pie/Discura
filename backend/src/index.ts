@@ -35,6 +35,16 @@ import { logger } from './utils/logger';
 import { db } from './services/database/database.factory';
 import { RegisterRoutes } from '@discura/common/routes';
 
+// CRITICAL: Import the real authentication implementation from backend
+import { expressAuthentication as backendAuthentication } from './middlewares/authentication';
+
+// Import the authentication module from common package
+import { setAuthImplementation } from '@discura/common/auth/authentication';
+
+// Set the authentication implementation from backend to common
+setAuthImplementation(backendAuthentication);
+logger.info('Authentication implementation injected from backend to common package');
+
 // Initialize database
 db.initialize()
   .then(() => {

@@ -8,6 +8,7 @@
     "outputDirectory": "./src/schema",
     "specVersion": 3,
     "basePath": "",
+    "baseRoutePrefix": "",
     "description": "Discura API - Discord Bot Management Platform",
     "name": "Discura API",
     "securityDefinitions": {
@@ -44,6 +45,7 @@
   },
   "routes": {
     "routesDir": "./src/routes",
+    "routesPrefix": "",
     "middleware": "express",
     "authenticationModule": "./src/auth/authentication.ts",
     "noImplicitAdditionalProperties": "throw-on-extras"

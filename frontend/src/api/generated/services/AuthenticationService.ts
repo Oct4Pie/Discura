@@ -11,43 +11,47 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class AuthenticationService {
     /**
+     * Login with credentials
      * @returns any Ok
      * @throws ApiError
      */
     public static login(): CancelablePromise<(UserResponseDto | ErrorResponseDto)> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/undefined/login',
+            url: '/auth/login',
         });
     }
     /**
+     * Register a new user
      * @returns any Ok
      * @throws ApiError
      */
     public static register(): CancelablePromise<(UserResponseDto | ErrorResponseDto)> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/undefined/register',
+            url: '/auth/register',
         });
     }
     /**
+     * Get current user profile
      * @returns any Ok
      * @throws ApiError
      */
     public static getProfile(): CancelablePromise<(UserProfileResponseDto | ErrorResponseDto)> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/undefined/profile',
+            url: '/auth/profile',
         });
     }
     /**
+     * Logout current user
      * @returns any Ok
      * @throws ApiError
      */
     public static logout(): CancelablePromise<(MessageResponseDto | ErrorResponseDto)> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/undefined/logout',
+            url: '/auth/logout',
         });
     }
 }

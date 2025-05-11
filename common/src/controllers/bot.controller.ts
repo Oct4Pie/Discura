@@ -1,4 +1,4 @@
-import { CONTROLLER_ROUTES, ROUTES } from '../types/routes';
+import { CONTROLLER_ROUTES, BASE_ROUTES, BOT_PATHS } from '../types/routes';
 import { DISCORD_API } from '../constants';
 import {
   Body,
@@ -25,11 +25,14 @@ import {
   MessageResponseDto
 } from "../types";
 
-
 /**
  * Controller for managing Discord bots
+ * 
+ * IMPORTANT: We use the string literals directly in the decorators
+ * because TSOA doesn't properly resolve imported constants during generation.
+ * These strings MUST match the constants in routes.constants.ts
  */
-@Route(CONTROLLER_ROUTES.BOTS)
+@Route("bots")
 @Tags('Bots')
 export class BotController extends Controller {
   /**
@@ -38,7 +41,7 @@ export class BotController extends Controller {
    * Returns a list of Discord bots owned by the authenticated user,
    * including their configuration and status.
    */
-  @Get('/')
+  @Get()
   @Security('jwt')
   public async getUserBots(@Request() request: ExpressRequest): Promise<BotsResponseDto> { 
     // Implementation will be provided by backend
@@ -68,7 +71,7 @@ export class BotController extends Controller {
    * Creates a new Discord bot with the specified configuration.
    * The bot will be owned by the authenticated user.
    */
-  @Post('/')
+  @Post()
   @Security('jwt')
   @SuccessResponse('201', 'Bot created successfully')
   public async createBot(

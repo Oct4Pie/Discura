@@ -36,6 +36,11 @@
       "import": "./dist/auth/authentication.js",
       "require": "./dist/auth/authentication.js"
     },
+    "./auth/authentication": {
+      "types": "./dist/auth/authentication.d.ts",
+      "import": "./dist/auth/authentication.js",
+      "require": "./dist/auth/authentication.js"
+    },
     "./controllers": {
       "types": "./dist/controllers/index.d.ts",
       "import": "./dist/controllers/index.js",

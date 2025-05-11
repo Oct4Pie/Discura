@@ -18,8 +18,7 @@ import {
   alpha,
   useTheme,
   IconButton,
-  Paper,
-  Tooltip
+  Paper
 } from '@mui/material';
 import { 
   Person as PersonIcon, 

@@ -1,91 +1,11 @@
 /**
- * API Route Constants
+ * Routes Export File
  * 
- * This file serves as the single source of truth for all API routes in Discura.
- * These constants are used by both the frontend and backend to ensure consistency.
+ * Re-exports all route constants from the routes.constants.ts file.
+ * This file serves as the entry point for importing route constants.
  * 
- * DO NOT HARDCODE ROUTE PATHS ANYWHERE ELSE IN THE CODEBASE.
+ * IMPORTANT: When using these routes in TSOA controllers, you must copy
+ * the string literals directly in the controller files - don't import constants.
  */
 
-// Base route segments
-export const ROUTES = {
-  AUTH: 'auth',
-  BOTS: 'bots',
-  LLM: 'llm',
-  KNOWLEDGE: 'knowledge',
-  CONSTANTS: 'constants',
-  
-  // Auth-related endpoints
-  AUTH_ENDPOINTS: {
-    PROFILE: 'profile',
-    LOGOUT: 'logout',
-    DISCORD: 'discord',
-    DISCORD_CALLBACK: 'discord/callback'
-  },
-  
-  // Bot-related endpoints
-  BOT_ENDPOINTS: {
-    BY_ID: (id: string) => `${id}`,
-    START: (id: string) => `${id}/start`,
-    STOP: (id: string) => `${id}/stop`,
-    KNOWLEDGE: (id: string) => `${id}/knowledge`,
-    KNOWLEDGE_ITEM: (botId: string, itemId: string) => `${botId}/knowledge/${itemId}`
-  },
-  
-  // LLM-related endpoints
-  LLM_ENDPOINTS: {
-    MODELS: 'models',
-    COMPLETION: 'chat/completions',
-    PROVIDERS: 'providers',
-    PROVIDER_BY_ID: 'providers/{provider}'
-  }
-};
-
-// Full route paths (for frontend use)
-export const API_ROUTES = {
-  // Auth routes
-  AUTH: {
-    BASE: `/api/${ROUTES.AUTH}`,
-    PROFILE: `/api/${ROUTES.AUTH}/${ROUTES.AUTH_ENDPOINTS.PROFILE}`,
-    LOGOUT: `/api/${ROUTES.AUTH}/${ROUTES.AUTH_ENDPOINTS.LOGOUT}`,
-    DISCORD: `/api/${ROUTES.AUTH}/${ROUTES.AUTH_ENDPOINTS.DISCORD}`,
-    DISCORD_CALLBACK: `/api/${ROUTES.AUTH}/${ROUTES.AUTH_ENDPOINTS.DISCORD_CALLBACK}`
-  },
-  
-  // Bot routes
-  BOTS: {
-    BASE: `/api/${ROUTES.BOTS}`,
-    BY_ID: (id: string) => `/api/${ROUTES.BOTS}/${ROUTES.BOT_ENDPOINTS.BY_ID(id)}`,
-    START: (id: string) => `/api/${ROUTES.BOTS}/${ROUTES.BOT_ENDPOINTS.START(id)}`,
-    STOP: (id: string) => `/api/${ROUTES.BOTS}/${ROUTES.BOT_ENDPOINTS.STOP(id)}`,
-    KNOWLEDGE: {
-      BASE: (botId: string) => `/api/${ROUTES.BOTS}/${ROUTES.BOT_ENDPOINTS.KNOWLEDGE(botId)}`,
-      BY_ID: (botId: string, itemId: string) => `/api/${ROUTES.BOTS}/${ROUTES.BOT_ENDPOINTS.KNOWLEDGE_ITEM(botId, itemId)}`
-    }
-  },
-  
-  // LLM routes
-  LLM: {
-    BASE: `/api/${ROUTES.LLM}`,
-    MODELS: `/api/${ROUTES.LLM}/${ROUTES.LLM_ENDPOINTS.MODELS}`,
-    COMPLETION: `/api/${ROUTES.LLM}/${ROUTES.LLM_ENDPOINTS.COMPLETION}`,
-    PROVIDERS: `/api/${ROUTES.LLM}/${ROUTES.LLM_ENDPOINTS.PROVIDERS}`,
-    PROVIDER_BY_ID: (provider: string) => `/api/${ROUTES.LLM}/${ROUTES.LLM_ENDPOINTS.PROVIDERS}/${provider}`
-  },
-
-  // Constants route
-  CONSTANTS: {
-    BASE: `/api/${ROUTES.CONSTANTS}`
-  }
-};
-
-// Backend route paths (for TSOA controllers)
-export const CONTROLLER_ROUTES = {
-  AUTH: ROUTES.AUTH,
-  BOTS: ROUTES.BOTS,
-  LLM: ROUTES.LLM,
-  CONSTANTS: ROUTES.CONSTANTS, 
-  KNOWLEDGE: `${ROUTES.BOTS}/{botId}/${ROUTES.KNOWLEDGE}`
-};
-
-// Note: Removed redundant export from routes/routes.ts to avoid circular dependency
+export * from './routes.constants';

@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { FrontendBot, toBotModel, toBotModels, BotConfiguration } from '../types';
-import { BotsService } from '../api';
-import { CreateBotRequest } from '../api';
-import { UpdateBotRequest } from '../api';
+import { BotsService, CreateBotRequest, UpdateBotRequest, BotsResponseDto } from '../api';
 
 interface BotsState {
   bots: FrontendBot[];
@@ -30,14 +28,15 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Call directly to the API endpoint since getUserBots is not in the generated API
-      // The GET / route is supposed to return the list of bots for the current user
-      const response = await fetch('/api/bots');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Use the TSOA-generated API client which will use OpenAPI.BASE = '/api'
+      // This follows the single source of truth principle in the project guidelines
+      const response = await BotsService.getUserBots();
+      
+      if (response && response.bots) {
+        set({ bots: toBotModels(response.bots), isLoading: false });
+      } else {
+        throw new Error('Invalid response format');
       }
-      const data = await response.json();
-      set({ bots: toBotModels(data.bots), isLoading: false });
     } catch (error) {
       console.error('Error fetching bots:', error);
       set({ error: 'Failed to fetch bots', isLoading: false });
@@ -48,9 +47,14 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use the generated API service
+      // Use the TSOA-generated API client
       const response = await BotsService.getBotById(id);
-      set({ currentBot: toBotModel(response.bot), isLoading: false });
+      
+      if (response && response.bot) {
+        set({ currentBot: toBotModel(response.bot), isLoading: false });
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (error) {
       console.error(`Error fetching bot ${id}:`, error);
       set({ error: 'Failed to fetch bot details', isLoading: false });
@@ -61,7 +65,7 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use the generated API service
+      // Use the TSOA-generated API client
       const response = await BotsService.createBot(botData as CreateBotRequest);
       const bot = toBotModel(response);
       
@@ -82,7 +86,7 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use the generated API service
+      // Use the TSOA-generated API client
       const response = await BotsService.updateBot(id, botData as UpdateBotRequest);
       const bot = toBotModel(response);
       
@@ -104,7 +108,7 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use the generated API service
+      // Use the TSOA-generated API client
       await BotsService.deleteBot(id);
       
       set(state => ({
@@ -123,7 +127,7 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use the generated API service
+      // Use the TSOA-generated API client
       const response = await BotsService.startBotById(id);
       const bot = toBotModel(response);
       
@@ -145,7 +149,7 @@ export const useBotStore = create<BotsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // Use the generated API service
+      // Use the TSOA-generated API client
       const response = await BotsService.stopBotById(id);
       const bot = toBotModel(response);
       

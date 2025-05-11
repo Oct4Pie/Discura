@@ -3,7 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * HTTP status codes structure for API
+ * Placeholder interface for HttpStatusConstants
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type HttpStatusConstants = {
     OK: number;

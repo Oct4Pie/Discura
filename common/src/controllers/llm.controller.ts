@@ -10,7 +10,6 @@ import {
   Response,
   Path,
 } from "tsoa";
-import { ROUTES } from "../types/routes";
 import {
   LLMModelData,
   LLMModelsResponseDto,
@@ -27,8 +26,11 @@ import { Request as ExpressRequest } from "express";
  *
  * Provides endpoints for interacting with large language models through
  * a standardized interface compatible with OpenAI API format.
+ * 
+ * IMPORTANT: The route string 'llm' matches BASE_ROUTES.LLM in routes.constants.ts
+ * This string literal MUST be kept in sync with that constant.
  */
-@Route(ROUTES.LLM)
+@Route("llm")
 @Tags("LLM")
 export class LLMController extends Controller {
   /**
@@ -37,7 +39,7 @@ export class LLMController extends Controller {
    * Returns a list of the available models sorted by creation date.
    * Models may vary based on system configuration and user permissions.
    */
-  @Get(ROUTES.LLM_ENDPOINTS.MODELS)
+  @Get("models")
   @Security("jwt")
   @Response<ErrorResponseDto>(500, "Server Error")
   public async getModels(): Promise<LLMModelsResponseDto> {
@@ -54,7 +56,7 @@ export class LLMController extends Controller {
    * The completion includes choices which contain generated messages from the model.
    * Response format can be controlled by the request parameters.
    */
-  @Post(ROUTES.LLM_ENDPOINTS.COMPLETION)
+  @Post("chat/completions")
   @Security("jwt")
   @Response<ErrorResponseDto>(400, "Invalid Request")
   @Response<ErrorResponseDto>(500, "Server Error")
@@ -72,7 +74,7 @@ export class LLMController extends Controller {
    * Returns the list of supported LLM providers in the system.
    * This helps clients know which providers are available.
    */
-  @Get(ROUTES.LLM_ENDPOINTS.PROVIDERS)
+  @Get("providers")
   @Security("jwt")
   @Response<ErrorResponseDto>(500, "Server Error")
   public async getProviders(): Promise<{ providers: LLMProvider[] }> {
@@ -92,7 +94,7 @@ export class LLMController extends Controller {
    *
    * Validates if the requested LLM provider is supported and available.
    */
-  @Get(ROUTES.LLM_ENDPOINTS.PROVIDER_BY_ID)
+  @Get("providers/{provider}")
   @Security("jwt")
   @Response<ErrorResponseDto>(404, "Provider Not Found")
   @Response<ErrorResponseDto>(500, "Server Error")

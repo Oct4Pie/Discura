@@ -4,7 +4,8 @@
 /* eslint-disable */
 import type { Constants } from './Constants';
 /**
- * Response DTO for constants
+ * Placeholder interface for ConstantsResponseDto
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type ConstantsResponseDto = {
     constants: Constants;

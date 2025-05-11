@@ -220,8 +220,9 @@ const models: TsoaRoute.Models = {
             "OFFLINE": {"dataType":"string","required":true},
             "ONLINE": {"dataType":"string","required":true},
             "ERROR": {"dataType":"string","required":true},
-            "LABELS": {"dataType":"nestedObjectLiteral","nestedProperties":{"error":{"dataType":"string","required":true},"online":{"dataType":"string","required":true},"offline":{"dataType":"string","required":true}},"required":true},
-            "COLORS": {"dataType":"nestedObjectLiteral","nestedProperties":{"error":{"dataType":"string","required":true},"online":{"dataType":"string","required":true},"offline":{"dataType":"string","required":true}},"required":true},
+            "offline": {"dataType":"string","required":true},
+            "online": {"dataType":"string","required":true},
+            "error": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -233,7 +234,10 @@ const models: TsoaRoute.Models = {
             "ANTHROPIC": {"dataType":"string","required":true},
             "GOOGLE": {"dataType":"string","required":true},
             "CUSTOM": {"dataType":"string","required":true},
-            "LABELS": {"dataType":"nestedObjectLiteral","nestedProperties":{"custom":{"dataType":"string","required":true},"google":{"dataType":"string","required":true},"anthropic":{"dataType":"string","required":true},"openai":{"dataType":"string","required":true}},"required":true},
+            "openai": {"dataType":"string","required":true},
+            "anthropic": {"dataType":"string","required":true},
+            "google": {"dataType":"string","required":true},
+            "custom": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -244,7 +248,9 @@ const models: TsoaRoute.Models = {
             "OPENAI": {"dataType":"string","required":true},
             "STABILITY": {"dataType":"string","required":true},
             "MIDJOURNEY": {"dataType":"string","required":true},
-            "LABELS": {"dataType":"nestedObjectLiteral","nestedProperties":{"midjourney":{"dataType":"string","required":true},"stability":{"dataType":"string","required":true},"openai":{"dataType":"string","required":true}},"required":true},
+            "openai": {"dataType":"string","required":true},
+            "stability": {"dataType":"string","required":true},
+            "midjourney": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -278,7 +284,11 @@ const models: TsoaRoute.Models = {
     "DefaultsConstants": {
         "dataType": "refObject",
         "properties": {
-            "BOT": {"dataType":"nestedObjectLiteral","nestedProperties":{"LLM_MODEL":{"dataType":"string","required":true},"LLM_PROVIDER":{"dataType":"string","required":true},"TRAITS":{"dataType":"array","array":{"dataType":"string"},"required":true},"PERSONALITY":{"dataType":"string","required":true},"SYSTEM_PROMPT":{"dataType":"string","required":true}},"required":true},
+            "SYSTEM_PROMPT": {"dataType":"string","required":true},
+            "PERSONALITY": {"dataType":"string","required":true},
+            "TRAITS": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "LLM_PROVIDER": {"dataType":"string","required":true},
+            "LLM_MODEL": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -303,9 +313,11 @@ const models: TsoaRoute.Models = {
         "properties": {
             "BASE_URL": {"dataType":"string","required":true},
             "OAUTH2_URL": {"dataType":"string","required":true},
-            "PERMISSIONS": {"dataType":"nestedObjectLiteral","nestedProperties":{"EMBED_LINKS":{"dataType":"string","required":true},"ATTACH_FILES":{"dataType":"string","required":true},"READ_MESSAGE_HISTORY":{"dataType":"string","required":true},"VIEW_CHANNEL":{"dataType":"string","required":true},"SEND_MESSAGES":{"dataType":"string","required":true}},"required":true},
-            "SCOPES": {"dataType":"nestedObjectLiteral","nestedProperties":{"APPLICATIONS_COMMANDS":{"dataType":"string","required":true},"BOT":{"dataType":"string","required":true}},"required":true},
-            "PERMISSION_INTEGERS": {"dataType":"nestedObjectLiteral","nestedProperties":{"BASIC_BOT":{"dataType":"string","required":true}},"required":true},
+            "SEND_MESSAGES": {"dataType":"string","required":true},
+            "VIEW_CHANNEL": {"dataType":"string","required":true},
+            "READ_MESSAGE_HISTORY": {"dataType":"string","required":true},
+            "ATTACH_FILES": {"dataType":"string","required":true},
+            "EMBED_LINKS": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -434,7 +446,7 @@ export function RegisterRoutes(app: Router) {
         const argsAuthController_login: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.post('/undefined/login',
+        app.post('/auth/login',
             ...(fetchMiddlewares<RequestHandler>(AuthController)),
             ...(fetchMiddlewares<RequestHandler>(AuthController.prototype.login)),
 
@@ -464,7 +476,7 @@ export function RegisterRoutes(app: Router) {
         const argsAuthController_register: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.post('/undefined/register',
+        app.post('/auth/register',
             ...(fetchMiddlewares<RequestHandler>(AuthController)),
             ...(fetchMiddlewares<RequestHandler>(AuthController.prototype.register)),
 
@@ -494,7 +506,7 @@ export function RegisterRoutes(app: Router) {
         const argsAuthController_getProfile: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.get('/undefined/profile',
+        app.get('/auth/profile',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(AuthController)),
             ...(fetchMiddlewares<RequestHandler>(AuthController.prototype.getProfile)),
@@ -525,7 +537,7 @@ export function RegisterRoutes(app: Router) {
         const argsAuthController_logout: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.post('/undefined/logout',
+        app.post('/auth/logout',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(AuthController)),
             ...(fetchMiddlewares<RequestHandler>(AuthController.prototype.logout)),
@@ -556,7 +568,7 @@ export function RegisterRoutes(app: Router) {
         const argsBotController_getUserBots: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.get('/undefined',
+        app.get('/bots',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(BotController)),
             ...(fetchMiddlewares<RequestHandler>(BotController.prototype.getUserBots)),
@@ -588,7 +600,7 @@ export function RegisterRoutes(app: Router) {
                 id: {"in":"path","name":"id","required":true,"dataType":"string"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.get('/undefined/:id',
+        app.get('/bots/:id',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(BotController)),
             ...(fetchMiddlewares<RequestHandler>(BotController.prototype.getBotById)),
@@ -620,7 +632,7 @@ export function RegisterRoutes(app: Router) {
                 requestBody: {"in":"body","name":"requestBody","required":true,"ref":"CreateBotRequest"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.post('/undefined',
+        app.post('/bots',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(BotController)),
             ...(fetchMiddlewares<RequestHandler>(BotController.prototype.createBot)),
@@ -653,7 +665,7 @@ export function RegisterRoutes(app: Router) {
                 requestBody: {"in":"body","name":"requestBody","required":true,"ref":"UpdateBotRequest"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.put('/undefined/:id',
+        app.put('/bots/:id',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(BotController)),
             ...(fetchMiddlewares<RequestHandler>(BotController.prototype.updateBot)),
@@ -685,7 +697,7 @@ export function RegisterRoutes(app: Router) {
                 id: {"in":"path","name":"id","required":true,"dataType":"string"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.delete('/undefined/:id',
+        app.delete('/bots/:id',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(BotController)),
             ...(fetchMiddlewares<RequestHandler>(BotController.prototype.deleteBot)),
@@ -717,7 +729,7 @@ export function RegisterRoutes(app: Router) {
                 id: {"in":"path","name":"id","required":true,"dataType":"string"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.post('/undefined/:id/start',
+        app.post('/bots/:id/start',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(BotController)),
             ...(fetchMiddlewares<RequestHandler>(BotController.prototype.startBotById)),
@@ -749,7 +761,7 @@ export function RegisterRoutes(app: Router) {
                 id: {"in":"path","name":"id","required":true,"dataType":"string"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.post('/undefined/:id/stop',
+        app.post('/bots/:id/stop',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(BotController)),
             ...(fetchMiddlewares<RequestHandler>(BotController.prototype.stopBotById)),
@@ -781,7 +793,7 @@ export function RegisterRoutes(app: Router) {
                 id: {"in":"path","name":"id","required":true,"dataType":"string"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.get('/undefined/:id/invite',
+        app.get('/bots/:id/invite',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(BotController)),
             ...(fetchMiddlewares<RequestHandler>(BotController.prototype.generateInviteLink)),
@@ -813,7 +825,7 @@ export function RegisterRoutes(app: Router) {
                 botId: {"in":"path","name":"botId","required":true,"dataType":"string"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.get('/undefined/:botId/knowledge',
+        app.get('/bots/:botId/knowledge',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(KnowledgeController)),
             ...(fetchMiddlewares<RequestHandler>(KnowledgeController.prototype.getKnowledgeItems)),
@@ -846,7 +858,7 @@ export function RegisterRoutes(app: Router) {
                 item: {"in":"body","name":"item","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"priority":{"dataType":"double"},"type":{"dataType":"string","required":true},"content":{"dataType":"string","required":true},"title":{"dataType":"string","required":true}}},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.post('/undefined/:botId/knowledge',
+        app.post('/bots/:botId/knowledge',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(KnowledgeController)),
             ...(fetchMiddlewares<RequestHandler>(KnowledgeController.prototype.addKnowledgeItem)),
@@ -880,7 +892,7 @@ export function RegisterRoutes(app: Router) {
                 item: {"in":"body","name":"item","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"priority":{"dataType":"double"},"type":{"dataType":"string"},"content":{"dataType":"string"},"title":{"dataType":"string"}}},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.put('/undefined/:botId/knowledge/:itemId',
+        app.put('/bots/:botId/knowledge/:itemId',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(KnowledgeController)),
             ...(fetchMiddlewares<RequestHandler>(KnowledgeController.prototype.updateKnowledgeItem)),
@@ -913,7 +925,7 @@ export function RegisterRoutes(app: Router) {
                 itemId: {"in":"path","name":"itemId","required":true,"dataType":"string"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.delete('/undefined/:botId/knowledge/:itemId',
+        app.delete('/bots/:botId/knowledge/:itemId',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(KnowledgeController)),
             ...(fetchMiddlewares<RequestHandler>(KnowledgeController.prototype.deleteKnowledgeItem)),
@@ -943,7 +955,7 @@ export function RegisterRoutes(app: Router) {
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsConstantsController_getConstants: Record<string, TsoaRoute.ParameterSchema> = {
         };
-        app.get('/undefined',
+        app.get('/constants',
             ...(fetchMiddlewares<RequestHandler>(ConstantsController)),
             ...(fetchMiddlewares<RequestHandler>(ConstantsController.prototype.getConstants)),
 
@@ -972,7 +984,7 @@ export function RegisterRoutes(app: Router) {
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsLLMController_getModels: Record<string, TsoaRoute.ParameterSchema> = {
         };
-        app.get('/undefined/models',
+        app.get('/llm/models',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(LLMController)),
             ...(fetchMiddlewares<RequestHandler>(LLMController.prototype.getModels)),
@@ -1004,7 +1016,7 @@ export function RegisterRoutes(app: Router) {
                 requestBody: {"in":"body","name":"requestBody","required":true,"ref":"LLMCompletionRequestDto"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.post('/undefined/chat/completions',
+        app.post('/llm/chat/completions',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(LLMController)),
             ...(fetchMiddlewares<RequestHandler>(LLMController.prototype.createChatCompletion)),
@@ -1034,7 +1046,7 @@ export function RegisterRoutes(app: Router) {
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsLLMController_getProviders: Record<string, TsoaRoute.ParameterSchema> = {
         };
-        app.get('/undefined/providers',
+        app.get('/llm/providers',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(LLMController)),
             ...(fetchMiddlewares<RequestHandler>(LLMController.prototype.getProviders)),
@@ -1065,7 +1077,7 @@ export function RegisterRoutes(app: Router) {
         const argsLLMController_checkProviderAvailability: Record<string, TsoaRoute.ParameterSchema> = {
                 provider: {"in":"path","name":"provider","required":true,"ref":"LLMProvider"},
         };
-        app.get('/undefined/providers/:provider',
+        app.get('/llm/providers/:provider',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(LLMController)),
             ...(fetchMiddlewares<RequestHandler>(LLMController.prototype.checkProviderAvailability)),

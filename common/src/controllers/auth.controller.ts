@@ -1,4 +1,3 @@
-import { CONTROLLER_ROUTES } from '../types/routes';
 import {
     Controller,
     Get,
@@ -15,15 +14,22 @@ import {
   MessageResponseDto,
   UserProfileResponseDto,
   UserResponseDto
-  } from "../types/api";
+  } from "../types";
 
 /**
  * Authentication controller
  * Handles user authentication and profile management
+ * 
+ * IMPORTANT: We use the string literals directly in the decorators
+ * because TSOA doesn't properly resolve imported constants during generation.
+ * These strings MUST match the constants in routes.constants.ts
  */
-@Route(CONTROLLER_ROUTES.AUTH)
+@Route("auth")
 @Tags('Authentication')
 export class AuthController extends Controller {
+  /**
+   * Login with credentials
+   */
   @Post('login')
   public async login(
     @Request() request: ExpressRequest
@@ -32,6 +38,9 @@ export class AuthController extends Controller {
     throw new Error('Method not implemented in common package');
   }
 
+  /**
+   * Register a new user
+   */
   @Post('register')
   public async register(
     @Request() request: ExpressRequest
@@ -40,6 +49,9 @@ export class AuthController extends Controller {
     throw new Error('Method not implemented in common package');
   }
 
+  /**
+   * Get current user profile
+   */
   @Get('profile')
   @Security('jwt')
   public async getProfile(
@@ -49,6 +61,9 @@ export class AuthController extends Controller {
     throw new Error('Method not implemented in common package');
   }
 
+  /**
+   * Logout current user
+   */
   @Post('logout')
   @Security('jwt')
   public async logout(

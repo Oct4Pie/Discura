@@ -3,24 +3,16 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Discord API constants structure for API
+ * Placeholder interface for DiscordApiConstants
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type DiscordApiConstants = {
     BASE_URL: string;
     OAUTH2_URL: string;
-    PERMISSIONS: {
-        EMBED_LINKS: string;
-        ATTACH_FILES: string;
-        READ_MESSAGE_HISTORY: string;
-        VIEW_CHANNEL: string;
-        SEND_MESSAGES: string;
-    };
-    SCOPES: {
-        APPLICATIONS_COMMANDS: string;
-        BOT: string;
-    };
-    PERMISSION_INTEGERS: {
-        BASIC_BOT: string;
-    };
+    SEND_MESSAGES: string;
+    VIEW_CHANNEL: string;
+    READ_MESSAGE_HISTORY: string;
+    ATTACH_FILES: string;
+    EMBED_LINKS: string;
 };
 

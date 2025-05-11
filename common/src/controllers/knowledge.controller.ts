@@ -1,4 +1,4 @@
-import { ROUTES, CONTROLLER_ROUTES } from '../types/routes';
+import { CONTROLLER_ROUTES, BASE_ROUTES, BOT_PATHS } from '../types/routes';
 import {
   Body,
   Controller,
@@ -26,8 +26,12 @@ import {
  * 
  * Provides endpoints for managing bot knowledge bases, allowing users to
  * add, update, and delete knowledge items that bots can reference during conversations.
+ * 
+ * IMPORTANT: We use the string literals directly in the decorators
+ * because TSOA doesn't properly resolve imported constants during generation.
+ * These strings MUST match the constants in routes.constants.ts
  */
-@Route(ROUTES.BOTS)
+@Route("bots")
 @Tags('Knowledge')
 export class KnowledgeController extends Controller {
   /**
@@ -35,7 +39,7 @@ export class KnowledgeController extends Controller {
    * 
    * @param botId The unique identifier of the bot
    */
-  @Get('/{botId}/knowledge')
+  @Get('{botId}/knowledge')
   @Security('jwt')
   public async getKnowledgeItems(
     @Path('botId') botId: string,
@@ -50,7 +54,7 @@ export class KnowledgeController extends Controller {
    * 
    * @param botId The unique identifier of the bot
    */
-  @Post('/{botId}/knowledge')
+  @Post('{botId}/knowledge')
   @Security('jwt')
   public async addKnowledgeItem(
     @Path('botId') botId: string,
@@ -72,7 +76,7 @@ export class KnowledgeController extends Controller {
    * @param botId The unique identifier of the bot
    * @param itemId The unique identifier of the knowledge item
    */
-  @Put('/{botId}/knowledge/{itemId}')
+  @Put('{botId}/knowledge/{itemId}')
   @Security('jwt')
   public async updateKnowledgeItem(
     @Path('botId') botId: string,
@@ -95,7 +99,7 @@ export class KnowledgeController extends Controller {
    * @param botId The unique identifier of the bot
    * @param itemId The unique identifier of the knowledge item
    */
-  @Delete('/{botId}/knowledge/{itemId}')
+  @Delete('{botId}/knowledge/{itemId}')
   @Security('jwt')
   public async deleteKnowledgeItem(
     @Path('botId') botId: string,

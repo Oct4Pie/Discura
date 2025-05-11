@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useAuthStore } from './stores/authStore';
 import theme from './theme';
 import { useEffect } from 'react';
+import { setupApiClient } from './api'; // Import API client setup
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout';
@@ -60,6 +61,9 @@ function App() {
   
   // Initialize authentication state when the app loads
   useEffect(() => {
+    // Configure API client first
+    setupApiClient();
+    // Then initialize authentication
     initialize();
   }, [initialize]);
 

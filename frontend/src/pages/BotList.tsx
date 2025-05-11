@@ -8,7 +8,6 @@ import {
   CardContent,
   CardActions,
   CardMedia,
-  CardActionArea,
   IconButton,
   Tooltip,
   Menu,

@@ -17,7 +17,6 @@ import {
   Container,
   Fade,
   Divider,
-  Stack,
   Step,
   StepLabel,
   Stepper

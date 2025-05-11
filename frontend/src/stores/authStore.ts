@@ -38,7 +38,8 @@ export const useAuthStore = create<AuthState>()(
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             
             // Try to fetch user profile with the stored token
-            await get().fetchUserProfile();
+            // Use api baseURL '/api', so call '/auth/profile'
+            await api.get('/auth/profile');
             
             // If we get here, token was valid and profile was fetched
             console.log('Successfully initialized auth state from stored token');
@@ -126,7 +127,7 @@ export const useAuthStore = create<AuthState>()(
           // Only call logout endpoint if we're authenticated
           if (get().isAuthenticated) {
             console.log('Calling logout endpoint...');
-            await api.post('/api/auth/logout');
+            await api.post('/auth/logout');
           }
         } catch (error) {
           console.error('Logout error:', error);
@@ -150,7 +151,7 @@ export const useAuthStore = create<AuthState>()(
       fetchUserProfile: async () => {
         console.log('Fetching user profile...');
         try {
-          const response = await api.get('/api/auth/profile');
+          const response = await api.get('/auth/profile');
           console.log('Profile fetch successful:', response.data);
           // Update state atomically
           set((state) => ({

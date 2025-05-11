@@ -20,7 +20,7 @@ export class KnowledgeService {
     ): CancelablePromise<KnowledgeBaseResponseDto> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/undefined/{botId}/knowledge',
+            url: '/bots/{botId}/knowledge',
             path: {
                 'botId': botId,
             },
@@ -44,7 +44,7 @@ export class KnowledgeService {
     ): CancelablePromise<KnowledgeItemDto> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/undefined/{botId}/knowledge',
+            url: '/bots/{botId}/knowledge',
             path: {
                 'botId': botId,
             },
@@ -72,7 +72,7 @@ export class KnowledgeService {
     ): CancelablePromise<KnowledgeItemDto> {
         return __request(OpenAPI, {
             method: 'PUT',
-            url: '/undefined/{botId}/knowledge/{itemId}',
+            url: '/bots/{botId}/knowledge/{itemId}',
             path: {
                 'botId': botId,
                 'itemId': itemId,
@@ -94,7 +94,7 @@ export class KnowledgeService {
     ): CancelablePromise<MessageResponseDto> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/undefined/{botId}/knowledge/{itemId}',
+            url: '/bots/{botId}/knowledge/{itemId}',
             path: {
                 'botId': botId,
                 'itemId': itemId,

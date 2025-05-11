@@ -3,18 +3,17 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * LLM provider structure for API
+ * Placeholder interface for LlmProviderConstants
+ * This will be replaced with the actual definition by sync-types.js
  */
 export type LlmProviderConstants = {
     OPENAI: string;
     ANTHROPIC: string;
     GOOGLE: string;
     CUSTOM: string;
-    LABELS: {
-        custom: string;
-        google: string;
-        anthropic: string;
-        openai: string;
-    };
+    openai: string;
+    anthropic: string;
+    google: string;
+    custom: string;
 };
 
