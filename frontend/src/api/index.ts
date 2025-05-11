@@ -4,29 +4,29 @@ export * from "./generated";
 // Import OpenAPI configuration for setup
 import { OpenAPI } from './generated/core/OpenAPI';
 import { useAuthStore } from '../stores/authStore';
+import { AuthenticationService } from './generated';
 
-/**
- * Configure the OpenAPI client to use the authentication token from authStore
- * This ensures all API requests include the JWT token in the Authorization header
- */
-export const setupApiClient = () => {
-  // Set up a resolver to dynamically fetch the token on each request
-  // The resolver must return a Promise as per the Resolver<string> type
-  OpenAPI.TOKEN = async () => {
-    const token = useAuthStore.getState().token;
-    return token ? `Bearer ${token}` : '';
-  };
+// Configure the OpenAPI client
+OpenAPI.BASE = '/api';
+OpenAPI.WITH_CREDENTIALS = true;
+OpenAPI.CREDENTIALS = 'include';
 
-  // Set credentials mode to include cookies
-  OpenAPI.WITH_CREDENTIALS = true;
-  OpenAPI.CREDENTIALS = 'include';
-  
-  // Fix the BASE path setting to work with the Vite proxy
-  // The Vite proxy will prepend '/api' to all requests
-  OpenAPI.BASE = '/api';
-
-  console.log('API client configured with authentication token resolver');
+// Replace TOKEN resolver to return only the raw token without 'Bearer ' prefix
+OpenAPI.TOKEN = async () => {
+  const token = useAuthStore.getState().token;
+  console.log('[API] TOKEN resolver raw token:', token ? '[TOKEN_HIDDEN]' : 'No token');
+  return token || '';
 };
 
-// Initialize API client configuration immediately
-setupApiClient();
+// Export a function to manually set auth headers on the generated client
+export const configureAuthHeaders = (token: string | null) => {
+  if (token) {
+    // Just setting the token in the store is enough
+    // The TOKEN resolver above will handle adding it to requests
+    console.log('[API] Auth headers configured with token');
+  } else {
+    console.log('[API] Auth headers cleared (no token)');
+  }
+};
+
+console.log('API client configured with authentication token resolver');

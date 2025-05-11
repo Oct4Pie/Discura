@@ -11,8 +11,7 @@ import type { ImageProviderConstants } from './ImageProviderConstants';
 import type { LlmProviderConstants } from './LlmProviderConstants';
 import type { StorageKeysConstants } from './StorageKeysConstants';
 /**
- * Placeholder interface for Constants
- * This will be replaced with the actual definition by sync-types.js
+ * Constants exported from common for frontend use
  */
 export type Constants = {
     BOT_STATUS: BotStatusConstants;

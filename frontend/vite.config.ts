@@ -10,7 +10,7 @@ export default defineConfig({
   resolve: {
     alias: {
       // Add explicit alias configuration for the common package
-      '@discura/common': path.resolve(__dirname, '../common/dist'),
+      '@discura/common': path.resolve(__dirname, '../common/src'),
     },
   },
   

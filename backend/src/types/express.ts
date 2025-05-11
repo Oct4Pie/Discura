@@ -3,16 +3,10 @@
  */
 import { Request } from 'express';
 import * as jwt from 'jsonwebtoken';
+import { JwtPayload } from '@discura/common/types';
 
-// Define our custom JWT payload
-export interface JwtPayload extends jwt.JwtPayload {
-  id: string; 
-  discordId: string;
-  username: string;
-  discriminator: string; // Added to match User properties
-  avatar: string | null; // Added to match User properties
-  email?: string | null;
-}
+// Re-export the JwtPayload from common package
+export { JwtPayload };
 
 // Extend Express User interface to match our User model
 declare global {

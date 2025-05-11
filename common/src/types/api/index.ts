@@ -15,4 +15,5 @@ export * from './error';
 export * from './knowledge';
 export * from './llm';
 export * from './response';
+export * from './tool';
 export * from './user';

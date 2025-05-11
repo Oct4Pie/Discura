@@ -1,5 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
-import { BotResponseDto, BotStatus, ImageProvider, Tool } from '@discura/common/schema/types';
+import { 
+  BotResponseDto, 
+  BotStatus, 
+  ImageProvider, 
+  LLMProvider,
+  Tool,
+  BotConfiguration
+} from '@discura/common/schema/types';
 import { BotRepository } from '../../services/database/bot.repository';
 import { IMAGE_PROVIDER, DEFAULTS } from '@discura/common/constants';
 import { db } from '../../services/database/database.factory';
@@ -7,8 +14,9 @@ import { logger } from '../../utils/logger';
 
 /**
  * Bot data from the database
+ * This is an internal interface for database entity mapping only
  */
-export interface BotData {
+interface BotDbEntity {
   id: string;
   user_id: string;
   name: string;
@@ -21,8 +29,9 @@ export interface BotData {
 
 /**
  * Bot configuration data from the database
+ * This is an internal interface for database entity mapping only
  */
-export interface BotConfigurationData {
+interface BotConfigurationDbEntity {
   bot_id: string;
   system_prompt: string;
   personality: string;
@@ -40,44 +49,6 @@ export interface BotConfigurationData {
 }
 
 /**
- * Bot configuration DTO for local use
- */
-export interface BotConfigurationDto {
-  systemPrompt: string;
-  personality: string;
-  traits: string[];
-  backstory: string;
-  llmProvider: string;
-  llmModel: string;
-  apiKey: string;
-  imageGeneration: {
-    enabled: boolean;
-    provider: string;
-    apiKey?: string;
-    model?: string;
-  };
-  toolsEnabled?: boolean;
-  tools?: Array<{
-    id: string;
-    name: string;
-    description: string;
-    parameters?: Array<{
-      name: string;
-      type: string;
-      description: string;
-      required: boolean;
-    }>;
-  }>;
-  knowledge?: Array<{
-    id: string;
-    name: string;
-    content: string;
-    type: string;
-    source?: string;
-  }>;
-}
-
-/**
  * Bot model with additional methods
  */
 export class Bot {
@@ -89,9 +60,9 @@ export class Bot {
   status: BotStatus; // Updated to use the directly imported BotStatus
   createdAt: Date;
   updatedAt: Date;
-  configuration?: BotConfigurationDto;
+  configuration?: BotConfiguration;
   
-  constructor(data: BotData, configData?: BotConfigurationData | null) {
+  constructor(data: BotDbEntity, configData?: BotConfigurationDbEntity | null) {
     this.id = data.id;
     this.user = data.user_id;
     this.name = data.name;
@@ -107,12 +78,12 @@ export class Bot {
         personality: configData.personality,
         backstory: configData.backstory,
         traits: JSON.parse(configData.traits),
-        llmProvider: configData.llm_provider,
+        llmProvider: configData.llm_provider as any, // Using type assertion since database value might not perfectly match enum
         llmModel: configData.llm_model,
         apiKey: configData.api_key,
         imageGeneration: {
           enabled: configData.image_generation_enabled === 1,
-          provider: configData.image_provider,
+          provider: configData.image_provider as ImageProvider,
           apiKey: configData.image_api_key,
           model: configData.image_model
         },
@@ -149,7 +120,7 @@ export class Bot {
       id: this.id,
       userId: this.user,
       name: this.name,
-      status: this.status as any, // Use type assertion to resolve compatibility for now
+      status: this.status as BotStatus,
       applicationId: this.applicationId,
       intents: [], // Add empty intents array
       configuration: {
@@ -157,8 +128,7 @@ export class Bot {
         personality: safeConfiguration.personality,
         backstory: safeConfiguration.backstory || '',
         traits: safeConfiguration.traits || [],
-        // Cast llmProvider to the specific string literal type required by BotConfiguration
-        llmProvider: safeConfiguration.llmProvider as 'openai' | 'anthropic' | 'google' | 'custom',
+        llmProvider: safeConfiguration.llmProvider as LLMProvider,
         llmModel: safeConfiguration.llmModel,
         apiKey: safeConfiguration.apiKey || '', // Add the apiKey property
         // Ensure knowledge items have the correct 'type' property by mapping and casting
@@ -178,7 +148,7 @@ export class Bot {
           name: tool.name,
           description: tool.description,
           parameters: tool.parameters || [],
-          implementation: '' // Add required implementation property with empty string default
+          implementation: tool.implementation || '' // Add required implementation property with empty string default
         }))
       },
       createdAt: this.createdAt.toISOString(),
@@ -205,7 +175,7 @@ export class BotAdapter {
   static async findById(id: string): Promise<Bot | null> {
     try {
       // Get bot data
-      const botData = await db.get<BotData>(
+      const botData = await db.get<BotDbEntity>(
         'SELECT * FROM bots WHERE id = ?',
         [id]
       );
@@ -215,7 +185,7 @@ export class BotAdapter {
       }
       
       // Get configuration data
-      const configData = await db.get<BotConfigurationData>(
+      const configData = await db.get<BotConfigurationDbEntity>(
         'SELECT * FROM bot_configurations WHERE bot_id = ?',
         [id]
       );
@@ -233,7 +203,7 @@ export class BotAdapter {
   static async findByUserId(userId: string): Promise<Bot[]> {
     try {
       // Get all bots for the user
-      const botDataList = await db.query<BotData>(
+      const botDataList = await db.query<BotDbEntity>(
         'SELECT * FROM bots WHERE user_id = ? ORDER BY created_at DESC',
         [userId]
       );
@@ -246,7 +216,7 @@ export class BotAdapter {
       const botIds = botDataList.map(bot => bot.id);
       const placeholders = botIds.map(() => '?').join(',');
       
-      const configDataList = await db.query<BotConfigurationData>(
+      const configDataList = await db.query<BotConfigurationDbEntity>(
         `SELECT * FROM bot_configurations WHERE bot_id IN (${placeholders})`,
         botIds
       );
@@ -325,12 +295,12 @@ export class BotAdapter {
   /**
    * Update or create bot configuration
    */
-  static async updateConfiguration(botId: string, config: BotConfigurationDto): Promise<boolean> {
+  static async updateConfiguration(botId: string, config: BotConfiguration): Promise<boolean> {
     try {
       const now = new Date().toISOString();
       
       // Check if configuration exists
-      const existingConfig = await db.get<BotConfigurationData>(
+      const existingConfig = await db.get<BotConfigurationDbEntity>(
         'SELECT * FROM bot_configurations WHERE bot_id = ?',
         [botId]
       );

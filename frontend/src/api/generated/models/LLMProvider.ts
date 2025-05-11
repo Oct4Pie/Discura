@@ -3,8 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Placeholder enum for LLMProvider
- * This will be replaced with the actual definition by sync-types.js
+ * LLM Provider Enum
  */
 export enum LLMProvider {
     OPENAI = 'openai',

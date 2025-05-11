@@ -4,8 +4,7 @@
 /* eslint-disable */
 import type { LLMCompletionMessage } from './LLMCompletionMessage';
 /**
- * Placeholder interface for LLMCompletionResponseChoice
- * This will be replaced with the actual definition by sync-types.js
+ * LLM Completion Response Choice
  */
 export type LLMCompletionResponseChoice = {
     index: number;

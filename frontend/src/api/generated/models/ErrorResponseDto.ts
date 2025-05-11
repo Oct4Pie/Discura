@@ -3,8 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Placeholder interface for ErrorResponseDto
- * This will be replaced with the actual definition by sync-types.js
+ * Standard Error Response DTO
  */
 export type ErrorResponseDto = {
     message: string;

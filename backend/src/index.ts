@@ -35,6 +35,9 @@ import { logger } from './utils/logger';
 import { db } from './services/database/database.factory';
 import { RegisterRoutes } from '@discura/common/routes';
 
+// Import controller injection utilities
+import { injectBackendControllers, restoreOriginalControllers } from './utils/tsoa-controller-injection';
+
 // CRITICAL: Import the real authentication implementation from backend
 import { expressAuthentication as backendAuthentication } from './middlewares/authentication';
 
@@ -87,19 +90,26 @@ function startServer() {
   app.use(passport.session());
   setupPassport();
 
-  // Set up non-TSOA routes
-  app.use(routes);
-
-  // Set up TSOA generated routes
+  // Set up TSOA generated routes FIRST to ensure they have precedence
   try {
+    // CRITICAL: Inject backend controller implementations before registering routes
+    injectBackendControllers();
+    
+    // Register routes from common package
     RegisterRoutes(app);
-    logger.info('TSOA routes registered successfully from ./generated/routes');
+    logger.info('TSOA routes registered successfully from @discura/common/routes');
+    
+    // Restore original controller constructors to avoid memory leaks
+    restoreOriginalControllers();
   } catch (error) {
     logger.error('Error setting up TSOA routes:', error instanceof Error ? error.message : String(error));
     if (error instanceof Error && error.stack) {
       logger.debug(error.stack);
     }
   }
+
+  // Set up non-TSOA routes AFTER TSOA routes (for OAuth and health checks only)
+  app.use(routes);
 
   // Serve Swagger UI
   try {

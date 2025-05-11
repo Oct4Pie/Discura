@@ -3,15 +3,21 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Placeholder interface for BotStatusConstants
- * This will be replaced with the actual definition by sync-types.js
+ * Bot status structure for API
  */
 export type BotStatusConstants = {
     OFFLINE: string;
     ONLINE: string;
     ERROR: string;
-    offline: string;
-    online: string;
-    error: string;
+    LABELS: {
+        error: string;
+        online: string;
+        offline: string;
+    };
+    COLORS: {
+        error: string;
+        online: string;
+        offline: string;
+    };
 };
 

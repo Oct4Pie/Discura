@@ -4,8 +4,7 @@
 /* eslint-disable */
 import type { LLMCompletionMessage } from './LLMCompletionMessage';
 /**
- * Placeholder interface for LLMCompletionRequestDto
- * This will be replaced with the actual definition by sync-types.js
+ * LLM Completion Request
  */
 export type LLMCompletionRequestDto = {
     model: string;

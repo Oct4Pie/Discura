@@ -1,11 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../../services/database/database.factory';
 import { logger } from '../../utils/logger';
+import { UserResponseDto } from '@discura/common/schema/types';
 
 /**
  * User data from the database
+ * This interface is only used for database interactions and should be kept internal
  */
-export interface UserData {
+interface UserDbEntity {
   id: string;
   discord_id: string;
   username: string;
@@ -18,6 +20,7 @@ export interface UserData {
 
 /**
  * User model with additional methods
+ * Acts as a bridge between database entities and API DTOs
  */
 export class User {
   id: string;
@@ -29,7 +32,7 @@ export class User {
   createdAt: Date;
   updatedAt: Date;
   
-  constructor(data: UserData) {
+  constructor(data: UserDbEntity) {
     this.id = data.id;
     this.discordId = data.discord_id;
     this.username = data.username;
@@ -41,18 +44,18 @@ export class User {
   }
   
   /**
-   * Convert to a plain object suitable for API responses
+   * Convert to a UserResponseDto for API responses
+   * This ensures adherence to the common API types (single source of truth)
    */
-  toDTO() {
+  toDTO(): UserResponseDto {
     return {
       id: this.id,
       discordId: this.discordId,
       username: this.username,
       discriminator: this.discriminator,
-      avatar: this.avatar,
-      email: this.email,
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString()
+      avatar: this.avatar || '',
+      email: this.email || '',
+      bots: [] // This would be populated separately when needed
     };
   }
 }
@@ -67,7 +70,7 @@ export class UserAdapter {
    */
   static async findById(id: string): Promise<User | null> {
     try {
-      const userData = await db.get<UserData>(
+      const userData = await db.get<UserDbEntity>(
         'SELECT * FROM users WHERE id = ?',
         [id]
       );
@@ -88,7 +91,7 @@ export class UserAdapter {
    */
   static async findByDiscordId(discordId: string): Promise<User | null> {
     try {
-      const userData = await db.get<UserData>(
+      const userData = await db.get<UserDbEntity>(
         'SELECT * FROM users WHERE discord_id = ?',
         [discordId]
       );

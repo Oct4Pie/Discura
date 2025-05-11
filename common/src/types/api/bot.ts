@@ -49,7 +49,7 @@ export interface BotsResponseDto {
 export interface CreateBotRequest {
   name: string;
   discordToken: string;
-  applicationId: string;
+  applicationId?: string; // Made optional since it can be provided by the backend
   intents?: string[];
   configuration?: BotConfiguration; // Changed from Record<string, any>
 }

@@ -23,7 +23,7 @@ import {
   UpdateBotRequest,
   ErrorResponseDto,
   MessageResponseDto
-} from "../types";
+} from "../types/api";
 
 /**
  * Controller for managing Discord bots

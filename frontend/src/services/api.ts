@@ -1,14 +1,5 @@
-import axios, { AxiosError } from 'axios';
-import { useAuthStore } from '../stores/authStore';
-
-// Define storage keys constants
-const STORAGE_KEYS = {
-  AUTH_STORAGE: 'auth',
-  USER_PREFERENCES: 'preferences',
-  THEME_MODE: 'theme_mode',
-  AUTH_TOKEN: 'auth_token',
-  USER_PROFILE: 'user_profile'
-};
+import axios, { AxiosError } from "axios";
+import { useAuthStore } from "../stores/authStore";
 
 /**
  * Set the authentication token for API requests
@@ -18,25 +9,25 @@ const STORAGE_KEYS = {
 export const setAuthToken = (token: string | null) => {
   if (token) {
     // For axios requests
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
     // For OpenAPI client, update the authStore which the resolver function uses
     // DO NOT directly set OpenAPI.TOKEN as it would override the resolver function
     const updateAuth = useAuthStore.setState;
     updateAuth({ token });
-    
-    console.log('API token set successfully');
+
+    console.log("API token set successfully");
   } else {
     // Clear token from axios
-    delete axios.defaults.headers.common['Authorization'];
-    delete api.defaults.headers.common['Authorization'];
-    
+    delete axios.defaults.headers.common["Authorization"];
+    delete api.defaults.headers.common["Authorization"];
+
     // Clear token from authStore
     const updateAuth = useAuthStore.setState;
     updateAuth({ token: null });
-    
-    console.log('API token cleared');
+
+    console.log("API token cleared");
   }
 };
 
@@ -49,10 +40,10 @@ export const getAuthToken = (): string | null => {
 
 // Create a configured axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: import.meta.env.VITE_API_URL || "/api",
   withCredentials: true,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -61,11 +52,11 @@ api.interceptors.request.use(
   (config) => {
     // Get token directly from auth store
     const token = useAuthStore.getState().token;
-    
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -78,9 +69,9 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Use setAuthToken to clear token in all places
       setAuthToken(null);
-      window.location.href = '/login';
+      window.location.href = "/login";
     }
-    
+
     return Promise.reject(error);
   }
 );

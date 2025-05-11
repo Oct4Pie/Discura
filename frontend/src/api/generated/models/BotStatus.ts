@@ -3,8 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Placeholder enum for BotStatus
- * This will be replaced with the actual definition by sync-types.js
+ * Bot Status Enum
  */
 export enum BotStatus {
     OFFLINE = 'offline',

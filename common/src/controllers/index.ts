@@ -10,3 +10,4 @@ export * from './bot.controller';
 export * from './knowledge.controller';
 export * from './llm.controller';
 export * from './constants.controller';
+export * from './tool.controller';

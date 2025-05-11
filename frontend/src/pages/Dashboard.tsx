@@ -1,16 +1,20 @@
 import { AddCircle as AddCircleIcon, SmartToy as BotIcon, PlayArrow as StartIcon, Stop as StopIcon } from '@mui/icons-material';
-import { 
-    Box, 
-    Button, 
-    Card, 
-    Container, 
-    Grid, 
-    Typography, 
-    useTheme,
-    alpha,
-    Avatar,
+import {
+    Box,
+    Button,
+    Card,
+    CardActions,
+    CardContent,
+    CardMedia,
+    Divider,
+    Grid,
+    IconButton,
     Paper,
     Skeleton,
+    Tooltip,
+    Typography,
+    alpha,
+    useTheme
 } from '@mui/material';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';

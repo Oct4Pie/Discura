@@ -92,6 +92,50 @@ Discura consists of three main components:
 - **Frontend**: React application providing the user interface
 - **Common**: Shared TypeScript types and utilities
 
+## Controller Injection Architecture
+
+The project uses a controller injection mechanism to enable backend-specific implementations of TSOA controllers defined in the common package. This architecture follows the "define once, implement many times" pattern:
+
+### Architecture Overview
+
+1. **Common Package**: Defines API contracts using TSOA controllers with placeholder implementations
+2. **Backend Package**: Implements the actual controller logic
+3. **TSOA Routes**: Generated from common package controllers
+4. **Controller Injection**: Runtime mechanism to use backend implementations with TSOA-generated routes
+
+### How Controller Injection Works
+
+The controller injection mechanism in `backend/src/utils/tsoa-controller-injection.ts` ensures that TSOA-generated routes use the backend implementations instead of the placeholder implementations in the common package:
+
+```typescript
+// Key steps in the injection process:
+1. Find all backend controller implementations
+2. Directly patch methods on the common controller prototypes
+3. Bind method implementations to backend controller instances
+4. Register the injection before TSOA routes are used
+```
+
+When the backend server starts:
+1. Backend controller implementations are instantiated
+2. Common controller prototype methods are replaced with methods from backend implementations
+3. TSOA routes are registered, now pointing to backend implementations
+4. Original constructors are restored to avoid memory leaks
+
+### Implementation Notes
+
+- Common controllers throw `"Method not implemented in common package"` errors in their placeholder implementations
+- Backend controllers extend or implement the common controller interfaces
+- The injection happens at runtime through prototype patching rather than compile-time
+- Debug logs are available to trace which methods are being patched
+
+### Troubleshooting Controller Injection
+
+If you see `"Method not implemented in common package"` errors:
+1. Check that backend controllers properly implement all methods from common controllers
+2. Verify controller injection is running before routes are registered
+3. Check the debug logs to confirm methods are being patched
+4. Ensure backend controller method signatures match common controller definitions
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

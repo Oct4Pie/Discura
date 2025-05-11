@@ -3,8 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Placeholder enum for ImageProvider
- * This will be replaced with the actual definition by sync-types.js
+ * Image Provider Enum
  */
 export enum ImageProvider {
     OPENAI = 'openai',

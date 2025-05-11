@@ -3,15 +3,16 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Placeholder interface for ImageProviderConstants
- * This will be replaced with the actual definition by sync-types.js
+ * Image provider structure for API
  */
 export type ImageProviderConstants = {
     OPENAI: string;
     STABILITY: string;
     MIDJOURNEY: string;
-    openai: string;
-    stability: string;
-    midjourney: string;
+    LABELS: {
+        midjourney: string;
+        stability: string;
+        openai: string;
+    };
 };
 

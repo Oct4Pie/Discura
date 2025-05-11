@@ -2,10 +2,6 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-/**
- * Placeholder interface for KnowledgeBase
- * This will be replaced with the actual definition by sync-types.js
- */
 export type KnowledgeBase = {
     id: string;
     name: string;

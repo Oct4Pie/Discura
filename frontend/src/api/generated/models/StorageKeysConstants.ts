@@ -3,8 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Placeholder interface for StorageKeysConstants
- * This will be replaced with the actual definition by sync-types.js
+ * Storage keys structure for API
  */
 export type StorageKeysConstants = {
     AUTH_STORAGE: string;

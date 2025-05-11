@@ -18,7 +18,7 @@ import {
   LLMCompletionResponseDto,
   ErrorResponseDto,
   LLMProvider,
-} from "../types";
+} from "../types/api";
 import { Request as ExpressRequest } from "express";
 
 /**

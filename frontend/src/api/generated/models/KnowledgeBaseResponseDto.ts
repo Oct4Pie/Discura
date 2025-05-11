@@ -4,8 +4,7 @@
 /* eslint-disable */
 import type { KnowledgeItemDto } from './KnowledgeItemDto';
 /**
- * Placeholder interface for KnowledgeBaseResponseDto
- * This will be replaced with the actual definition by sync-types.js
+ * Knowledge Base Response Data
  */
 export type KnowledgeBaseResponseDto = {
     botId: string;

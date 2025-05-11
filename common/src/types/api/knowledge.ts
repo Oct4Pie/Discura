@@ -10,7 +10,7 @@
  * @tsoaModel
  */
 export interface KnowledgeItemDto {
-  id: number;
+  id: number | string;
   title: string;
   content: string;
   type: string;

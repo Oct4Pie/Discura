@@ -3,8 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Placeholder interface for LLMModelData
- * This will be replaced with the actual definition by sync-types.js
+ * LLM Model Data Structure
  */
 export type LLMModelData = {
     id: string;

@@ -1,4 +1,4 @@
-import { Tool } from '@discura/common/types'; // Updated import path
+import { Tool } from '@discura/common/types';
 import { logger } from '../utils/logger';
 
 // Execute tool calls

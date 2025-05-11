@@ -5,8 +5,7 @@
 import type { BotConfiguration } from './BotConfiguration';
 import type { BotStatus } from './BotStatus';
 /**
- * Placeholder interface for UpdateBotRequest
- * This will be replaced with the actual definition by sync-types.js
+ * Update Bot Request
  */
 export type UpdateBotRequest = {
     name?: string;

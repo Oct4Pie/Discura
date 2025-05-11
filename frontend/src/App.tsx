@@ -5,7 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useAuthStore } from './stores/authStore';
 import theme from './theme';
 import { useEffect } from 'react';
-import { setupApiClient } from './api'; // Import API client setup
+import { configureAuthHeaders } from './api'; // Updated import
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout';
@@ -57,15 +57,19 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
-  const { initialize } = useAuthStore();
+  const { initialize, token } = useAuthStore();
   
   // Initialize authentication state when the app loads
   useEffect(() => {
-    // Configure API client first
-    setupApiClient();
-    // Then initialize authentication
+    // Initialize auth - the OpenAPI client will use the token resolver
     initialize();
   }, [initialize]);
+  
+  // Configure auth headers whenever token changes
+  useEffect(() => {
+    // This ensures our token configuration is properly applied
+    configureAuthHeaders(token);
+  }, [token]);
 
   return (
     <ThemeProvider theme={theme}>

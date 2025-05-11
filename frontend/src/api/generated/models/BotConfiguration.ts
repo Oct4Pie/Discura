@@ -7,8 +7,7 @@ import type { KnowledgeBase } from './KnowledgeBase';
 import type { LLMProvider } from './LLMProvider';
 import type { Tool } from './Tool';
 /**
- * Placeholder interface for BotConfiguration
- * This will be replaced with the actual definition by sync-types.js
+ * Bot Configuration Structure
  */
 export type BotConfiguration = {
     systemPrompt: string;

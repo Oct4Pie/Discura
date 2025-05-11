@@ -4,8 +4,7 @@
 /* eslint-disable */
 import type { UserResponseDto } from './UserResponseDto';
 /**
- * Placeholder interface for UserProfileResponseDto
- * This will be replaced with the actual definition by sync-types.js
+ * User Profile Response Data
  */
 export type UserProfileResponseDto = {
     user: UserResponseDto;

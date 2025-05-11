@@ -5,8 +5,7 @@
 import type { BotConfiguration } from './BotConfiguration';
 import type { BotStatus } from './BotStatus';
 /**
- * Placeholder interface for BotResponseDto
- * This will be replaced with the actual definition by sync-types.js
+ * Bot Response Data
  */
 export type BotResponseDto = {
     id: string;

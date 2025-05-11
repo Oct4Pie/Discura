@@ -3,8 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Placeholder interface for LLMCompletionMessage
- * This will be replaced with the actual definition by sync-types.js
+ * LLM Completion Message
  */
 export type LLMCompletionMessage = {
     role: string;

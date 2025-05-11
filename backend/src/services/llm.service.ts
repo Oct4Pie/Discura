@@ -7,13 +7,8 @@ import {
   LLMCompletionResponseDto,
   LLMModelData
 } from '@discura/common';
+import { LLMResponse } from '@discura/common/types/llm';
 import { BotAdapter } from '../models/adapters/bot.adapter';
-
-// Interface for LLM response
-interface LLMResponse {
-  text: string;
-  toolCalls?: any[];
-}
 
 // Default models to show when no provider is available
 const DEFAULT_MODELS: LLMModelData[] = [

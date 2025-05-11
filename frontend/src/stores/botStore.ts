@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { FrontendBot, toBotModel, toBotModels, BotConfiguration } from '../types';
-import { BotsService, CreateBotRequest, UpdateBotRequest, BotsResponseDto } from '../api';
+import { BotsService, CreateBotRequest, UpdateBotRequest } from '../api';
 
 interface BotsState {
   bots: FrontendBot[];

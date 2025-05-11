@@ -6,5 +6,5 @@
 
 declare namespace Schema {
   // Export all types from generated API models
-  export * from '../api/generated';
+  export * from '../api';
 }

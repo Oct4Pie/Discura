@@ -1,23 +1,12 @@
 import { db } from '../../services/database/database.factory';
 import { logger } from '../../utils/logger';
-
-/**
- * Knowledge item DTO for API responses
- */
-export interface KnowledgeItemDto {
-  id: number;
-  title: string;
-  content: string;
-  type: string;
-  priority: number;
-  createdAt: string;
-  updatedAt: string;
-}
+import { KnowledgeItemDto } from '@discura/common/schema/types';
 
 /**
  * Knowledge item data from the database
+ * This is an internal interface for database entity mapping only
  */
-export interface KnowledgeData {
+interface KnowledgeDbEntity {
   id: number;
   bot_id: string;
   title: string;
@@ -41,7 +30,7 @@ export class KnowledgeItem {
   createdAt: Date;
   updatedAt: Date;
   
-  constructor(data: KnowledgeData) {
+  constructor(data: KnowledgeDbEntity) {
     this.id = data.id;
     this.botId = data.bot_id;
     this.title = data.title;
@@ -53,7 +42,8 @@ export class KnowledgeItem {
   }
   
   /**
-   * Convert to a DTO for API responses
+   * Convert to a KnowledgeItemDto for API responses
+   * Using the common package type definition (single source of truth)
    */
   toDTO(): KnowledgeItemDto {
     return {
@@ -77,7 +67,7 @@ export class KnowledgeAdapter {
    */
   static async findById(id: number, botId: string): Promise<KnowledgeItem | null> {
     try {
-      const data = await db.get<KnowledgeData>(
+      const data = await db.get<KnowledgeDbEntity>(
         'SELECT * FROM knowledge_items WHERE id = ? AND bot_id = ?',
         [id, botId]
       );
@@ -98,7 +88,7 @@ export class KnowledgeAdapter {
    */
   static async findByBotId(botId: string): Promise<KnowledgeItem[]> {
     try {
-      const dataList = await db.query<KnowledgeData>(
+      const dataList = await db.query<KnowledgeDbEntity>(
         'SELECT * FROM knowledge_items WHERE bot_id = ? ORDER BY priority DESC, created_at DESC',
         [botId]
       );

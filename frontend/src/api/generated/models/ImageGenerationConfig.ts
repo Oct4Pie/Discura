@@ -3,10 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { ImageProvider } from './ImageProvider';
-/**
- * Placeholder interface for ImageGenerationConfig
- * This will be replaced with the actual definition by sync-types.js
- */
 export type ImageGenerationConfig = {
     enabled: boolean;
     provider: ImageProvider;

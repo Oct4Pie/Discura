@@ -3,8 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Placeholder interface for UserResponseDto
- * This will be replaced with the actual definition by sync-types.js
+ * User Response Data
  */
 export type UserResponseDto = {
     id: string;

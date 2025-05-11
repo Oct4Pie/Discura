@@ -1,16 +1,20 @@
 import { toolRepository, ToolDefinitionEntity } from '../../services/database/tool.repository';
 import { logger } from '../../utils/logger';
+import { Tool } from '@discura/common/schema/types';
 
 /**
- * Tool definition DTO for API responses
+ * Tool Definition DTO interface that matches the common package definition
+ * This is used as a temporary interface until the type is properly generated in schema/types
  */
-export interface ToolDefinitionDto {
+interface ToolDefinitionDto {
   id?: string;
   botId: string;
   name: string;
   description: string;
   schema: object;
   enabled: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /**
@@ -23,7 +27,7 @@ export class ToolAdapter {
   /**
    * Get all tool definitions for a bot
    */
-  static async getByBotId(botId: string): Promise<any[]> {
+  static async getByBotId(botId: string): Promise<ToolDefinitionDto[]> {
     try {
       const tools = await toolRepository.findByBotId(botId);
       return tools.map(tool => this.mapToToolModel(tool));
@@ -36,7 +40,7 @@ export class ToolAdapter {
   /**
    * Get enabled tool definitions for a bot
    */
-  static async getEnabledByBotId(botId: string): Promise<any[]> {
+  static async getEnabledByBotId(botId: string): Promise<ToolDefinitionDto[]> {
     try {
       const tools = await toolRepository.findEnabledByBotId(botId);
       return tools.map(tool => this.mapToToolModel(tool));
@@ -49,7 +53,7 @@ export class ToolAdapter {
   /**
    * Get a tool definition by ID
    */
-  static async getById(id: number): Promise<any> {
+  static async getById(id: number): Promise<ToolDefinitionDto | null> {
     try {
       const tool = await toolRepository.findToolById(id);
       if (!tool) return null;
@@ -64,7 +68,7 @@ export class ToolAdapter {
   /**
    * Get a tool definition by name and bot ID
    */
-  static async getByNameAndBotId(name: string, botId: string): Promise<any> {
+  static async getByNameAndBotId(name: string, botId: string): Promise<ToolDefinitionDto | null> {
     try {
       const tool = await toolRepository.findByNameAndBotId(name, botId);
       if (!tool) return null;
@@ -85,7 +89,7 @@ export class ToolAdapter {
     description: string;
     schema: object;
     enabled?: boolean;
-  }): Promise<any> {
+  }): Promise<ToolDefinitionDto> {
     try {
       const { botId, name, description, schema, enabled = true } = data;
       
@@ -113,15 +117,29 @@ export class ToolAdapter {
   /**
    * Update a tool definition
    */
-  static async update(id: number, updates: Partial<ToolDefinitionDto>): Promise<boolean> {
+  static async update(id: number, updates: Partial<Tool | ToolDefinitionDto>): Promise<boolean> {
     try {
       // Map API DTO to database entity format
       const entityUpdates: Partial<ToolDefinitionEntity> = {};
       
       if (updates.name !== undefined) entityUpdates.name = updates.name;
       if (updates.description !== undefined) entityUpdates.description = updates.description;
-      if (updates.schema !== undefined) entityUpdates.schema = JSON.stringify(updates.schema);
-      if (updates.enabled !== undefined) entityUpdates.enabled = updates.enabled ? 1 : 0;
+      
+      if ('parameters' in updates || 'implementation' in updates) {
+        // Handle Tool type updates (from botConfiguration.ts)
+        const schema = {
+          parameters: 'parameters' in updates ? updates.parameters : [],
+          implementation: 'implementation' in updates ? updates.implementation : ''
+        };
+        entityUpdates.schema = JSON.stringify(schema);
+      } else if ('schema' in updates) {
+        // Handle ToolDefinitionDto updates
+        entityUpdates.schema = JSON.stringify(updates.schema);
+      }
+      
+      if ('enabled' in updates) {
+        entityUpdates.enabled = updates.enabled ? 1 : 0;
+      }
       
       return await toolRepository.updateToolDefinition(id, entityUpdates);
     } catch (error) {
@@ -169,9 +187,9 @@ export class ToolAdapter {
   /**
    * Map SQLite entity to tool model format
    */
-  private static mapToToolModel(tool: ToolDefinitionEntity): any {
+  private static mapToToolModel(tool: ToolDefinitionEntity): ToolDefinitionDto {
     // Parse JSON schema string from database
-    let parsedSchema: object;
+    let parsedSchema: object = {};
     try {
       parsedSchema = JSON.parse(tool.schema);
     } catch (error) {
@@ -180,31 +198,37 @@ export class ToolAdapter {
     }
     
     return {
-      id: tool.id,
+      id: tool.id?.toString(),
       botId: tool.bot_id,
       name: tool.name,
       description: tool.description,
       schema: parsedSchema,
       enabled: Boolean(tool.enabled),
-      createdAt: tool.created_at ? new Date(tool.created_at) : new Date(),
-      updatedAt: tool.updated_at ? new Date(tool.updated_at) : new Date(),
-      
-      // Add helper methods for consistent interface
-      lean: function() {
-        return { ...this };
-      },
-      
-      // Convert to ToolDefinitionDto
-      toDTO: function(): ToolDefinitionDto {
-        return {
-          id: this.id?.toString(),
-          botId: this.botId,
-          name: this.name,
-          description: this.description,
-          schema: this.schema,
-          enabled: this.enabled
-        };
-      }
+      createdAt: tool.created_at,
+      updatedAt: tool.updated_at,
+    };
+  }
+
+  /**
+   * Convert a tool definition to a Tool for bot configuration
+   */
+  static toTool(toolDefinition: ToolDefinitionDto): Tool {
+    // Extract parameters and implementation from schema if possible
+    let parameters = [];
+    let implementation = '';
+    
+    if (typeof toolDefinition.schema === 'object' && toolDefinition.schema !== null) {
+      const schema = toolDefinition.schema as any;
+      parameters = Array.isArray(schema.parameters) ? schema.parameters : [];
+      implementation = typeof schema.implementation === 'string' ? schema.implementation : '';
+    }
+    
+    return {
+      id: toolDefinition.id || '',
+      name: toolDefinition.name,
+      description: toolDefinition.description,
+      parameters: parameters,
+      implementation: implementation
     };
   }
 }

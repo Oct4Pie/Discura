@@ -38,7 +38,7 @@ export const expressAuthentication: AuthenticationFunction = async (
         } else {
           // Add user to request - cast to any to avoid type conflicts
           (request as any).user = decoded as JwtPayload;
-          logger.debug(`User authenticated: ${(decoded as JwtPayload).sub}`);
+          logger.debug(`User authenticated: ${(decoded as JwtPayload).id}`);
           resolve(decoded);
         }
       });

@@ -4,8 +4,7 @@
 /* eslint-disable */
 import type { BotConfiguration } from './BotConfiguration';
 /**
- * Placeholder interface for CreateBotRequest
- * This will be replaced with the actual definition by sync-types.js
+ * Create Bot Request
  */
 export type CreateBotRequest = {
     name: string;

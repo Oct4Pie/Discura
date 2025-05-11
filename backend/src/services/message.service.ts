@@ -4,13 +4,8 @@ import { generateImage } from './image.service';
 import { callLLM } from './llm.service';
 import { executeTools } from './tool.service';
 import { BotAdapter, Bot } from '../models/adapters/bot.adapter';
-import { Tool, ImageProvider } from '@discura/common';
-
-// Type for LLM response
-interface LLMResponse {
-  text: string;
-  toolCalls?: any[];
-}
+import { Tool, ImageProvider } from '@discura/common/types';
+import { LLMResponse } from '@discura/common/types/llm';
 
 /**
  * Sets up event handlers for a Discord bot client

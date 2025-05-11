@@ -5,7 +5,7 @@
  */
 import { Controller, Get, Route, Tags } from 'tsoa';
 import { CONTROLLER_ROUTES, BASE_ROUTES } from '../types/routes';
-import { ConstantsResponseDto } from '../types';
+import { ConstantsResponseDto } from '../types/api';
 
 /**
  * Controller for providing application constants to the frontend
