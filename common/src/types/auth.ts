@@ -1,13 +1,13 @@
 /**
  * Authentication Types
- * 
+ *
  * Shared types for authentication between backend and API definitions.
  * These types are used by the backend JWT implementation and by TSOA controllers.
  */
 
 // Define our custom JWT payload - abstract from backend implementation
 export interface JwtPayload {
-  id: string; 
+  id: string;
   discordId: string;
   username: string;
   discriminator?: string;
@@ -19,7 +19,7 @@ export interface JwtPayload {
 export type AuthenticationFunction = (
   request: any, // Express.Request in actual implementation
   securityName: string,
-  scopes?: string[]
+  scopes?: string[],
 ) => Promise<any>;
 
 // Re-export any needed authentication types used throughout the app

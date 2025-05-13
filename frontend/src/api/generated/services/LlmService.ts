@@ -2,10 +2,13 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AllProviderModelsResponseDto } from '../models/AllProviderModelsResponseDto';
+import type { CustomProviderConfig } from '../models/CustomProviderConfig';
 import type { LLMCompletionRequestDto } from '../models/LLMCompletionRequestDto';
 import type { LLMCompletionResponseDto } from '../models/LLMCompletionResponseDto';
 import type { LLMModelsResponseDto } from '../models/LLMModelsResponseDto';
 import type { LLMProvider } from '../models/LLMProvider';
+import type { ProviderModelsResponseDto } from '../models/ProviderModelsResponseDto';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -90,6 +93,159 @@ export class LlmService {
             url: '/llm/providers/{provider}',
             path: {
                 'provider': provider,
+            },
+            errors: {
+                404: `Provider Not Found`,
+                500: `Server Error`,
+            },
+        });
+    }
+    /**
+     * Get models for a specific provider
+     *
+     * Returns the models available for the specified provider.
+     * Results are cached to avoid rate limiting but will be refreshed
+     * if the cache is too old.
+     * @param provider
+     * @returns ProviderModelsResponseDto Ok
+     * @throws ApiError
+     */
+    public static getProviderModels(
+        provider: LLMProvider,
+    ): CancelablePromise<ProviderModelsResponseDto> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/llm/providers/{provider}/models',
+            path: {
+                'provider': provider,
+            },
+            errors: {
+                404: `Provider Not Found`,
+                500: `Server Error`,
+            },
+        });
+    }
+    /**
+     * Get models for all available providers
+     *
+     * Returns models available for all providers in the system.
+     * Results are cached to avoid rate limiting but will be refreshed
+     * if the cache is too old.
+     * @returns AllProviderModelsResponseDto Ok
+     * @throws ApiError
+     */
+    public static getAllProviderModels(): CancelablePromise<AllProviderModelsResponseDto> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/llm/models/all-providers',
+            errors: {
+                500: `Server Error`,
+            },
+        });
+    }
+    /**
+     * Force refresh models for a provider
+     *
+     * Forces a refresh of the model cache for the specified provider.
+     * This will make a new API call to the provider to get the latest models.
+     * @param provider
+     * @returns ProviderModelsResponseDto Ok
+     * @throws ApiError
+     */
+    public static refreshProviderModels(
+        provider: LLMProvider,
+    ): CancelablePromise<ProviderModelsResponseDto> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/llm/providers/{provider}/models/refresh',
+            path: {
+                'provider': provider,
+            },
+            errors: {
+                404: `Provider Not Found`,
+                500: `Server Error`,
+            },
+        });
+    }
+    /**
+     * Enable or disable a provider
+     *
+     * Updates the status of a provider to either enabled or disabled.
+     * Providers must be enabled to be used in the system.
+     * @param provider
+     * @param requestBody
+     * @returns any Ok
+     * @throws ApiError
+     */
+    public static updateProviderStatus(
+        provider: LLMProvider,
+        requestBody: {
+            enabled: boolean;
+        },
+    ): CancelablePromise<{
+        enabled: boolean;
+        provider: LLMProvider;
+        success: boolean;
+    }> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/llm/providers/{provider}/status',
+            path: {
+                'provider': provider,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                404: `Provider Not Found`,
+                500: `Server Error`,
+            },
+        });
+    }
+    /**
+     * Configure a custom provider
+     *
+     * Adds or updates a custom provider configuration.
+     * Custom providers must follow the OpenAI-compatible API format.
+     * @param requestBody
+     * @returns any Ok
+     * @throws ApiError
+     */
+    public static configureCustomProvider(
+        requestBody: CustomProviderConfig,
+    ): CancelablePromise<{
+        provider: CustomProviderConfig;
+        success: boolean;
+    }> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/llm/providers/custom',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid Provider Configuration`,
+                500: `Server Error`,
+            },
+        });
+    }
+    /**
+     * Remove a custom provider
+     *
+     * Removes a custom provider from the system by name.
+     * @param name
+     * @returns any Ok
+     * @throws ApiError
+     */
+    public static removeCustomProvider(
+        name: string,
+    ): CancelablePromise<{
+        removed: boolean;
+        success: boolean;
+    }> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/llm/providers/custom/{name}',
+            path: {
+                'name': name,
             },
             errors: {
                 404: `Provider Not Found`,

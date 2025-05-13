@@ -1,18 +1,19 @@
 /**
  * Backend Authentication Module for TSOA
- * 
+ *
  * This file overrides the placeholder implementation in common/src/auth/authentication.ts
  * by re-exporting the backend's actual implementation.
- * 
+ *
  * When the backend registers TSOA routes, this file will be used instead of the common
  * package's placeholder, ensuring proper authentication.
  */
 
-import { Request } from 'express';
-import * as jwt from 'jsonwebtoken';
-import config from '../config';
-import { AuthenticationFunction, JwtPayload } from '@discura/common/types/auth';
-import { logger } from '../utils/logger';
+import { AuthenticationFunction, JwtPayload } from "@discura/common/types/auth";
+import { Request } from "express";
+import * as jwt from "jsonwebtoken";
+
+import config from "../config";
+import { logger } from "../utils/logger";
 
 /**
  * Real authentication implementation for JWT token validation
@@ -21,10 +22,10 @@ import { logger } from '../utils/logger';
 export const expressAuthentication: AuthenticationFunction = async (
   request: Request,
   securityName: string,
-  scopes?: string[]
+  scopes?: string[],
 ): Promise<any> => {
-  if (securityName === 'jwt') {
-    const token = request.headers['authorization']?.split(' ')[1];
+  if (securityName === "jwt") {
+    const token = request.headers["authorization"]?.split(" ")[1];
 
     return new Promise((resolve, reject) => {
       if (!token) {
@@ -44,6 +45,6 @@ export const expressAuthentication: AuthenticationFunction = async (
       });
     });
   }
-  
+
   return Promise.reject(new Error("Invalid security name"));
-}
+};

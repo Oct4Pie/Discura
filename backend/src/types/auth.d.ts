@@ -6,4 +6,4 @@
 /// <reference types="@discura/common/auth" />
 
 // Export the auth types from common
-export * from '@discura/common/auth';
+export * from "@discura/common/auth";

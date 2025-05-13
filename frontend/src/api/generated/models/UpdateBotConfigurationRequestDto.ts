@@ -4,13 +4,9 @@
 /* eslint-disable */
 import type { BotConfiguration } from './BotConfiguration';
 /**
- * Create Bot Request
+ * Update Bot Configuration Request DTO
  */
-export type CreateBotRequest = {
-    name: string;
-    discordToken: string;
-    applicationId: string;
-    intents?: Array<string>;
-    configuration?: BotConfiguration;
+export type UpdateBotConfigurationRequestDto = {
+    configuration: BotConfiguration;
 };
 

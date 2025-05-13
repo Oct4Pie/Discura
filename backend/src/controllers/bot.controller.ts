@@ -1,364 +1,493 @@
-import { Request } from 'express';
-import { logger } from '../utils/logger';
-import { BotAdapter } from '../models/adapters/bot.adapter';
-import { 
-  BotResponseDto, 
-  BotStatus, 
-  BotsResponseDto, 
-  CreateBotRequest, 
-  MessageResponseDto, 
-  UpdateBotRequest 
-} from '@discura/common/schema/types';
-import { 
+import { BotController as CommonBotController } from "@discura/common/controllers";
+import {
+  CreateBotRequestDto,
+  CreateBotResponseDto,
+  GetAllBotsResponseDto,
+  GetBotResponseDto,
+  StartBotResponseDto,
+  StopBotResponseDto,
+  UpdateBotRequestDto,
+  UpdateBotResponseDto,
+  UpdateBotConfigurationRequestDto,
+  UpdateBotConfigurationResponseDto,
+  GenerateBotInviteLinkResponseDto,
+  DeleteBotResponseDto,
+  BotStatus,
+} from "@discura/common";
+import {
+  createBot,
+  getBotsByUser,
+  getBotById,
   startBot,
   stopBot,
-  generateBotInviteLink
-} from '../services/bot.service';
-import { BotController as CommonBotController } from '@discura/common/controllers';
-import { Controller } from 'tsoa';
+  updateBot,
+  updateBotConfiguration,
+  deleteBot,
+  generateBotInviteLink,
+} from "../services/bot.service";
+import { Request } from "express";
+import { logger } from "../utils/logger";
 
-/**
- * Implementation of the BotController for managing Discord bots
- * Extends the common BotController to ensure proper TSOA integration
- */
 export class BotController extends CommonBotController {
   /**
-   * List all bots for the authenticated user
+   * Create a new bot
+   * @param requestBody Bot creation data
+   * @param request Express request
+   * @returns Created bot data with success message
    */
-  public async getUserBots(request: Request): Promise<BotsResponseDto> {
+  public async createBot(
+    requestBody: CreateBotRequestDto,
+    request: Request
+  ): Promise<CreateBotResponseDto> {
     try {
-      // Get user ID from authenticated request
-      const userId = (request as any).user?.id;
+      // Get user ID from authenticated user
+      const userId = request.user?.id;
       if (!userId) {
-        throw new Error('User not authenticated');
+        throw new Error("User not authenticated");
       }
 
-      // Get all bots for the user
-      const bots = await BotAdapter.findByUserId(userId);
-      
-      // Convert to DTOs
-      const botDtos = bots.map(bot => bot.toDTO());
-      
-      logger.info(`Retrieved ${botDtos.length} bots for user ${userId}`);
-      return { bots: botDtos };
-    } catch (error) {
-      logger.error('Error in getUserBots:', error);
-      throw error;
+      // Add user ID to bot data
+      const botData = {
+        ...requestBody,
+        userId,
+      };
+
+      // Create bot
+      const bot = await createBot(botData);
+
+      logger.info(`User ${userId} created bot ${bot.id}`);
+
+      // Return the properly formatted DTO using the toDTO method
+      return bot.toDTO();
+    } catch (error: any) {
+      logger.error("Bot creation failed:", error);
+      throw new Error(`Failed to create bot: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get all bots for the current user
+   * @param request Express request
+   * @returns List of user's bots
+   */
+  public async getUserBots(request: Request): Promise<GetAllBotsResponseDto> {
+    try {
+      // Get user ID from authenticated user
+      const userId = request.user?.id;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
+      // Get user's bots
+      const bots = await getBotsByUser(userId);
+
+      // Map each Bot to BotResponseDto using toDTO() method
+      return {
+        bots: bots.map((bot) => bot.toDTO()),
+      };
+    } catch (error: any) {
+      logger.error("Get all bots failed:", error);
+      throw new Error(`Failed to retrieve bots: ${error.message}`);
     }
   }
 
   /**
    * Get a specific bot by ID
+   * @param id Bot ID
+   * @param request Express request
+   * @returns Bot data
    */
-  public async getBotById(id: string, request: Request): Promise<{ bot: BotResponseDto }> {
+  public async getBotById(
+    id: string,
+    request: Request
+  ): Promise<GetBotResponseDto> {
     try {
-      // Get user ID from authenticated request
-      const userId = (request as any).user?.id;
+      // Get user ID from authenticated user
+      const userId = request.user?.id;
       if (!userId) {
-        throw new Error('User not authenticated');
+        throw new Error("User not authenticated");
       }
 
-      // Get the bot
-      const bot = await BotAdapter.findById(id);
-      
-      // Check if bot exists and belongs to the user
+      // Get bot data
+      const bot = await getBotById(id);
+
+      // Check if bot exists
       if (!bot) {
-        throw new Error('Bot not found');
+        throw new Error("Bot not found");
       }
-      
+
+      // Check if bot belongs to user - use bot.user instead of bot.userId
       if (bot.user !== userId) {
-        throw new Error('You do not have permission to access this bot');
-      }
-      
-      // Convert to detailed DTO
-      const botDto = bot.toDetailDTO();
-      
-      return { bot: botDto };
-    } catch (error) {
-      logger.error(`Error in getBotById for bot ${id}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create a new bot
-   */
-  public async createBot(requestBody: CreateBotRequest, request: Request): Promise<BotResponseDto> {
-    try {
-      // Get user ID from authenticated request
-      const userId = (request as any).user?.id;
-      if (!userId) {
-        throw new Error('User not authenticated');
+        throw new Error("You do not have permission to view this bot");
       }
 
-      // Use the Discord application ID from environment variables if not provided
-      const applicationId = requestBody.applicationId || process.env.DISCORD_CLIENT_ID;
-      if (!applicationId) {
-        throw new Error('Application ID is required and could not be determined from environment variables');
-      }
-
-      // Create the new bot
-      const bot = await BotAdapter.create({
-        userId,
-        name: requestBody.name,
-        applicationId: applicationId,
-        discordToken: requestBody.discordToken
-      });
-      
-      // If configuration was provided, update it
-      if (requestBody.configuration) {
-        await BotAdapter.updateConfiguration(bot.id, {
-          systemPrompt: requestBody.configuration.systemPrompt,
-          personality: requestBody.configuration.personality,
-          backstory: requestBody.configuration.backstory || '',
-          traits: requestBody.configuration.traits || [],
-          llmProvider: requestBody.configuration.llmProvider,
-          llmModel: requestBody.configuration.llmModel,
-          apiKey: requestBody.configuration.apiKey || '',
-          imageGeneration: {
-            enabled: requestBody.configuration.imageGeneration?.enabled || false,
-            provider: requestBody.configuration.imageGeneration?.provider || 'openai',
-            apiKey: requestBody.configuration.imageGeneration?.apiKey,
-            model: requestBody.configuration.imageGeneration?.model
-          },
-          toolsEnabled: requestBody.configuration.toolsEnabled || false,
-          tools: requestBody.configuration.tools?.map(tool => ({
-            id: tool.id,
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.parameters || [],
-            implementation: tool.implementation || '' // Adding required implementation property
-          })) || [],
-          knowledge: requestBody.configuration.knowledge || [] // Add knowledge property
-        });
-      }
-      
-      // Refresh the bot to include the updated configuration
-      const updatedBot = await BotAdapter.findById(bot.id);
-      if (!updatedBot) {
-        throw new Error('Failed to retrieve the created bot');
-      }
-      
-      logger.info(`Bot ${bot.id} created successfully for user ${userId}`);
-      return updatedBot.toDTO();
-    } catch (error) {
-      logger.error('Error in createBot:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update an existing bot
-   */
-  public async updateBot(id: string, requestBody: UpdateBotRequest, request: Request): Promise<BotResponseDto> {
-    try {
-      // Get user ID from authenticated request
-      const userId = (request as any).user?.id;
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-
-      // Get the bot
-      const bot = await BotAdapter.findById(id);
-      
-      // Check if bot exists and belongs to the user
-      if (!bot) {
-        throw new Error('Bot not found');
-      }
-      
-      if (bot.user !== userId) {
-        throw new Error('You do not have permission to update this bot');
-      }
-
-      // Update basic bot properties if provided
-      if (requestBody.name || requestBody.discordToken || requestBody.applicationId || requestBody.status) {
-        await BotAdapter.update(id, {
-          name: requestBody.name,
-          discord_token: requestBody.discordToken,
-          status: requestBody.status as BotStatus
-        });
-      }
-      
-      // Update configuration if provided
-      if (requestBody.configuration) {
-        await BotAdapter.updateConfiguration(id, {
-          systemPrompt: requestBody.configuration.systemPrompt,
-          personality: requestBody.configuration.personality,
-          backstory: requestBody.configuration.backstory || '',
-          traits: requestBody.configuration.traits || [],
-          llmProvider: requestBody.configuration.llmProvider,
-          llmModel: requestBody.configuration.llmModel,
-          apiKey: requestBody.configuration.apiKey || '',
-          imageGeneration: {
-            enabled: requestBody.configuration.imageGeneration?.enabled || false,
-            provider: requestBody.configuration.imageGeneration?.provider || 'openai',
-            apiKey: requestBody.configuration.imageGeneration?.apiKey,
-            model: requestBody.configuration.imageGeneration?.model
-          },
-          toolsEnabled: requestBody.configuration.toolsEnabled || false,
-          tools: requestBody.configuration.tools?.map(tool => ({
-            id: tool.id,
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.parameters || [],
-            implementation: tool.implementation || '' // Adding required implementation property
-          })) || [],
-          knowledge: requestBody.configuration.knowledge || [] // Add knowledge property
-        });
-      }
-      
-      // Refresh the bot to include the updated configuration
-      const updatedBot = await BotAdapter.findById(id);
-      if (!updatedBot) {
-        throw new Error('Failed to retrieve the updated bot');
-      }
-      
-      logger.info(`Bot ${id} updated successfully by user ${userId}`);
-      return updatedBot.toDTO();
-    } catch (error) {
-      logger.error(`Error in updateBot for bot ${id}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete a bot
-   */
-  public async deleteBot(id: string, request: Request): Promise<MessageResponseDto> {
-    try {
-      // Get user ID from authenticated request
-      const userId = (request as any).user?.id;
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-
-      // Get the bot
-      const bot = await BotAdapter.findById(id);
-      
-      // Check if bot exists and belongs to the user
-      if (!bot) {
-        throw new Error('Bot not found');
-      }
-      
-      if (bot.user !== userId) {
-        throw new Error('You do not have permission to delete this bot');
-      }
-
-      // Stop the bot if it's running
-      if (bot.status === BotStatus.ONLINE) {
-        await stopBot(id, userId);
-      }
-      
-      // Delete the bot
-      const deleted = await BotAdapter.delete(id);
-      
-      if (!deleted) {
-        throw new Error('Failed to delete the bot');
-      }
-      
-      logger.info(`Bot ${id} deleted successfully by user ${userId}`);
-      return { message: 'Bot deleted successfully' };
-    } catch (error) {
-      logger.error(`Error in deleteBot for bot ${id}:`, error);
-      throw error;
+      // Return bot with the correct structure using toDTO() method
+      return {
+        bot: bot.toDTO(),
+      };
+    } catch (error: any) {
+      logger.error(`Get bot ${id} failed:`, error);
+      throw new Error(`Failed to retrieve bot: ${error.message}`);
     }
   }
 
   /**
    * Start a bot
+   * @param id Bot ID
+   * @param request Express request
+   * @returns Updated bot data with status
    */
-  public async startBotById(id: string, request: Request): Promise<BotResponseDto> {
+  public async startBotById(
+    id: string,
+    request: Request
+  ): Promise<StartBotResponseDto> {
     try {
-      // Get user ID from authenticated request
-      const userId = (request as any).user?.id;
+      // Get user ID from authenticated user
+      const userId = request.user?.id;
       if (!userId) {
-        throw new Error('User not authenticated');
+        throw new Error("User not authenticated");
       }
 
-      // Start the bot
-      const result = await startBot(id, userId);
-      
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to start bot');
-      }
-      
-      // Get the updated bot
-      const bot = await BotAdapter.findById(id);
+      // Get bot data
+      const bot = await getBotById(id);
+
+      // Check if bot exists
       if (!bot) {
-        throw new Error('Bot not found after starting');
+        throw new Error("Bot not found");
       }
-      
-      logger.info(`Bot ${id} started successfully by user ${userId}`);
-      return bot.toDTO();
-    } catch (error) {
-      logger.error(`Error in startBotById for bot ${id}:`, error);
-      throw error;
+
+      // Check if bot belongs to user - use bot.user instead of bot.userId
+      if (bot.user !== userId) {
+        throw new Error("You do not have permission to start this bot");
+      }
+
+      // Check if bot is already online - compare with BotStatus enum
+      if (bot.status === BotStatus.ONLINE) {
+        logger.info(`Bot ${id} is already online`);
+        return bot.toDTO();
+      }
+
+      // Start bot
+      const updatedBot = await startBot(id);
+      logger.info(`Bot ${id} started successfully`);
+
+      // Return the bot with proper DTO conversion
+      if (!updatedBot) {
+        throw new Error("Failed to start bot: Bot not found after update");
+      }
+      return updatedBot.toDTO();
+    } catch (error: any) {
+      logger.error(`Start bot ${id} failed:`, error);
+
+      // Provide helpful error messages
+      let errorMessage = `Failed to start bot: ${error.message}`;
+
+      if (error.message.includes("token")) {
+        errorMessage =
+          "Invalid Discord token. Please check your bot token and try again.";
+      } else if (error.message.includes("intent")) {
+        errorMessage =
+          "Missing required Discord intents. Make sure Message Content Intent is enabled in the Discord Developer Portal.";
+      } else if (error.message.includes("API key")) {
+        errorMessage =
+          "Missing LLM provider API key. Please add an API key in your bot's configuration.";
+      } else if (error.message.includes("model")) {
+        errorMessage =
+          "Invalid LLM model. Please select a valid model in your bot's configuration.";
+      }
+
+      throw new Error(errorMessage);
     }
   }
 
   /**
    * Stop a bot
+   * @param id Bot ID
+   * @param request Express request
+   * @returns Updated bot data with status
    */
-  public async stopBotById(id: string, request: Request): Promise<BotResponseDto> {
+  public async stopBotById(
+    id: string,
+    request: Request
+  ): Promise<StopBotResponseDto> {
     try {
-      // Get user ID from authenticated request
-      const userId = (request as any).user?.id;
+      // Get user ID from authenticated user
+      const userId = request.user?.id;
       if (!userId) {
-        throw new Error('User not authenticated');
+        throw new Error("User not authenticated");
       }
 
-      // Stop the bot
-      const result = await stopBot(id, userId);
-      
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to stop bot');
-      }
-      
-      // Get the updated bot
-      const bot = await BotAdapter.findById(id);
+      // Get bot data
+      const bot = await getBotById(id);
+
+      // Check if bot exists
       if (!bot) {
-        throw new Error('Bot not found after stopping');
+        throw new Error("Bot not found");
       }
-      
-      logger.info(`Bot ${id} stopped successfully by user ${userId}`);
-      return bot.toDTO();
-    } catch (error) {
-      logger.error(`Error in stopBotById for bot ${id}:`, error);
-      throw error;
+
+      // Check if bot belongs to user - use bot.user instead of bot.userId
+      if (bot.user !== userId) {
+        throw new Error("You do not have permission to stop this bot");
+      }
+
+      // Check if bot is already offline - compare with BotStatus enum
+      if (bot.status === BotStatus.OFFLINE) {
+        logger.info(`Bot ${id} is already offline`);
+        return bot.toDTO();
+      }
+
+      // Stop bot
+      const updatedBot = await stopBot(id);
+      logger.info(`Bot ${id} stopped successfully`);
+
+      // Return the bot with proper DTO conversion
+      if (!updatedBot) {
+        throw new Error("Failed to stop bot: Bot not found after update");
+      }
+      return updatedBot.toDTO();
+    } catch (error: any) {
+      logger.error(`Stop bot ${id} failed:`, error);
+      throw new Error(`Failed to stop bot: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update a bot's basic information
+   * @param id Bot ID
+   * @param requestBody Updated bot data
+   * @param request Express request
+   * @returns Updated bot data
+   */
+  public async updateBot(
+    id: string,
+    requestBody: UpdateBotRequestDto,
+    request: Request
+  ): Promise<UpdateBotResponseDto> {
+    try {
+      // Get user ID from authenticated user
+      const userId = request.user?.id;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
+      // Get bot data
+      const bot = await getBotById(id);
+
+      // Check if bot exists
+      if (!bot) {
+        throw new Error("Bot not found");
+      }
+
+      // Check if bot belongs to user - use bot.user instead of bot.userId
+      if (bot.user !== userId) {
+        throw new Error("You do not have permission to update this bot");
+      }
+
+      // Update bot
+      const updatedBot = await updateBot(id, requestBody);
+      logger.info(`Bot ${id} updated successfully`);
+
+      // Return the updated bot with proper DTO conversion
+      if (!updatedBot) {
+        throw new Error("Failed to update bot: Bot not found after update");
+      }
+      return updatedBot.toDTO();
+    } catch (error: any) {
+      logger.error(`Update bot ${id} failed:`, error);
+      throw new Error(`Failed to update bot: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update a bot's configuration
+   * @param id Bot ID
+   * @param requestBody Updated configuration data
+   * @param request Express request
+   * @returns Updated bot data with message
+   */
+  public async updateBotConfiguration(
+    id: string,
+    requestBody: UpdateBotConfigurationRequestDto,
+    request: Request
+  ): Promise<UpdateBotConfigurationResponseDto> {
+    try {
+      // Get user ID from authenticated user
+      const userId = request.user?.id;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
+      // Get bot data
+      const bot = await getBotById(id);
+
+      // Check if bot exists
+      if (!bot) {
+        throw new Error("Bot not found");
+      }
+
+      // Check if bot belongs to user - use bot.user instead of bot.userId
+      if (bot.user !== userId) {
+        throw new Error(
+          "You do not have permission to update this bot's configuration"
+        );
+      }
+
+      // Update bot configuration
+      const updatedBot = await updateBotConfiguration(id, requestBody);
+
+      // Make sure we have a bot returned
+      if (!updatedBot) {
+        throw new Error(
+          "Failed to update bot configuration: Bot not found after update"
+        );
+      }
+
+      // Determine which aspects were updated for the message
+      const updatedAspects = [];
+      if (requestBody.configuration?.systemPrompt)
+        updatedAspects.push("system prompt");
+      if (requestBody.configuration?.personality)
+        updatedAspects.push("personality");
+      if (requestBody.configuration?.traits) updatedAspects.push("traits");
+      if (requestBody.configuration?.backstory)
+        updatedAspects.push("backstory");
+      if (
+        requestBody.configuration?.llmModel ||
+        requestBody.configuration?.llmProvider
+      )
+        updatedAspects.push("LLM settings");
+
+      const aspectsMessage =
+        updatedAspects.length > 0
+          ? `Updated ${updatedAspects.join(", ")}.`
+          : "Configuration updated.";
+
+      const messageText = `Bot configuration saved successfully. ${aspectsMessage}${bot.status === BotStatus.ONLINE ? " Changes will take effect on the next message." : ""}`;
+
+      // Return the updated bot with message as per UpdateBotConfigurationResponseDto
+      return {
+        ...updatedBot.toDTO(),
+        message: messageText,
+      };
+    } catch (error: any) {
+      logger.error(`Update bot ${id} configuration failed:`, error);
+
+      // Provide user-friendly error message
+      let errorMessage = `Failed to update bot configuration: ${error.message}`;
+
+      if (error.message.includes("system prompt exceeds maximum")) {
+        errorMessage =
+          "System prompt is too long. Please shorten it and try again.";
+      }
+
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Delete a bot
+   * @param request Express request
+   * @param botId Bot ID
+   * @returns Success status
+   */
+  public async deleteBot(
+    id: string,
+    request: Request
+  ): Promise<DeleteBotResponseDto> {
+    try {
+      // Get user ID from authenticated user
+      const userId = request.user?.id;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
+      // Get bot data
+      const bot = await getBotById(id);
+
+      // Check if bot exists
+      if (!bot) {
+        return {
+          success: false,
+          message: "Bot not found",
+        };
+      }
+
+      // Check if bot belongs to user - use bot.user instead of bot.userId
+      if (bot.user !== userId) {
+        return {
+          success: false,
+          message: "You do not have permission to delete this bot",
+        };
+      }
+
+      // Delete bot
+      await deleteBot(id);
+
+      // Return success response
+      return {
+        success: true,
+        message: `Bot "${bot.name}" deleted successfully`,
+      };
+    } catch (error: any) {
+      logger.error(`Delete bot ${id} failed:`, error);
+
+      return {
+        success: false,
+        message: `Failed to delete bot: ${error.message}`,
+      };
     }
   }
 
   /**
    * Generate an invite link for a bot
+   * @param id Bot ID
+   * @param request Express request
+   * @returns Invite URL
    */
-  public async generateInviteLink(id: string, request: Request): Promise<{ inviteUrl: string }> {
+  public async generateInviteLink(
+    id: string,
+    request: Request
+  ): Promise<GenerateBotInviteLinkResponseDto> {
     try {
-      // Get user ID from authenticated request
-      const userId = (request as any).user?.id;
+      // Get user ID from authenticated user
+      const userId = request.user?.id;
       if (!userId) {
-        throw new Error('User not authenticated');
+        throw new Error("User not authenticated");
       }
 
-      // Get the bot
-      const bot = await BotAdapter.findById(id);
-      
-      // Check if bot exists and belongs to the user
+      // Get bot data
+      const bot = await getBotById(id);
+
+      // Check if bot exists
       if (!bot) {
-        throw new Error('Bot not found');
-      }
-      
-      if (bot.user !== userId) {
-        throw new Error('You do not have permission to generate an invite link for this bot');
+        throw new Error("Bot not found");
       }
 
-      // Generate the invite link
-      const inviteUrl = await generateBotInviteLink(id);
-      
-      logger.info(`Generated invite link for bot ${id} by user ${userId}`);
-      return { inviteUrl };
-    } catch (error) {
-      logger.error(`Error in generateInviteLink for bot ${id}:`, error);
-      throw error;
+      // Check if bot belongs to user - use bot.user instead of bot.userId
+      if (bot.user !== userId) {
+        throw new Error(
+          "You do not have permission to generate an invite link for this bot"
+        );
+      }
+
+      // Generate invite link
+      const { inviteUrl } = await generateBotInviteLink(id);
+
+      // Return success response with invite URL
+      return {
+        inviteUrl,
+      };
+    } catch (error: any) {
+      logger.error(`Generate invite link for bot ${id} failed:`, error);
+
+      let errorMessage = `Failed to generate invite link: ${error.message}`;
+
+      if (error.message.includes("application ID is not available")) {
+        errorMessage =
+          "Bot application ID is missing. Make sure you've correctly set up your Discord bot.";
+      }
+
+      throw new Error(errorMessage);
     }
   }
 }

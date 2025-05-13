@@ -9,4 +9,6 @@ export enum BotStatus {
     OFFLINE = 'offline',
     ONLINE = 'online',
     ERROR = 'error',
+    STARTING = 'starting',
+    STOPPING = 'stopping',
 }

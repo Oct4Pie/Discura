@@ -2,11 +2,18 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { BotResponseDto } from '../models/BotResponseDto';
-import type { BotsResponseDto } from '../models/BotsResponseDto';
-import type { CreateBotRequest } from '../models/CreateBotRequest';
-import type { MessageResponseDto } from '../models/MessageResponseDto';
-import type { UpdateBotRequest } from '../models/UpdateBotRequest';
+import type { CreateBotRequestDto } from '../models/CreateBotRequestDto';
+import type { CreateBotResponseDto } from '../models/CreateBotResponseDto';
+import type { DeleteBotResponseDto } from '../models/DeleteBotResponseDto';
+import type { GenerateBotInviteLinkResponseDto } from '../models/GenerateBotInviteLinkResponseDto';
+import type { GetAllBotsResponseDto } from '../models/GetAllBotsResponseDto';
+import type { GetBotResponseDto } from '../models/GetBotResponseDto';
+import type { StartBotResponseDto } from '../models/StartBotResponseDto';
+import type { StopBotResponseDto } from '../models/StopBotResponseDto';
+import type { UpdateBotConfigurationRequestDto } from '../models/UpdateBotConfigurationRequestDto';
+import type { UpdateBotConfigurationResponseDto } from '../models/UpdateBotConfigurationResponseDto';
+import type { UpdateBotRequestDto } from '../models/UpdateBotRequestDto';
+import type { UpdateBotResponseDto } from '../models/UpdateBotResponseDto';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -16,10 +23,10 @@ export class BotsService {
      *
      * Returns a list of Discord bots owned by the authenticated user,
      * including their configuration and status.
-     * @returns BotsResponseDto Ok
+     * @returns GetAllBotsResponseDto Ok
      * @throws ApiError
      */
-    public static getUserBots(): CancelablePromise<BotsResponseDto> {
+    public static getUserBots(): CancelablePromise<GetAllBotsResponseDto> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/bots',
@@ -31,12 +38,12 @@ export class BotsService {
      * Creates a new Discord bot with the specified configuration.
      * The bot will be owned by the authenticated user.
      * @param requestBody
-     * @returns BotResponseDto Bot created successfully
+     * @returns CreateBotResponseDto Bot created successfully
      * @throws ApiError
      */
     public static createBot(
-        requestBody: CreateBotRequest,
-    ): CancelablePromise<BotResponseDto> {
+        requestBody: CreateBotRequestDto,
+    ): CancelablePromise<CreateBotResponseDto> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/bots',
@@ -49,14 +56,12 @@ export class BotsService {
      *
      * Returns detailed information about a specific bot owned by the authenticated user.
      * @param id The unique identifier of the bot
-     * @returns any Ok
+     * @returns GetBotResponseDto Ok
      * @throws ApiError
      */
     public static getBotById(
         id: string,
-    ): CancelablePromise<{
-        bot: BotResponseDto;
-    }> {
+    ): CancelablePromise<GetBotResponseDto> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/bots/{id}',
@@ -71,13 +76,13 @@ export class BotsService {
      * Updates the configuration of an existing bot owned by the authenticated user.
      * @param id The unique identifier of the bot to update
      * @param requestBody
-     * @returns BotResponseDto Ok
+     * @returns UpdateBotResponseDto Ok
      * @throws ApiError
      */
     public static updateBot(
         id: string,
-        requestBody: UpdateBotRequest,
-    ): CancelablePromise<BotResponseDto> {
+        requestBody: UpdateBotRequestDto,
+    ): CancelablePromise<UpdateBotResponseDto> {
         return __request(OpenAPI, {
             method: 'PUT',
             url: '/bots/{id}',
@@ -94,12 +99,12 @@ export class BotsService {
      * Deletes a bot owned by the authenticated user.
      * If the bot is currently running, it will be stopped before deletion.
      * @param id The unique identifier of the bot to delete
-     * @returns MessageResponseDto Ok
+     * @returns DeleteBotResponseDto Ok
      * @throws ApiError
      */
     public static deleteBot(
         id: string,
-    ): CancelablePromise<MessageResponseDto> {
+    ): CancelablePromise<DeleteBotResponseDto> {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/bots/{id}',
@@ -113,12 +118,12 @@ export class BotsService {
      *
      * Starts a Discord bot that is currently stopped.
      * @param id The unique identifier of the bot to start
-     * @returns BotResponseDto Ok
+     * @returns StartBotResponseDto Ok
      * @throws ApiError
      */
     public static startBotById(
         id: string,
-    ): CancelablePromise<BotResponseDto> {
+    ): CancelablePromise<StartBotResponseDto> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/bots/{id}/start',
@@ -132,12 +137,12 @@ export class BotsService {
      *
      * Stops a Discord bot that is currently running.
      * @param id The unique identifier of the bot to stop
-     * @returns BotResponseDto Ok
+     * @returns StopBotResponseDto Ok
      * @throws ApiError
      */
     public static stopBotById(
         id: string,
-    ): CancelablePromise<BotResponseDto> {
+    ): CancelablePromise<StopBotResponseDto> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/bots/{id}/stop',
@@ -147,19 +152,41 @@ export class BotsService {
         });
     }
     /**
+     * Update bot configuration
+     *
+     * Updates the configuration of a bot without changing other properties.
+     * This is a specialized endpoint for updating bot configuration settings.
+     * @param id The unique identifier of the bot
+     * @param requestBody
+     * @returns UpdateBotConfigurationResponseDto Ok
+     * @throws ApiError
+     */
+    public static updateBotConfiguration(
+        id: string,
+        requestBody: UpdateBotConfigurationRequestDto,
+    ): CancelablePromise<UpdateBotConfigurationResponseDto> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/bots/{id}/configuration',
+            path: {
+                'id': id,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
      * Generate an invite link for a bot
      *
      * Creates an OAuth2 invite link that users can use to add the bot to their Discord servers.
      * The link includes permissions necessary for the bot to function properly.
      * @param id The unique identifier of the bot
-     * @returns any Ok
+     * @returns GenerateBotInviteLinkResponseDto Ok
      * @throws ApiError
      */
     public static generateInviteLink(
         id: string,
-    ): CancelablePromise<{
-        inviteUrl: string;
-    }> {
+    ): CancelablePromise<GenerateBotInviteLinkResponseDto> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/bots/{id}/invite',

@@ -1,8 +1,9 @@
-import { v4 as uuidv4 } from 'uuid';
-import { BaseRepository } from './base.repository';
-import { db } from './database.factory';
-import { logger } from '../../utils/logger';
-import { BotStatus } from '@discura/common/types';
+import { BotStatus } from "@discura/common/types";
+import { v4 as uuidv4 } from "uuid";
+
+import { BaseRepository } from "./base.repository";
+import { db } from "./database.factory";
+import { logger } from "../../utils/logger";
 
 /**
  * Bot entity representing a row in the bots table
@@ -56,7 +57,7 @@ export class BotRepository extends BaseRepository<BotEntity> {
   private static instance: BotRepository;
 
   private constructor() {
-    super('bots');
+    super("bots");
   }
 
   /**
@@ -73,14 +74,16 @@ export class BotRepository extends BaseRepository<BotEntity> {
    * Find bots by user ID
    */
   async findByUserId(userId: string): Promise<BotEntity[]> {
-    return this.findByField('user_id', userId);
+    return this.findByField("user_id", userId);
   }
 
   /**
    * Find bot by application ID
    */
-  async findByApplicationId(applicationId: string): Promise<BotEntity | undefined> {
-    const result = await this.findOneByField('application_id', applicationId);
+  async findByApplicationId(
+    applicationId: string,
+  ): Promise<BotEntity | undefined> {
+    const result = await this.findOneByField("application_id", applicationId);
     return result === null ? undefined : result;
   }
 
@@ -88,39 +91,39 @@ export class BotRepository extends BaseRepository<BotEntity> {
    * Create a new bot
    */
   async createBot(
-    userId: string, 
-    name: string, 
-    applicationId: string, 
-    discordToken: string
+    userId: string,
+    name: string,
+    applicationId: string,
+    discordToken: string,
   ): Promise<BotEntity> {
     try {
       const botId = uuidv4();
-      
+
       const bot: BotEntity = {
         id: botId,
         user_id: userId,
         name,
         application_id: applicationId,
         discord_token: discordToken,
-        status: BotStatus.OFFLINE
+        status: BotStatus.OFFLINE,
       };
 
       await this.create(bot);
-      
+
       // Initialize empty bot configuration
-      await db.insert('bot_configurations', {
+      await db.insert("bot_configurations", {
         bot_id: botId,
-        system_prompt: '',
-        personality: '',
-        backstory: '',
-        llm_provider: '',
-        llm_model: '',
-        image_generation_enabled: 0
+        system_prompt: "",
+        personality: "",
+        backstory: "",
+        llm_provider: "",
+        llm_model: "",
+        image_generation_enabled: 0,
       });
 
       return bot;
     } catch (error) {
-      logger.error('Error creating bot:', error);
+      logger.error("Error creating bot:", error);
       throw error;
     }
   }
@@ -131,27 +134,27 @@ export class BotRepository extends BaseRepository<BotEntity> {
   async getBotWithDetails(botId: string): Promise<any> {
     try {
       const bot = await this.findById(botId);
-      
+
       if (!bot) {
         return null;
       }
 
       const config = await db.get<BotConfigEntity>(
-        'SELECT * FROM bot_configurations WHERE bot_id = ?',
-        [botId]
+        "SELECT * FROM bot_configurations WHERE bot_id = ?",
+        [botId],
       );
 
       const traits = await db.query<BotTraitEntity>(
-        'SELECT * FROM bot_traits WHERE bot_id = ?',
-        [botId]
+        "SELECT * FROM bot_traits WHERE bot_id = ?",
+        [botId],
       );
 
       return {
         ...bot,
         configuration: {
           ...(config || {}),
-          traits: traits.map(t => t.trait)
-        }
+          traits: traits.map((t) => t.trait),
+        },
       };
     } catch (error) {
       logger.error(`Error fetching bot details for ID ${botId}:`, error);
@@ -164,11 +167,11 @@ export class BotRepository extends BaseRepository<BotEntity> {
    */
   async updateStatus(botId: string, status: BotStatus): Promise<boolean> {
     try {
-      const result = await this.update(botId, { 
+      const result = await this.update(botId, {
         status,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       });
-      
+
       return result;
     } catch (error) {
       logger.error(`Error updating bot status for ID ${botId}:`, error);
@@ -179,37 +182,34 @@ export class BotRepository extends BaseRepository<BotEntity> {
   /**
    * Update bot configuration
    */
-  async updateConfiguration(botId: string, config: Partial<BotConfigEntity>): Promise<boolean> {
+  async updateConfiguration(
+    botId: string,
+    config: Partial<BotConfigEntity>,
+  ): Promise<boolean> {
     try {
       // Check if configuration exists
       const existingConfig = await db.get<BotConfigEntity>(
-        'SELECT * FROM bot_configurations WHERE bot_id = ?',
-        [botId]
+        "SELECT * FROM bot_configurations WHERE bot_id = ?",
+        [botId],
       );
 
       // Add updated_at timestamp
       const updatedConfig = {
         ...config,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       if (existingConfig) {
         // Update existing configuration
-        await db.update(
-          'bot_configurations',
-          updatedConfig,
-          'bot_id = ?',
-          [botId]
-        );
+        await db.update("bot_configurations", updatedConfig, "bot_id = ?", [
+          botId,
+        ]);
       } else {
         // Create new configuration
-        await db.insert(
-          'bot_configurations',
-          {
-            bot_id: botId,
-            ...updatedConfig
-          }
-        );
+        await db.insert("bot_configurations", {
+          bot_id: botId,
+          ...updatedConfig,
+        });
       }
 
       // Handle traits separately if they exist in the config
@@ -233,14 +233,14 @@ export class BotRepository extends BaseRepository<BotEntity> {
       // Execute in a transaction for atomicity
       await db.executeWrite(async () => {
         // Delete existing traits
-        await db.delete('bot_traits', 'bot_id = ?', [botId]);
-        
+        await db.delete("bot_traits", "bot_id = ?", [botId]);
+
         // Insert new traits
         if (traits && traits.length > 0) {
           for (const trait of traits) {
-            await db.insert('bot_traits', {
+            await db.insert("bot_traits", {
               bot_id: botId,
-              trait
+              trait,
             });
           }
         }
@@ -259,13 +259,13 @@ export class BotRepository extends BaseRepository<BotEntity> {
       // Execute in a transaction for atomicity
       return await db.executeWrite(async () => {
         // Delete related records first (cascading should handle this, but being explicit)
-        await db.delete('bot_traits', 'bot_id = ?', [botId]);
-        await db.delete('bot_configurations', 'bot_id = ?', [botId]);
-        await db.delete('knowledge_items', 'bot_id = ?', [botId]);
-        await db.delete('tool_definitions', 'bot_id = ?', [botId]);
-        
+        await db.delete("bot_traits", "bot_id = ?", [botId]);
+        await db.delete("bot_configurations", "bot_id = ?", [botId]);
+        await db.delete("knowledge_items", "bot_id = ?", [botId]);
+        await db.delete("tool_definitions", "bot_id = ?", [botId]);
+
         // Delete the bot itself
-        const result = await db.delete('bots', 'id = ?', [botId]);
+        const result = await db.delete("bots", "id = ?", [botId]);
         return result > 0;
       });
     } catch (error) {
@@ -277,8 +277,10 @@ export class BotRepository extends BaseRepository<BotEntity> {
   /**
    * Find bot by application ID
    */
-  public async findOneByApplicationId(applicationId: string): Promise<BotEntity | undefined> {
-    const result = await this.findOneByField('application_id', applicationId);
+  public async findOneByApplicationId(
+    applicationId: string,
+  ): Promise<BotEntity | undefined> {
+    const result = await this.findOneByField("application_id", applicationId);
     return result === null ? undefined : result;
   }
 }

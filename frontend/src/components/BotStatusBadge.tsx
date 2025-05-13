@@ -10,8 +10,8 @@ interface BotStatusBadgeProps {
 const statusColorMap: Record<BotStatus, 'success' | 'warning' | 'error' | 'default'> = {
   [BotStatus.ONLINE]: 'success',
   [BotStatus.OFFLINE]: 'default',
-  // [BotStatus.STARTING]: 'warning', // STARTING is not in the generated enum yet
-  // [BotStatus.STOPPING]: 'warning', // STOPPING is not in the generated enum yet
+  [BotStatus.STARTING]: 'warning',
+  [BotStatus.STOPPING]: 'warning',
   [BotStatus.ERROR]: 'error',
 };
 
@@ -19,8 +19,8 @@ const statusColorMap: Record<BotStatus, 'success' | 'warning' | 'error' | 'defau
 const statusTextMap: Record<BotStatus, string> = {
   [BotStatus.ONLINE]: 'Online',
   [BotStatus.OFFLINE]: 'Offline',
-  // [BotStatus.STARTING]: 'Starting',
-  // [BotStatus.STOPPING]: 'Stopping',
+  [BotStatus.STARTING]: 'Starting',
+  [BotStatus.STOPPING]: 'Stopping',
   [BotStatus.ERROR]: 'Error',
 };
 

@@ -3,9 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Simple message response
+ * Message Response DTO
  */
 export type MessageResponseDto = {
     message: string;
+    success: boolean;
 };
 

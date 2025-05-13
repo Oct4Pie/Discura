@@ -6,9 +6,9 @@
  * defined in the common package's controllers.
  */
 
-export * from './auth.controller';
-export * from './bot.controller';
-export * from './constants.controller';
-export * from './knowledge.controller';
-export * from './llm.controller';
-export * from './tool.controller';
+export * from "./auth.controller";
+export * from "./bot.controller";
+export * from "./constants.controller";
+export * from "./knowledge.controller";
+export * from "./llm.controller";
+export * from "./tool.controller";

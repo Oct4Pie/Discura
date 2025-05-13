@@ -9,7 +9,10 @@ import {
   Code as CodeIcon,
   Image as ImageIcon,
   Book as BookIcon,
-  Build as BuildIcon
+  Build as BuildIcon,
+  Refresh as RefreshIcon,
+  Link as LinkIcon,
+  Launch as LaunchIcon
 } from "@mui/icons-material";
 import {
   Alert,
@@ -18,6 +21,11 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   FormControl,
   FormControlLabel,
@@ -26,10 +34,12 @@ import {
   MenuItem,
   Paper,
   Select,
+  Snackbar,
   Switch,
   Tab,
   Tabs,
   TextField,
+  Tooltip,
   Typography,
   alpha,
   useTheme
@@ -38,12 +48,13 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { BotStatus, ImageProvider } from "../types";
-import { LLMProvider } from "../api/";
+import { LLMProvider, BotsService } from "../api/";
 import BotStatusBadge from "../components/BotStatusBadge";
 import ConfirmDialog from "../components/ConfirmDialog";
-import { useBotStore } from "../stores/botStore";
 import GridItem from "../components/GridItem";
 import TabPanel from "../components/TabPanel";
+import { useBotStore } from "../stores/botStore";
+import PersonalityPreview from "../components/PersonalityPreview";
 
 const BotDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -51,7 +62,11 @@ const BotDetail = () => {
   const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState("");
   const [saving, setSaving] = useState(false);
+  const [botActionInProgress, setBotActionInProgress] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   
   const {
     currentBot,
@@ -76,6 +91,8 @@ const BotDetail = () => {
   const [apiKey, setApiKey] = useState("");
   const [imageGenEnabled, setImageGenEnabled] = useState(false);
   const [imageProvider, setImageProvider] = useState<ImageProvider>(ImageProvider.OPENAI);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
 
   // Load bot data
   useEffect(() => {
@@ -94,26 +111,16 @@ const BotDetail = () => {
       setBackstory(currentBot.configuration?.backstory || "");
       
       const provider = currentBot.configuration?.llmProvider || "openai";
-      if (provider === "openai") {
-        setLlmProvider(LLMProvider.OPENAI);
-      } else if (provider === "anthropic") {
-        setLlmProvider(LLMProvider.ANTHROPIC);
-      } else if (provider === "google") {
-        setLlmProvider(LLMProvider.GOOGLE);
-      } else if (provider === "custom") {
-        setLlmProvider(LLMProvider.CUSTOM);
-      } else {
-        setLlmProvider(LLMProvider.OPENAI);
-      }
-      
+      setLlmProvider(provider as LLMProvider);
       setLlmModel(currentBot.configuration?.llmModel || "");
-      setApiKey((currentBot.configuration as any)?.apiKey || "");
+      setApiKey(currentBot.configuration?.apiKey || "");
+      
       setImageGenEnabled(currentBot.configuration?.imageGeneration?.enabled || false);
-      setImageProvider((currentBot.configuration?.imageGeneration?.provider as ImageProvider) || ImageProvider.OPENAI);
+      setImageProvider(currentBot.configuration?.imageGeneration?.provider as ImageProvider || ImageProvider.OPENAI);
     }
   }, [currentBot]);
 
-  const handleChangeTab = (_: React.SyntheticEvent, newValue: number) => {
+  const handleChangeTab = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -176,7 +183,7 @@ const BotDetail = () => {
       toast.success("LLM settings updated");
     } catch (error) {
       toast.error("Failed to update LLM settings");
-      console.error("Update LLM settings error:", error);
+      console.error("Update LLM error:", error);
     } finally {
       setSaving(false);
     }
@@ -191,9 +198,7 @@ const BotDetail = () => {
         imageGeneration: {
           enabled: imageGenEnabled,
           provider: imageProvider,
-          apiKey: ((currentBot.configuration?.imageGeneration || {}) as any).apiKey || "",
-          model: currentBot.configuration?.imageGeneration?.model || "",
-        },
+        }
       });
       toast.success("Image generation settings updated");
     } catch (error) {
@@ -219,23 +224,59 @@ const BotDetail = () => {
     }
   };
 
+  const handleGenerateInviteLink = async () => {
+    if (!id) return;
+    
+    try {
+      // Call the API to generate the invite link using the correct method name
+      const response = await BotsService.generateInviteLink(id);
+      if (response && response.inviteUrl) {
+        setInviteUrl(response.inviteUrl);
+        setInviteDialogOpen(true);
+      }
+    } catch (error) {
+      toast.error("Failed to generate invite link");
+      console.error("Generate invite link error:", error);
+    }
+  };
+
   const handleToggleBotStatus = async () => {
     if (!currentBot || !id) return;
+
+    setBotActionInProgress(true);
+    setSnackbarMessage(
+      `${currentBot.status === BotStatus.ONLINE ? "Stopping" : "Starting"} bot...`
+    );
+    setSnackbarOpen(true);
 
     try {
       if (currentBot.status === BotStatus.ONLINE) {
         await stopBot(id);
         toast.success("Bot stopped successfully");
+        setSnackbarMessage("Bot stopped successfully! It is now offline.");
       } else {
         await startBot(id);
         toast.success("Bot started successfully");
+        setSnackbarMessage("Bot started successfully! It is now online and ready to chat.");
       }
-    } catch (error) {
-      toast.error(
-        `Failed to ${currentBot.status === BotStatus.ONLINE ? "stop" : "start"} bot`
-      );
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || `Failed to ${currentBot.status === BotStatus.ONLINE ? "stop" : "start"} bot`;
+      toast.error(errorMessage);
+      setSnackbarMessage(`Error: ${errorMessage}`);
       console.error("Toggle bot status error:", error);
+    } finally {
+      setBotActionInProgress(false);
+      
+      // Leave snackbar open to show final status
+      setTimeout(() => {
+        setSnackbarOpen(false);
+      }, 5000); // Keep success/error message visible for 5 seconds
     }
+  };
+
+  const copyInviteLink = () => {
+    navigator.clipboard.writeText(inviteUrl);
+    toast.success("Invite URL copied to clipboard");
   };
 
   if (isLoading) {
@@ -271,6 +312,7 @@ const BotDetail = () => {
           mb: 4,
           gap: 2,
           flexWrap: { xs: 'wrap', sm: 'nowrap' },
+          width: '100%',
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
@@ -296,11 +338,28 @@ const BotDetail = () => {
         </Box>
 
         <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button 
+            variant="outlined"
+            startIcon={<LinkIcon />}
+            onClick={handleGenerateInviteLink}
+            sx={{
+              borderWidth: 1.5,
+              borderRadius: 1, // Custom border radius for button
+              '&:hover': {
+                borderWidth: 1.5,
+              }
+            }}
+          >
+            Invite Bot
+          </Button>
+          
           <Button
             variant="contained"
             color={currentBot.status === BotStatus.ONLINE ? "error" : "success"}
-            startIcon={currentBot.status === BotStatus.ONLINE ? <StopIcon /> : <StartIcon />}
+            startIcon={botActionInProgress ? <CircularProgress size={20} color="inherit" /> : 
+              currentBot.status === BotStatus.ONLINE ? <StopIcon /> : <StartIcon />}
             onClick={handleToggleBotStatus}
+            disabled={botActionInProgress || currentBot.status === BotStatus.ERROR}
             sx={{
               px: 3,
               py: 1,
@@ -313,7 +372,9 @@ const BotDetail = () => {
               )}`,
             }}
           >
-            {currentBot.status === BotStatus.ONLINE ? "Stop Bot" : "Start Bot"}
+            {botActionInProgress 
+              ? (currentBot.status === BotStatus.ONLINE ? "Stopping..." : "Starting...") 
+              : (currentBot.status === BotStatus.ONLINE ? "Stop Bot" : "Start Bot")}
           </Button>
 
           <Button
@@ -333,6 +394,21 @@ const BotDetail = () => {
           </Button>
         </Box>
       </Box>
+
+      {/* Status alert when bot is in error state */}
+      {currentBot.status === BotStatus.ERROR && (
+        <Alert 
+          severity="error" 
+          sx={{ 
+            mb: 4, 
+            borderRadius: 1,
+            border: `1px solid ${alpha(theme.palette.error.main, 0.1)}`, 
+          }}
+        >
+          This bot encountered an error. The token may be invalid or the Message Content Intent may not be enabled.
+          Please check your configuration and try starting the bot again.
+        </Alert>
+      )}
 
       {/* Tabs */}
       <Paper 
@@ -442,6 +518,18 @@ const BotDetail = () => {
           <CardContent>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
               <GridItem item xs={12}>
+                <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<RefreshIcon />}
+                    onClick={() => setPreviewOpen(true)}
+                    sx={{ borderRadius: 1 }}
+                  >
+                    Preview Personality
+                  </Button>
+                </Box>
+                
                 <TextField
                   fullWidth
                   multiline
@@ -675,29 +763,20 @@ const BotDetail = () => {
         {/* Image Generation Tab */}
         <TabPanel value={tabValue} index={3}>
           <CardContent>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={imageGenEnabled}
-                  onChange={(e) => setImageGenEnabled(e.target.checked)}
-                  color="primary"
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+              <GridItem item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={imageGenEnabled}
+                      onChange={(e) => setImageGenEnabled(e.target.checked)}
+                    />
+                  }
+                  label="Enable Image Generation"
+                  sx={{ mb: 2 }}
                 />
-              }
-              label="Enable Image Generation"
-              sx={{ mb: 3 }}
-            />
+              </GridItem>
 
-            <Divider sx={{ mb: 3 }} />
-
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 3,
-                opacity: imageGenEnabled ? 1 : 0.5,
-                pointerEvents: imageGenEnabled ? "auto" : "none",
-              }}
-            >
               <GridItem item xs={12} md={6}>
                 <FormControl fullWidth>
                   <InputLabel id="image-provider-label">Image Provider</InputLabel>
@@ -754,6 +833,22 @@ const BotDetail = () => {
         </TabPanel>
       </Paper>
 
+      {/* Status Snackbar for Bot Actions */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={botActionInProgress ? null : 5000}
+        onClose={() => setSnackbarOpen(false)}
+      >
+        <Alert
+          severity={botActionInProgress ? "info" : snackbarMessage.includes("Error") ? "error" : "success"}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+          {botActionInProgress && <CircularProgress size={16} sx={{ ml: 1, color: 'white' }} />}
+        </Alert>
+      </Snackbar>
+      
       {/* Delete confirmation dialog */}
       <ConfirmDialog
         open={deleteDialogOpen}
@@ -764,6 +859,81 @@ const BotDetail = () => {
         onConfirm={handleDeleteBot}
         onCancel={() => setDeleteDialogOpen(false)}
       />
+      
+      {/* Invite link dialog */}
+      <Dialog 
+        open={inviteDialogOpen} 
+        onClose={() => setInviteDialogOpen(false)}
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
+        <DialogTitle>Add Bot to Server</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Use this link to add "{currentBot.name}" to your Discord server:
+          </DialogContentText>
+          <TextField
+            fullWidth
+            value={inviteUrl}
+            InputProps={{ readOnly: true }}
+            variant="outlined"
+            sx={{ mb: 2 }}
+          />
+          <Alert severity="info">
+            You need to have "Manage Server" permission on the Discord server to add this bot.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setInviteDialogOpen(false)} color="inherit">
+            Close
+          </Button>
+          <Button 
+            onClick={copyInviteLink}
+            color="primary"
+            variant="contained"
+            sx={{ borderRadius: 1 }}
+          >
+            Copy Link
+          </Button>
+          <Button 
+            onClick={() => window.open(inviteUrl, '_blank')}
+            color="primary"
+            variant="contained"
+            endIcon={<LaunchIcon />}
+            sx={{ borderRadius: 1 }}
+          >
+            Open Link
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Personality Preview Dialog */}
+      <Dialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
+        <DialogTitle>Bot Personality Preview</DialogTitle>
+        <DialogContent>
+          <PersonalityPreview
+            botName={name}
+            systemPrompt={systemPrompt}
+            personality={personality}
+            traits={traits}
+            backstory={backstory}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

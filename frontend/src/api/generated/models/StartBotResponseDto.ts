@@ -5,14 +5,18 @@
 import type { BotConfiguration } from './BotConfiguration';
 import type { BotStatus } from './BotStatus';
 /**
- * Update Bot Request
+ * Start Bot Response DTO
  */
-export type UpdateBotRequest = {
-    name?: string;
+export type StartBotResponseDto = {
+    id: string;
+    userId: string;
+    name: string;
     discordToken?: string;
-    applicationId?: string;
-    intents?: Array<string>;
-    status?: BotStatus;
-    configuration?: BotConfiguration;
+    applicationId: string;
+    status: BotStatus;
+    intents: Array<string>;
+    configuration: BotConfiguration;
+    createdAt: string;
+    updatedAt: string;
 };
 

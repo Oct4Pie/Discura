@@ -1,180 +1,485 @@
-import { Client, Message, MessageReaction, Interaction, CommandInteraction, ButtonInteraction, ChannelType, TextChannel, User, ModalSubmitInteraction, ContextMenuCommandInteraction, AutocompleteInteraction, PartialMessageReaction, PartialUser, MessageReactionEventDetails } from 'discord.js';
-import { logger } from '../utils/logger';
-import { generateImage } from './image.service';
-import { callLLM } from './llm.service';
-import { executeTools } from './tool.service';
-import { BotAdapter, Bot } from '../models/adapters/bot.adapter';
-import { Tool, ImageProvider } from '@discura/common/types';
-import { LLMResponse } from '@discura/common/types/llm';
+import {
+  Client,
+  Message,
+  AutocompleteInteraction,
+  CommandInteraction,
+  ContextMenuCommandInteraction,
+  ChatInputCommandInteraction,
+  ModalSubmitInteraction,
+  ButtonInteraction,
+  Events,
+  ChannelType,
+  TextChannel,
+  DMChannel,
+  ThreadChannel,
+  Collection,
+} from "discord.js";
+import { v4 as uuidv4 } from "uuid";
+import { BotConfiguration, LLMProvider, ImageProvider } from "@discura/common";
+import { Bot } from "../models/bot.model";
 
-/**
- * Sets up event handlers for a Discord bot client
- * @param client Discord.js Client instance
- * @param botId ID of the bot in our database
- */
-export async function setupMessageHandlers(client: Client, botId: string): Promise<void> {
+import { generateImage } from "./image.service";
+import { callLLM } from "./llm.service";
+import {
+  evaluateToolResult,
+  executeTools,
+  findMatchingTools,
+} from "./tool.service";
+import { BotAdapter } from "../models/adapters/bot.adapter";
+import { logger } from "../utils/logger";
+import { processToolCommand } from "./tool.service";
+
+// Store typing indicators for each channel
+const typingIndicators = new Map<string, NodeJS.Timeout>();
+
+// Store conversation history
+const conversationHistory = new Map<
+  string,
+  Array<{ role: string; content: string; userId?: string; username?: string }>
+>();
+const MAX_HISTORY_LENGTH = 10; // Maximum number of messages to keep in history
+
+// Set up message handlers for a Discord bot
+export const setupMessageHandlers = async (client: Client, botId: string) => {
   try {
     // Get bot configuration from database
     const bot = await BotAdapter.findById(botId);
     if (!bot) {
-      throw new Error(`Bot not found with ID: ${botId}`);
+      throw new Error(`Bot configuration not found for bot ID: ${botId}`);
     }
 
-    // Set up event handlers
-    client.on('messageCreate', async (message: Message) => {
-      try {
-        // Don't respond to messages from other bots including itself
-        if (message.author.bot) return;
-        
-        // Only respond to messages that mention the bot or are in DMs
-        const isMentioned = message.mentions.users.has(client.user!.id);
-        const isDM = message.channel.isDMBased();
-        
-        if (!isMentioned && !isDM) return;
-        
-        await handleMessage(client, message, bot);
-      } catch (error) {
-        logger.error(`Error handling message for bot ${botId}:`, error);
+    // Set up message event handler
+    client.on(Events.MessageCreate, async (message) => {
+      await handleMessage(client, message, bot);
+    });
+
+    // Set up interaction event handlers
+    client.on(Events.InteractionCreate, async (interaction) => {
+      if (interaction.isChatInputCommand()) {
+        await handleSlashCommand(interaction, bot);
+      } else if (interaction.isButton()) {
+        await handleButtonInteraction(interaction, bot);
+      } else if (interaction.isModalSubmit()) {
+        await handleModalSubmitInteraction(interaction, bot);
+      } else if (interaction.isContextMenuCommand()) {
+        await handleContextMenuInteraction(interaction, bot);
+      } else if (interaction.isAutocomplete()) {
+        await handleAutocompleteInteraction(interaction, bot);
       }
     });
 
-    client.on('messageReactionAdd', async (reaction, user, details) => {
-      try {
-        // Don't respond to reactions from other bots including itself
-        if (user.bot) return;
-        
-        await handleReaction(reaction, user, bot);
-      } catch (error) {
-        logger.error(`Error handling reaction for bot ${botId}:`, error);
-      }
-    });
-
-    client.on('interactionCreate', async (interaction: Interaction) => {
-      try {
-        // Handle different types of interactions
-        if (interaction.isChatInputCommand()) {
-          await handleCommandInteraction(interaction, bot);
-        } 
-        else if (interaction.isButton()) {
-          await handleButtonInteraction(interaction, bot);
-        }
-        else if (interaction.isModalSubmit()) {
-          await handleModalInteraction(interaction as ModalSubmitInteraction, bot);
-        }
-        else if (interaction.isContextMenuCommand()) {
-          await handleContextMenuInteraction(interaction as ContextMenuCommandInteraction, bot);
-        }
-        else if (interaction.isAutocomplete()) {
-          await handleAutocompleteInteraction(interaction as AutocompleteInteraction, bot);
-        }
-      } catch (error) {
-        logger.error(`Error handling interaction for bot ${botId}:`, error);
-        
-        // Respond to the interaction if it hasn't been acknowledged yet
-        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-          await interaction.reply({ 
-            content: 'Sorry, there was an error processing your request.', 
-            ephemeral: true 
-          }).catch(err => {
-            logger.error('Failed to send error reply:', err);
-          });
-        }
-      }
-    });
-
-    logger.info(`Set up message handlers for bot ${botId}`);
+    logger.info(`Message handlers set up for bot ${botId}`);
   } catch (error) {
     logger.error(`Failed to set up message handlers for bot ${botId}:`, error);
     throw error;
   }
+};
+
+// Generate a bot prompt that incorporates personality and backstory
+function generateSystemPrompt(botConfig: BotConfiguration): string {
+  // Start with the base system prompt or a default helpful assistant prompt
+  let systemPrompt =
+    botConfig.systemPrompt || "You are a helpful Discord bot assistant.";
+
+  // Add personality if defined
+  if (botConfig.personality) {
+    systemPrompt += `\n\nYour personality: ${botConfig.personality}`;
+  }
+
+  // Add traits if defined
+  if (botConfig.traits && botConfig.traits.length > 0) {
+    systemPrompt += `\n\nYour traits: ${botConfig.traits.join(", ")}`;
+  }
+
+  // Add backstory if defined
+  if (botConfig.backstory) {
+    systemPrompt += `\n\nYour backstory: ${botConfig.backstory}`;
+  }
+
+  // Add basic Discord context
+  systemPrompt +=
+    "\n\nYou're communicating through Discord, so you can use Discord's formatting (e.g., **bold**, *italic*, etc.).";
+  systemPrompt += "\nRespond concisely but helpfully, and be conversational.";
+
+  return systemPrompt;
 }
 
-// Handle reaction events
-async function handleReaction(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser, bot: Bot): Promise<void> {
+// Start typing indicator in channel
+async function startTypingIndicator(
+  channel: TextChannel | DMChannel | ThreadChannel
+) {
   try {
-    // Partial reactions need to be fetched
-    const fullReaction = reaction.partial ? await reaction.fetch() : reaction;
-    
-    // Implementation for handling reactions
-    logger.info(`Reaction received: ${fullReaction.emoji.name} from user ${user.tag || user.username}`);
+    // If there's an existing typing indicator for this channel, clear it
+    const existingTyping = typingIndicators.get(channel.id);
+    if (existingTyping) {
+      clearInterval(existingTyping);
+    }
+
+    // Start typing
+    channel.sendTyping();
+
+    // Keep the typing indicator active with periodic updates
+    const typingInterval = setInterval(() => {
+      channel.sendTyping().catch((err) => {
+        logger.warn(
+          `Failed to maintain typing indicator in channel ${channel.id}:`,
+          err
+        );
+        clearInterval(typingInterval);
+        typingIndicators.delete(channel.id);
+      });
+    }, 5000); // Discord typing indicator lasts ~10 seconds, so refresh every 5s
+
+    // Store the interval ID for later cleanup
+    typingIndicators.set(channel.id, typingInterval);
   } catch (error) {
-    logger.error('Error handling reaction:', error);
+    logger.warn(
+      `Failed to start typing indicator in channel ${channel.id}:`,
+      error
+    );
   }
 }
 
+// Stop typing indicator in channel
+function stopTypingIndicator(channelId: string) {
+  const typingInterval = typingIndicators.get(channelId);
+  if (typingInterval) {
+    clearInterval(typingInterval);
+    typingIndicators.delete(channelId);
+  }
+}
+
+// Get conversation history for a channel
+function getConversationHistory(channelId: string, userId: string) {
+  const key = `${channelId}_${userId}`;
+  if (!conversationHistory.has(key)) {
+    conversationHistory.set(key, []);
+  }
+  return conversationHistory.get(key) || [];
+}
+
+// Add a message to conversation history
+function addToConversationHistory(
+  channelId: string,
+  userId: string,
+  role: string,
+  content: string,
+  username?: string
+) {
+  const key = `${channelId}_${userId}`;
+  const history = getConversationHistory(channelId, userId);
+
+  history.push({
+    role,
+    content,
+    userId: role === "user" ? userId : undefined,
+    username: role === "user" ? username : undefined,
+  });
+
+  // Trim history if it exceeds maximum length
+  while (history.length > MAX_HISTORY_LENGTH) {
+    history.shift();
+  }
+
+  conversationHistory.set(key, history);
+}
+
+// Handle incoming Discord messages
+export const handleMessage = async (
+  client: Client,
+  message: Message,
+  bot: Bot
+) => {
+  // Ignore messages from bots or without content
+  if (message.author.bot || !message.content) return;
+
+  // Check if the message mentions the bot or is in a DM
+  const mentioned = message.mentions.has(client.user!.id);
+  const isDirectMessage = message.channel.type === ChannelType.DM;
+
+  if (!mentioned && !isDirectMessage) return;
+
+  // Extract message content (remove mention if present)
+  let content = message.content;
+  if (mentioned) {
+    content = content.replace(new RegExp(`<@!?${client.user!.id}>`), "").trim();
+  }
+
+  // Skip empty messages after removing the mention
+  if (!content) return;
+
+  const channel = message.channel;
+
+  // Ensure the channel is text-based before proceeding
+  if (!channel.isTextBased()) return;
+
+  try {
+    // Start typing indicator to show the bot is "thinking"
+    await startTypingIndicator(
+      channel as TextChannel | DMChannel | ThreadChannel
+    );
+
+    // Add the user's message to history
+    addToConversationHistory(
+      channel.id,
+      message.author.id,
+      "user",
+      content,
+      message.author.username
+    );
+
+    // Get conversation history
+    const history = getConversationHistory(channel.id, message.author.id);
+
+    // Generate system prompt from bot configuration
+    const systemPrompt = generateSystemPrompt(bot.configuration || {
+      systemPrompt: "You are a helpful Discord bot assistant.",
+      personality: "",
+      traits: [],
+      backstory: "",
+      llmProvider: LLMProvider.OPENAI,
+      llmModel: "gpt-3.5-turbo",
+      apiKey: "",
+      imageGeneration: {
+        enabled: false,
+        provider: ImageProvider.MIDJOURNEY, // Fixed: Using enum value instead of string literal
+      },
+      toolsEnabled: false,
+      tools: [],
+      knowledge: []
+    });
+
+    // Call the LLM with the conversation history and system prompt
+    const response = await callLLM({
+      botId: bot.id,
+      prompt: content,
+      systemPrompt: systemPrompt,
+      history: history,
+      userId: message.author.id,
+      username: message.author.username,
+      model: bot.configuration?.llmModel,
+      provider: bot.configuration?.llmProvider,
+    });
+
+    // Add the bot's response to history
+    if (response && response.text) {
+      addToConversationHistory(
+        channel.id,
+        message.author.id,
+        "assistant",
+        response.text
+      );
+    }
+
+    // Handle potential image generation
+    let sentMessage;
+    if (
+      response?.generateImage &&
+      bot.configuration?.imageGeneration?.enabled
+    ) {
+      try {
+        // Generate an image based on the prompt
+        const imageUrl = await generateImage(
+          response.imagePrompt || content,
+          {
+            provider: bot.configuration?.imageGeneration?.provider || "openai",
+            apiKey: bot.configuration?.apiKey || "",
+            model: bot.configuration?.imageGeneration?.model,
+            enabled: true
+          }
+        );
+
+        // Send the response with the image
+        sentMessage = await (channel as TextChannel).send({
+          content: response.text,
+          files: imageUrl
+            ? [{ attachment: imageUrl, name: "generated-image.png" }]
+            : [],
+        });
+      } catch (imageError) {
+        logger.error(`Image generation error for bot ${bot.id}:`, imageError);
+
+        // If image generation fails, just send the text response
+        sentMessage = await (channel as TextChannel).send({
+          content: `${response.text}\n\n*(Failed to generate image: Something went wrong with image generation)*`,
+        });
+      }
+    } else {
+      // Send regular text response
+      sentMessage = await (channel as TextChannel).send(
+        response?.text ||
+          "I'm sorry, I'm having trouble processing that request."
+      );
+    }
+
+    logger.info(`Bot ${bot.id} responded to message in channel ${channel.id}`);
+    return sentMessage;
+  } catch (error) {
+    logger.error(`Error handling message for bot ${bot.id}:`, error);
+
+    try {
+      // Send error message to channel
+      await (channel as TextChannel).send(
+        "I'm sorry, I encountered an error while processing your request. Please try again later."
+      );
+    } catch (sendError) {
+      logger.error(
+        `Failed to send error message for bot ${bot.id}:`,
+        sendError
+      );
+    }
+  } finally {
+    // Always stop the typing indicator
+    stopTypingIndicator(channel.id);
+  }
+};
+
 /**
  * Handles slash command interactions
+ * @param interaction Slash command interaction
+ * @param bot Bot data from database
  */
-async function handleCommandInteraction(interaction: CommandInteraction, bot: any): Promise<void> {
-  // Get the command name
+async function handleSlashCommand(
+  interaction: ChatInputCommandInteraction,
+  bot: any
+): Promise<void> {
+  // Handle different slash commands here...
   const commandName = interaction.commandName;
-  
-  logger.info(`Bot ${bot.name} received command: ${commandName}`);
-  
-  if (commandName === 'help') {
-    await interaction.reply({
-      content: 'I am a Discord bot powered by Discura. You can chat with me or use slash commands!',
-      ephemeral: true
-    });
-  } else if (commandName === 'info') {
-    await interaction.reply({
-      content: `Bot Name: ${bot.name}\nPersonality: ${bot.configuration?.personality || 'Friendly'}`,
-      ephemeral: false
-    });
-  } else {
-    // For other commands, process with the LLM
+
+  try {
     await interaction.deferReply();
-    
+
+    if (commandName === "ping") {
+      await interaction.editReply("Pong!");
+    } else if (commandName === "help") {
+      await interaction.editReply({
+        content:
+          "**Available Commands**\n" +
+          "/ping - Check if the bot is online\n" +
+          "/help - Show this help message\n" +
+          "/image - Generate an image from a prompt",
+      });
+    } else if (
+      commandName === "image" &&
+      bot.configuration?.imageGeneration?.enabled
+    ) {
+      const prompt = interaction.options.getString("prompt");
+      if (!prompt) {
+        await interaction.editReply("Please provide a prompt for the image.");
+        return;
+      }
+
+      try {
+        const imageUrl = await generateImage(prompt, {
+          provider: bot.configuration?.imageGeneration?.provider || "openai",
+          apiKey: bot.configuration?.apiKey || "",
+          model: bot.configuration?.imageGeneration?.model,
+          enabled: true
+        });
+
+        if (imageUrl) {
+          await interaction.editReply({
+            content: `Generated image for: "${prompt}"`,
+            files: [{ attachment: imageUrl, name: "generated-image.png" }],
+          });
+        } else {
+          await interaction.editReply(
+            "Failed to generate image. Please try again."
+          );
+        }
+      } catch (error) {
+        logger.error(`Error generating image for bot ${bot.id}:`, error);
+        await interaction.editReply(
+          "Failed to generate image due to an error. Please try again later."
+        );
+      }
+    } else if (commandName === "tool" && bot.configuration?.toolsEnabled) {
+      const toolName = interaction.options.getString("name");
+      const toolInput = interaction.options.getString("input");
+
+      if (!toolName) {
+        await interaction.editReply("Please specify a tool to use.");
+        return;
+      }
+
+      try {
+        const result = await processToolCommand(
+          bot.id,
+          toolName,
+          toolInput || ""
+        );
+        await interaction.editReply(result || "Tool executed successfully.");
+      } catch (error) {
+        logger.error(`Error processing tool command for bot ${bot.id}:`, error);
+        await interaction.editReply(
+          `Error executing tool: ${(error as Error).message}`
+        );
+      }
+    } else {
+      await interaction.editReply("Unknown command or feature not enabled.");
+    }
+  } catch (error) {
+    logger.error(`Error handling slash command for bot ${bot.id}:`, error);
+
     try {
-      // Format the command and options for the LLM
-      const optionsString = interaction.options.data
-        .map(opt => `${opt.name}: ${opt.value}`)
-        .join(', ');
-      
-      const prompt = `Command: /${commandName} ${optionsString}`;
-      
-      // Process the command with the LLM
-      const response = await processMessage(prompt, bot);
-      
-      // Send the response
-      await interaction.editReply(response);
-    } catch (error) {
-      logger.error('Error processing command with LLM:', error);
-      await interaction.editReply('Sorry, I encountered an error processing your command.');
+      // Try to respond with an error message if we haven't replied yet
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "An error occurred while processing this command."
+        );
+      } else {
+        await interaction.reply({
+          content: "An error occurred while processing this command.",
+          ephemeral: true,
+        });
+      }
+    } catch (replyError) {
+      logger.error(`Failed to send error reply for bot ${bot.id}:`, replyError);
     }
   }
 }
 
 /**
  * Handles button interactions
+ * @param interaction Button interaction
+ * @param bot Bot data from database
  */
-async function handleButtonInteraction(interaction: ButtonInteraction, bot: any): Promise<void> {
-  // Get the button custom ID
-  const buttonId = interaction.customId;
-  
-  logger.info(`Bot ${bot.name} received button interaction: ${buttonId}`);
-  
-  // Handle different button actions based on the customId
-  if (buttonId.startsWith('help_')) {
-    await interaction.reply({
-      content: 'You clicked a help button. What can I assist you with?',
-      ephemeral: true
-    });
-  } else {
-    // For other button interactions, you can process with the LLM if needed
-    await interaction.deferReply({ ephemeral: true });
-    
+async function handleButtonInteraction(
+  interaction: ButtonInteraction,
+  bot: any
+): Promise<void> {
+  try {
+    await interaction.deferUpdate();
+    const buttonId = interaction.customId;
+
+    // Handle button interactions based on customId
+    if (buttonId.startsWith("confirm_")) {
+      await interaction.editReply({
+        content: "Action confirmed!",
+        components: [], // Remove buttons
+      });
+    } else if (buttonId.startsWith("cancel_")) {
+      await interaction.editReply({
+        content: "Action cancelled.",
+        components: [], // Remove buttons
+      });
+    } else {
+      await interaction.editReply({
+        content: "Button action not recognized.",
+        components: [], // Remove buttons
+      });
+    }
+  } catch (error) {
+    logger.error(`Error handling button interaction for bot ${bot.id}:`, error);
+
     try {
-      const prompt = `User clicked button: ${buttonId}`;
-      
-      // Process the button interaction with the LLM
-      const response = await processMessage(prompt, bot);
-      
-      // Send the response
-      await interaction.editReply(response);
-    } catch (error) {
-      logger.error('Error processing button interaction with LLM:', error);
-      await interaction.editReply('Sorry, I encountered an error processing your interaction.');
+      // Try to respond with an error message
+      await interaction.editReply({
+        content: "An error occurred while processing this interaction.",
+        components: [], // Remove buttons
+      });
+    } catch (replyError) {
+      logger.error(`Failed to send error reply for bot ${bot.id}:`, replyError);
     }
   }
 }
@@ -184,47 +489,39 @@ async function handleButtonInteraction(interaction: ButtonInteraction, bot: any)
  * @param interaction Modal submit interaction
  * @param bot Bot data from database
  */
-async function handleModalInteraction(interaction: ModalSubmitInteraction, bot: any): Promise<void> {
-  // Extract the custom ID to identify which modal was submitted
-  const modalId = interaction.customId;
-  
-  // Get all the field inputs from the modal
-  const fields = interaction.fields.fields;
-  const fieldValues: Record<string, string> = {};
-  
-  fields.forEach((value, key) => {
-    fieldValues[key] = value.value;
-  });
-  
-  // Acknowledge the interaction first
-  await interaction.deferReply({ ephemeral: true });
-  
-  // Process based on modal type
-  let response = '';
-  
-  if (modalId.startsWith('prompt_')) {
-    // This is a custom prompt modal
-    const userPrompt = fieldValues['prompt_text'] || 'No prompt provided';
-    
-    // Call LLM with the user's prompt
-    const llmResponse = await callLLM({
-      botId: bot.id,
-      prompt: userPrompt,
-      userId: interaction.user.id,
-      username: interaction.user.username
-    });
-    
-    response = llmResponse.text || "I don't have a response for that.";
-  } else {
-    // Default handling for unknown modals
-    response = `Thank you for your submission!`;
+async function handleModalSubmitInteraction(
+  interaction: ModalSubmitInteraction,
+  bot: any
+): Promise<void> {
+  try {
+    await interaction.deferReply({ ephemeral: true });
+    const modalId = interaction.customId;
+
+    // Handle different modal submissions based on customId
+    if (modalId === "feedback_form") {
+      const feedback = interaction.fields.getTextInputValue("feedback_input");
+      logger.info(`Received feedback for bot ${bot.id}: ${feedback}`);
+
+      await interaction.editReply({
+        content: "Thank you for your feedback!",
+      });
+    } else {
+      await interaction.editReply({
+        content: "Form submission processed.",
+      });
+    }
+  } catch (error) {
+    logger.error(`Error handling modal submission for bot ${bot.id}:`, error);
+
+    try {
+      // Try to respond with an error message
+      await interaction.editReply({
+        content: "An error occurred while processing your submission.",
+      });
+    } catch (replyError) {
+      logger.error(`Failed to send error reply for bot ${bot.id}:`, replyError);
+    }
   }
-  
-  // Send the response
-  await interaction.followUp({
-    content: response,
-    ephemeral: true
-  });
 }
 
 /**
@@ -232,46 +529,57 @@ async function handleModalInteraction(interaction: ModalSubmitInteraction, bot: 
  * @param interaction Context menu interaction
  * @param bot Bot data from database
  */
-async function handleContextMenuInteraction(interaction: ContextMenuCommandInteraction, bot: any): Promise<void> {
+async function handleContextMenuInteraction(
+  interaction: ContextMenuCommandInteraction,
+  bot: any
+): Promise<void> {
   // Extract the command name
   const commandName = interaction.commandName;
-  
+
   // Acknowledge the interaction first
   await interaction.deferReply({ ephemeral: true });
-  
-  let response = '';
-  
+
+  let response = "";
+
   // Handle different context menu commands
-  if (commandName === 'Summarize Message' && interaction.isMessageContextMenuCommand()) {
+  if (
+    commandName === "Summarize Message" &&
+    interaction.isMessageContextMenuCommand()
+  ) {
     const targetMessage = interaction.targetMessage;
     const messageContent = targetMessage.content;
-    
-    if (!messageContent || messageContent.trim() === '') {
+
+    if (!messageContent || messageContent.trim() === "") {
       response = "There's no text content to summarize in this message.";
     } else {
+      // Generate system prompt from bot configuration
+      const systemPrompt = generateSystemPrompt(bot.configuration || {});
+
       // Call LLM to summarize the message
       const llmResponse = await callLLM({
         botId: bot.id,
         prompt: `Please summarize the following message concisely: "${messageContent}"`,
+        systemPrompt: systemPrompt,
         userId: interaction.user.id,
-        username: interaction.user.username
+        username: interaction.user.username,
       });
-      
+
       response = llmResponse.text || "I couldn't summarize that message.";
     }
-  }
-  else if (commandName === 'User Info' && interaction.isUserContextMenuCommand()) {
+  } else if (
+    commandName === "User Info" &&
+    interaction.isUserContextMenuCommand()
+  ) {
     const targetUser = interaction.targetUser;
     response = `User: ${targetUser.username}\nID: ${targetUser.id}\nCreated: ${targetUser.createdAt.toLocaleString()}`;
-  }
-  else {
+  } else {
     response = `Unknown context menu command: ${commandName}`;
   }
-  
+
   // Send the response
   await interaction.followUp({
     content: response,
-    ephemeral: true
+    ephemeral: true,
   });
 }
 
@@ -280,338 +588,34 @@ async function handleContextMenuInteraction(interaction: ContextMenuCommandInter
  * @param interaction Autocomplete interaction
  * @param bot Bot data from database
  */
-async function handleAutocompleteInteraction(interaction: AutocompleteInteraction, bot: any): Promise<void> {
-  const command = interaction.commandName;
+async function handleAutocompleteInteraction(
+  interaction: AutocompleteInteraction,
+  bot: any
+): Promise<void> {
+  // Get the command name and focused option
+  const commandName = interaction.commandName;
   const focusedOption = interaction.options.getFocused(true);
-  
-  let choices: { name: string; value: string }[] = [];
-  
-  // Generate autocomplete options based on command and focused option
-  if (command === 'help' && focusedOption.name === 'topic') {
-    choices = [
-      { name: 'Commands', value: 'commands' },
-      { name: 'Features', value: 'features' },
-      { name: 'Settings', value: 'settings' },
-      { name: 'Personality', value: 'personality' },
-      { name: 'Image Generation', value: 'images' },
-      { name: 'Function Calling', value: 'functions' }
-    ];
+
+  // Handle autocomplete for different commands
+  if (
+    commandName === "tool" &&
+    focusedOption.name === "name" &&
+    bot.configuration?.toolsEnabled
+  ) {
+    // Get list of available tools for the bot
+    const tools = bot.configuration.tools || [];
+
+    // Filter tools based on user input
+    const filtered = tools
+      .map((tool: { name: string; id: string }) => ({
+        name: tool.name,
+        value: tool.id,
+      }))
+      .filter((choice: { name: string; value: string }) =>
+        choice.name.toLowerCase().includes(focusedOption.value.toLowerCase())
+      );
+
+    // Respond with matching choices (max 25 choices as per Discord's limit)
+    await interaction.respond(filtered.slice(0, 25));
   }
-  
-  // Filter based on user input
-  const filtered = choices.filter(choice => 
-    choice.name.toLowerCase().includes(focusedOption.value.toLowerCase()));
-  
-  // Respond with matching choices (max 25 choices as per Discord's limit)
-  await interaction.respond(
-    filtered.slice(0, 25)
-  );
-}
-
-// Handle incoming Discord messages
-export const handleMessage = async (client: Client, message: Message, bot: Bot) => {
-  // Ignore messages from bots or without content
-  if (message.author.bot || !message.content) return;
-
-  // Check if the message mentions the bot
-  const mentioned = message.mentions.has(client.user!.id);
-  const isDirectMessage = message.channel.type === ChannelType.DM; // Use ChannelType enum
-
-  if (!mentioned && !isDirectMessage) return;
-
-  // Extract message content (remove mention if present)
-  let content = message.content;
-  if (mentioned) {
-    content = content.replace(/<@!?\\d+>/, '').trim();
-  }
-
-  const channel = message.channel; // Use a variable for clarity
-
-  // Check if channel is a type where we can send messages/typing indicators
-  const isSendableChannel = channel.type === ChannelType.GuildText || channel.type === ChannelType.DM;
-
-  if (isSendableChannel) {
-    try {
-       await channel.sendTyping();
-    } catch (typingError) {
-        // channel.id should be safe here as GuildText and DM channels have IDs
-        logger.warn(`Could not send typing indicator in channel ${channel.id}:`, typingError);
-    }
-  } else {
-     logger.warn(`Cannot send typing indicator in channel of type ${channel.type}`);
-  }
-
-  try {
-    // 1. Get LLM Response (including potential tool calls)
-    const llmResult: LLMResponse = await callLLM({
-      botId: bot.id,
-      prompt: content,
-      userId: message.author.id,
-      username: message.author.username
-    });
-
-    // 2. Handle Tool Calls if any
-    let toolResults: any[] = [];
-    if (bot.configuration?.toolsEnabled && llmResult.toolCalls && llmResult.toolCalls.length > 0) {
-      // Check if channel supports sending messages before confirming tool use
-       if (isSendableChannel) {
-           try {
-               await channel.send('🛠️ Using tools...');
-           } catch (sendError) {
-               logger.warn(`Could not send tool usage message in channel ${channel.id}:`, sendError);
-           }
-       }
-      // Convert bot configuration tools to the required Tool type
-      const adaptedTools = adaptBotToolsToToolType(bot.configuration.tools || []);
-      toolResults = await executeTools(llmResult.toolCalls, adaptedTools);
-    }
-
-    // 3. Handle Image Generation if requested (example trigger: "/image")
-    let imageUrl: string | null = null;
-    const imageMatch = content.match(/\/image\s+(.*)/i);
-    if (imageMatch && bot.configuration?.imageGeneration?.enabled) {
-      const imagePrompt = imageMatch[1].trim();
-       if (isSendableChannel) {
-           try {
-               await channel.send(`Generating image for: "${imagePrompt}" ...`);
-           } catch (sendError) {
-               logger.warn(`Could not send image generation message in channel ${channel.id}:`, sendError);
-           }
-       }
-      try {
-        // Adapt the image configuration to ensure the provider is always 'openai' for compatibility
-        const adaptedConfig = adaptImageGenerationConfig(bot.configuration.imageGeneration);
-        imageUrl = await generateImage(imagePrompt, adaptedConfig);
-      } catch (imgError) {
-        logger.error('Image generation failed:', imgError);
-         if (isSendableChannel) {
-             try {
-                 await channel.send('Sorry, there was an error generating the image.');
-             } catch (sendError) {
-                 logger.warn(`Could not send image generation error message in channel ${channel.id}:`, sendError);
-             }
-         }
-      }
-    }
-
-    // 4. Send Final Response(s)
-    // Send LLM text response (split if necessary)
-    if (llmResult.text) {
-      const chunks = splitMessage(llmResult.text);
-      for (const chunk of chunks) {
-         if (isSendableChannel) {
-             try {
-                 await channel.send(chunk);
-             } catch (sendError) {
-                 logger.error(`Failed to send message chunk to channel ${channel.id}:`, sendError);
-                 break;
-             }
-         } else {
-             logger.error(`Cannot send message chunk to channel of type ${channel.type}`);
-             break;
-         }
-      }
-    } else if (!imageUrl && toolResults.length === 0) {
-        // Send a default message if no other response was generated
-         if (isSendableChannel) {
-             try {
-                await channel.send("I don't have a specific response for that right now.");
-             } catch (sendError) {
-                 logger.warn(`Could not send default message in channel ${channel.id}:`, sendError);
-             }
-         }
-    }
-
-    // Send Image URL if generated
-    if (imageUrl) {
-       if (isSendableChannel) {
-           try {
-               await channel.send(imageUrl);
-           } catch (sendError) {
-               logger.error(`Failed to send image URL to channel ${channel.id}:`, sendError);
-           }
-       }
-    }
-
-  } catch (error) {
-    logger.error('Error handling message:', error);
-     if (isSendableChannel) {
-         try {
-            await channel.send('Sorry, I encountered an error processing your request.');
-         } catch (sendError) {
-             logger.error(`Failed to send error message to channel ${channel.id}:`, sendError);
-         }
-     }
-  }
-};
-
-// --- Helper Functions ---
-
-// Renamed function parameter to avoid conflict with imported executeTools
-async function processToolCalls(toolCalls: any[], bot: Bot): Promise<any[]> {
-    const results = [];
-    for (const call of toolCalls) {
-        try {
-            // Assuming 'call' has function name and arguments
-            const functionName = call.function?.name;
-            const functionArgs = JSON.parse(call.function?.arguments || '{}'); // Safely parse args
-            const toolId = call.id; // ID to map result back to the call
-
-            if (!functionName) continue;
-
-            // Find the tool configuration
-            const tool = bot.configuration?.tools?.find((t: { name: string }) => t.name === functionName);
-            if (!tool) {
-                results.push({ tool_call_id: toolId, output: `Error: Tool '${functionName}' not found.` });
-                continue;
-            }
-
-            // Execute the tool
-            const adaptedTools = adaptBotToolsToToolType(bot.configuration?.tools || []);
-            const toolExecutionResult = await executeTools([call], adaptedTools);
-            // Extract the actual output from the result
-            const output = toolExecutionResult.length > 0 ? toolExecutionResult[0].result : 'Error: Tool execution failed or returned no result.';
-
-            results.push({ tool_call_id: toolId, output: JSON.stringify(output) }); // Stringify output for LLM
-
-        } catch (error) {
-            logger.error(`Error processing tool call ${call.id}:`, error);
-            results.push({ tool_call_id: call.id, output: `Error: Failed to execute tool ${call.function?.name}.` });
-        }
-    }
-    return results;
-}
-
-
-function splitMessage(text: string, maxLength = 2000): string[] {
-  const chunks: string[] = [];
-  let currentChunk = '';
-
-  // Split by lines first to try and preserve code blocks/formatting
-  const lines = text.split('\\n');
-
-  for (const line of lines) {
-    // If a single line is too long, split it by words
-    if (line.length > maxLength) {
-        // Flush the current chunk if it exists
-        if (currentChunk) {
-            chunks.push(currentChunk);
-            currentChunk = '';
-        }
-        
-        const words = line.split(' ');
-        let longLineChunk = '';
-        for(const word of words) {
-            if ((longLineChunk + word + ' ').length <= maxLength) {
-                longLineChunk += word + ' ';
-            } else {
-                chunks.push(longLineChunk.trim());
-                longLineChunk = word + ' ';
-            }
-        }
-         if (longLineChunk) { // Add the remainder of the long line
-            chunks.push(longLineChunk.trim());
-        }
-
-    } else if ((currentChunk + line + '\\n').length <= maxLength) {
-      currentChunk += line + '\\n';
-    } else {
-      // Push the current chunk and start a new one
-      chunks.push(currentChunk.trim());
-      currentChunk = line + '\\n';
-    }
-  }
-
-  // Push the last remaining chunk
-  if (currentChunk) {
-    chunks.push(currentChunk.trim());
-  }
-
-  return chunks.filter(chunk => chunk.length > 0); // Remove empty chunks
-}
-
-// Simple wrapper for callLLM for backward compatibility
-async function processMessage(prompt: string, bot: Bot): Promise<string> {
-  try {
-    const result = await callLLM({
-      botId: bot.id,
-      prompt,
-      userId: 'system',
-      username: 'system'
-    });
-    
-    return result.text || "I don't have a response for that.";
-  } catch (error) {
-    logger.error('Error processing message:', error);
-    return 'Sorry, I encountered an error processing your request.';
-  }
-}
-
-/**
- * Adapts bot configuration tools to the required Tool type with implementation
- * This is needed because the tools in bot configuration don't include implementation
- */
-function adaptBotToolsToToolType(configTools: Array<{
-  id: string;
-  name: string;
-  description: string;
-  parameters?: Array<{
-    name: string;
-    type: string;
-    description: string;
-    required: boolean;
-  }>;
-}>): Tool[] {
-  return configTools.map(tool => ({
-    id: tool.id,
-    name: tool.name,
-    description: tool.description,
-    parameters: tool.parameters || [],
-    // Default implementation that returns the input arguments
-    implementation: `
-      return {
-        result: {
-          success: true,
-          args: args,
-          message: "This is a placeholder implementation for the ${tool.name} tool."
-        }
-      };
-    `
-  }));
-}
-
-/**
- * Adapts bot configuration image generation config to the required ImageGenerationConfig type
- */
-function adaptImageGenerationConfig(config: {
-  enabled: boolean;
-  provider: string;
-  apiKey?: string;
-  model?: string;
-}) {
-  // Map the string provider to the enum value
-  let provider: ImageProvider;
-  
-  // Try to map the string provider to the enum value
-  switch(config.provider.toLowerCase()) {
-    case 'openai':
-      provider = ImageProvider.OPENAI;
-      break;
-    case 'stability':
-      provider = ImageProvider.STABILITY;
-      break;
-    case 'midjourney':
-      provider = ImageProvider.MIDJOURNEY;
-      break;
-    default:
-      // Default to OpenAI if provider not recognized
-      provider = ImageProvider.OPENAI;
-  }
-  
-  return {
-    enabled: config.enabled,
-    provider,
-    apiKey: config.apiKey,
-    model: config.model
-  };
 }

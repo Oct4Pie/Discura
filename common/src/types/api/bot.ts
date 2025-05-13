@@ -15,6 +15,8 @@ export enum BotStatus {
   OFFLINE = "offline",
   ONLINE = "online",
   ERROR = "error",
+  STARTING = "starting",
+  STOPPING = "stopping",
 }
 
 /**
@@ -55,6 +57,18 @@ export interface CreateBotRequest {
 }
 
 /**
+ * Create Bot Request DTO
+ * @tsoaModel
+ */
+export interface CreateBotRequestDto extends CreateBotRequest {}
+
+/**
+ * Create Bot Response DTO
+ * @tsoaModel
+ */
+export interface CreateBotResponseDto extends BotResponseDto {}
+
+/**
  * Update Bot Request
  * @tsoaModel
  */
@@ -65,4 +79,81 @@ export interface UpdateBotRequest {
   intents?: string[];
   status?: BotStatus;
   configuration?: BotConfiguration; // Changed from Record<string, any>
+}
+
+/**
+ * Update Bot Request DTO
+ * @tsoaModel
+ */
+export interface UpdateBotRequestDto extends UpdateBotRequest {}
+
+/**
+ * Update Bot Response DTO
+ * @tsoaModel
+ */
+export interface UpdateBotResponseDto extends BotResponseDto {}
+
+/**
+ * Get All Bots Response DTO
+ * @tsoaModel
+ */
+export interface GetAllBotsResponseDto extends BotsResponseDto {}
+
+/**
+ * Get Bot Response DTO
+ * @tsoaModel
+ */
+export interface GetBotResponseDto {
+  bot: BotResponseDto;
+}
+
+/**
+ * Start Bot Response DTO
+ * @tsoaModel
+ */
+export interface StartBotResponseDto extends BotResponseDto {}
+
+/**
+ * Stop Bot Response DTO
+ * @tsoaModel
+ */
+export interface StopBotResponseDto extends BotResponseDto {}
+
+/**
+ * Delete Bot Response DTO
+ * @tsoaModel
+ */
+export interface DeleteBotResponseDto extends MessageResponseDto {}
+
+/**
+ * Message Response DTO
+ * @tsoaModel
+ */
+export interface MessageResponseDto {
+  message: string;
+  success: boolean;
+}
+
+/**
+ * Generate Bot Invite Link Response DTO
+ * @tsoaModel
+ */
+export interface GenerateBotInviteLinkResponseDto {
+  inviteUrl: string;
+}
+
+/**
+ * Update Bot Configuration Request DTO
+ * @tsoaModel
+ */
+export interface UpdateBotConfigurationRequestDto {
+  configuration: BotConfiguration;
+}
+
+/**
+ * Update Bot Configuration Response DTO
+ * @tsoaModel
+ */
+export interface UpdateBotConfigurationResponseDto extends BotResponseDto {
+  message: string;
 }

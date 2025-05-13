@@ -1,7 +1,7 @@
-import config from '../../config';
-import { logger } from '../../utils/logger';
-import { SQLiteDatabase } from './sqlite.database';
-import { IDatabaseService } from './database.interface';
+import { IDatabaseService } from "./database.interface";
+import { SQLiteDatabase } from "./sqlite.database";
+import config from "../../config";
+import { logger } from "../../utils/logger";
 
 /**
  * Database factory for selecting and initializing the appropriate database service
@@ -15,24 +15,24 @@ class DatabaseFactory {
    */
   async initialize(): Promise<void> {
     const dbType = config.database.type;
-    
+
     switch (dbType) {
-      case 'sqlite':
-        logger.info('Initializing SQLite database');
+      case "sqlite":
+        logger.info("Initializing SQLite database");
         this.dbInstance = new SQLiteDatabase(config.database.sqlite.path);
         break;
-        
+
       // We can add support for other databases like Turso here in the future
       // case 'turso':
       //   logger.info('Initializing Turso database');
       //   this.dbInstance = new TursoDatabase(config.database.turso.url, config.database.turso.authToken);
       //   break;
-        
+
       default:
         logger.info(`Unknown database type: ${dbType}, defaulting to SQLite`);
         this.dbInstance = new SQLiteDatabase(config.database.sqlite.path);
     }
-    
+
     await this.dbInstance.initialize();
   }
 
@@ -79,7 +79,10 @@ class DatabaseFactory {
   /**
    * Insert a record into a table
    */
-  async insert(table: string, data: Record<string, any>): Promise<string | number> {
+  async insert(
+    table: string,
+    data: Record<string, any>,
+  ): Promise<string | number> {
     this.ensureInitialized();
     return this.dbInstance!.insert(table, data);
   }
@@ -87,7 +90,12 @@ class DatabaseFactory {
   /**
    * Update records in a table
    */
-  async update(table: string, data: Record<string, any>, whereClause: string, whereParams?: any[]): Promise<number> {
+  async update(
+    table: string,
+    data: Record<string, any>,
+    whereClause: string,
+    whereParams?: any[],
+  ): Promise<number> {
     this.ensureInitialized();
     return this.dbInstance!.update(table, data, whereClause, whereParams);
   }
@@ -95,7 +103,11 @@ class DatabaseFactory {
   /**
    * Delete records from a table
    */
-  async delete(table: string, whereClause: string, whereParams?: any[]): Promise<number> {
+  async delete(
+    table: string,
+    whereClause: string,
+    whereParams?: any[],
+  ): Promise<number> {
     this.ensureInitialized();
     return this.dbInstance!.delete(table, whereClause, whereParams);
   }
@@ -115,7 +127,7 @@ class DatabaseFactory {
    */
   private ensureInitialized(): void {
     if (!this.dbInstance) {
-      throw new Error('Database not initialized. Call initialize() first.');
+      throw new Error("Database not initialized. Call initialize() first.");
     }
   }
 }

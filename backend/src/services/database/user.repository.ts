@@ -1,7 +1,8 @@
-import { v4 as uuidv4 } from 'uuid';
-import { BaseRepository } from './base.repository';
-import { db } from './database.factory';
-import { logger } from '../../utils/logger';
+import { v4 as uuidv4 } from "uuid";
+
+import { BaseRepository } from "./base.repository";
+import { db } from "./database.factory";
+import { logger } from "../../utils/logger";
 
 /**
  * User entity representing a row in the users table
@@ -24,7 +25,7 @@ export class UserRepository extends BaseRepository<UserEntity> {
   private static instance: UserRepository;
 
   private constructor() {
-    super('users');
+    super("users");
   }
 
   /**
@@ -41,7 +42,7 @@ export class UserRepository extends BaseRepository<UserEntity> {
    * Find a user by Discord ID
    */
   async findByDiscordId(discordId: string): Promise<UserEntity | undefined> {
-    const result = await this.findOneByField('discord_id', discordId);
+    const result = await this.findOneByField("discord_id", discordId);
     return result === null ? undefined : result;
   }
 
@@ -60,10 +61,10 @@ export class UserRepository extends BaseRepository<UserEntity> {
       };
 
       await this.create(user);
-      
+
       return user as UserEntity;
     } catch (error) {
-      logger.error('Error creating user from Discord data:', error);
+      logger.error("Error creating user from Discord data:", error);
       throw error;
     }
   }
@@ -71,10 +72,13 @@ export class UserRepository extends BaseRepository<UserEntity> {
   /**
    * Update a user's Discord profile data
    */
-  async updateDiscordProfile(discordId: string, profileData: Partial<UserEntity>): Promise<boolean> {
+  async updateDiscordProfile(
+    discordId: string,
+    profileData: Partial<UserEntity>,
+  ): Promise<boolean> {
     try {
       const user = await this.findByDiscordId(discordId);
-      
+
       if (!user) {
         return false;
       }
@@ -89,7 +93,7 @@ export class UserRepository extends BaseRepository<UserEntity> {
       };
 
       // Filter out undefined values
-      Object.keys(allowedUpdates).forEach(key => {
+      Object.keys(allowedUpdates).forEach((key) => {
         if (allowedUpdates[key as keyof UserEntity] === undefined) {
           delete allowedUpdates[key as keyof UserEntity];
         }
@@ -97,7 +101,7 @@ export class UserRepository extends BaseRepository<UserEntity> {
 
       return await this.update(user.id, allowedUpdates);
     } catch (error) {
-      logger.error('Error updating user Discord profile:', error);
+      logger.error("Error updating user Discord profile:", error);
       throw error;
     }
   }
@@ -108,13 +112,13 @@ export class UserRepository extends BaseRepository<UserEntity> {
   async getUserBotIds(userId: string): Promise<string[]> {
     try {
       const botRows = await db.query<{ id: string }>(
-        'SELECT id FROM bots WHERE user_id = ?',
-        [userId]
+        "SELECT id FROM bots WHERE user_id = ?",
+        [userId],
       );
-      
-      return botRows.map(row => row.id);
+
+      return botRows.map((row) => row.id);
     } catch (error) {
-      logger.error('Error fetching user bot IDs:', error);
+      logger.error("Error fetching user bot IDs:", error);
       throw error;
     }
   }

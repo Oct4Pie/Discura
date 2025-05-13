@@ -15,7 +15,7 @@ import MainLayout from './layouts/MainLayout';
 import AuthCallback from './pages/AuthCallback';
 import BotDetail from './pages/BotDetail';
 import BotList from './pages/BotList';
-import CreateBot from './pages/CreateBot';
+import BotCreate from './pages/BotCreate';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
@@ -106,7 +106,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/bots" element={<BotList />} />
-            <Route path="/bots/create" element={<CreateBot />} />
+            <Route path="/bots/create" element={<BotCreate />} />
             <Route path="/bots/:id" element={<BotDetail />} />
             <Route path="/settings" element={<Settings />} />
           </Route>

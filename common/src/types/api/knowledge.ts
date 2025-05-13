@@ -1,6 +1,6 @@
 /**
  * Knowledge API Types
- * 
+ *
  * This file contains all API types related to the Knowledge service.
  * These are defined with @tsoaModel decorator to be picked up by the API generation process.
  */

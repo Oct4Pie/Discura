@@ -11,6 +11,7 @@
 - [Module Resolution](#module-resolution)
 - [API Type Troubleshooting](#api-type-troubleshooting)
 - [Controller Injection Mechanism](#controller-injection-mechanism)
+- [LLM Provider System](#llm-provider-system)
 - [Project Status](#project-status)
 - [Using Context7](#using-context7)
 - [Troubleshooting Guide](#troubleshooting-guide)
@@ -24,6 +25,7 @@
 3.  **NO Hard-Coding:** NEVER hard-code API paths or types. Use generated code and route constants.
 4.  **NO Editing Generated Files:** NEVER edit files created by the generation script (e.g., in `common/src/schema/`, `common/src/routes/`, `frontend/src/api/generated/`, `frontend/src/api/schema.ts`).
 5.  **Common Package Centralization:** ALL code shared between frontend and backend MUST be in the `@discura/common` package. No exceptions.
+6.  **Backend-Frontend Separation:** Keep all business logic in the backend. Frontend should only handle UI and API client interactions.
 
 ## Architecture Overview
 
@@ -39,8 +41,8 @@ The `@discura/common` package is the central repository for all code, type defin
 
 1.  **Shared Types**: All type definitions (interfaces, enums, etc.) used by both frontend and backend are managed within the `@discura/common` package.
     *   **API Types** (for HTTP requests/responses) are defined in `common/src/types/api/`, marked with `@tsoaModel`, and then generated.
-        *   Backend imports from `@discura/common/schema/types`.
-        *   Frontend imports from `frontend/src/api/generated/` (which are generated from the common package's schema).
+        *   Backend imports from `@discura/common`.
+        *   Frontend imports from `frontend/src/api/` (which are generated from the common package's schema).
     *   **Non-API Shared Types** (for internal logic, shared utilities, etc.) are defined directly in `common/src/types/` (outside the `api` subfolder).
         *   Both backend and frontend import these from `@discura/common/types`.
     *   (See the "Type System Flow - DEFINITIVE GUIDE" section for the exact workflow.)
@@ -107,7 +109,7 @@ API types MUST follow this EXACT workflow:
      - Execute `common/scripts/tsoa-bootstrap.js` which:
        - Creates temporary helper files for type resolution (like `common/src/types/api/tsoa-reference.ts`).
        - Updates the TSOA configuration if necessary.
-       - Temporarily patches API type imports in controllers (from `../types` to allow resolution against placeholders in `@discura/common/schema/types`).
+       - Temporarily patches API type imports in controllers (from `../types` to allow resolution against placeholders in `@discura/common`).
        - Runs TSOA (using `common/tsoa.json`) to process these patched controllers and generate `common/src/schema/swagger.json` (OpenAPI specification).
      - Execute `common/scripts/sync-types.js` to read `common/src/schema/swagger.json` and generate the final, complete type definitions in `common/src/schema/types.ts`, replacing the placeholders
      - Run TSOA again to generate `common/src/routes/routes.ts` (TSOA-generated Express routes)
@@ -115,7 +117,7 @@ API types MUST follow this EXACT workflow:
      - Generate the frontend API client code in `frontend/src/api/generated/` and the schema in `frontend/src/api/schema.ts` based on `common/src/schema/swagger.json`
    
    - STEP 4: Import these API types:
-     - In backend code (e.g., service implementations): `import { LLMModelData } from '@discura/common/schema/types';`
+     - In backend code (e.g., service implementations): `import { LLMModelData } from '@discura/common';`
      - In frontend code: `import { LLMModelData } from 'src/api';` (this path assumes `baseUrl: "src"` in `frontend/tsconfig.json` or a similar setup; adjust to `../api` or an alias like `@/api` as per your project's specific path resolution from `frontend/src/api/index.ts` which should re-export all necessary types and client parts from `frontend/src/api/generated/`).
 
    - CRITICAL: NEVER import API types directly from their original definition files (e.g., `common/src/types/api/llm.ts`) into application logic. ALWAYS use the generated paths. Controllers within the common package should import from '../types', while frontend components should import API types and client functionalities *only* through the `frontend/src/api/index.ts` facade.
@@ -153,13 +155,13 @@ The `./generate-api-types.sh` script performs these exact steps in the following
     *   Uses `common/scripts/bootstrap-types.js` which scans `common/src/types/api` for `@tsoaModel` decorators.
     *   Creates temporary placeholder implementations of ALL API types.
     *   CRITICAL: This breaks circular dependencies by providing these placeholder types. Controllers import API types from `../types` (as per current practice), 
-    *   and the `tsoa-bootstrap.js` script (in the next step) temporarily patches these imports to resolve against these placeholders in `@discura/common/schema/types`.
+    *   and the `tsoa-bootstrap.js` script (in the next step) temporarily patches these imports to resolve against these placeholders in `@discura/common`.
     *   This MUST run BEFORE TSOA attempts to generate routes from controllers.
 
 2.  **Run TSOA in the common package**: Generates API schema and routes.
     *   Uses `common/scripts/tsoa-bootstrap.js` to run TSOA with the correct working directory (`common`).
-    *   The `tsoa-bootstrap.js` script first temporarily patches API type imports in `common/src/controllers/` (changing them from `../types` to resolve against `@discura/common/schema/types`).
-    *   Then, TSOA (configured by `common/tsoa.json`) processes these patched controllers, using the placeholder API types from `@discura/common/schema/types`.
+    *   The `tsoa-bootstrap.js` script first temporarily patches API type imports in `common/src/controllers/` (changing them from `../types` to resolve against `@discura/common`).
+    *   Then, TSOA (configured by `common/tsoa.json`) processes these patched controllers, using the placeholder API types from `@discura/common/`.
     *   Outputs `swagger.json` to `common/src/schema/`.
     *   Outputs `routes.ts` to `common/src/routes/`.
 
@@ -179,11 +181,11 @@ The `./generate-api-types.sh` script performs these exact steps in the following
 
 | Type Category        | Definition Location        | Decorator   | Import In Backend                     | Import In Frontend                      |
 | -------------------- | -------------------------- | ----------- | ------------------------------------- | --------------------------------------- |
-| API Types            | `common/src/types/api/*`   | `@tsoaModel` | `@discura/common/schema/types`        | `src/api` (via `frontend/src/api/index.ts`) |
+| API Types            | `common/src/types/api/*`   | `@tsoaModel` | `@discura/common`        | `src/api` (via `frontend/src/api/index.ts`) |
 | Non-API Shared Types | `common/src/types/*`       | None        | `@discura/common/types`               | `@discura/common/types`                 |
 
 #### ABSOLUTELY CRITICAL RULES:
--   API types (request/response DTOs): DEFINE in `common/src/types/api` with `@tsoaModel` -> IMPORT from `@discura/common/schema/types` (backend) or `src/api` (frontend, via `frontend/src/api/index.ts`).
+-   API types (request/response DTOs): DEFINE in `common/src/types/api` with `@tsoaModel` -> IMPORT from `@discura/common` (backend) or `src/api` (frontend, via `frontend/src/api/index.ts`).
 -   Non-API shared types (enums, internal interfaces): DEFINE directly in `common/src/types/` (NOT in `api/` subfolder) -> IMPORT from `@discura/common/types`.
 -   NEVER duplicate types - each type has ONE definition location based on its category.
 -   NEVER import API types directly from their source definition files (e.g., `common/src/types/api/user.ts`) in controllers or application logic.
@@ -207,7 +209,7 @@ The proper type definition workflow varies based on the type of type:
 1.  Define types with `@tsoaModel` decorator in `common/src/types/api/`.
 2.  Generate using `./generate-api-types.sh`.
 3.  In TSOA controllers within `common/src/controllers/`, import API types from `../types`.
-4.  In backend service implementations, import API types from `@discura/common/schema/types`.
+4.  In backend service implementations, import API types from `@discura/common`.
 5.  In frontend code, import API types from `src/api` (or `../api` depending on the file location, leveraging `frontend/src/api/index.ts` which re-exports from `./generated`).
 6.  NEVER import API types directly from their original definition files (e.g., `common/src/types/api/mytype.ts`) in application logic.
 
@@ -320,9 +322,135 @@ If you see `"Method not implemented in common package"` errors:
 1. Check that backend controllers properly implement all methods from common controllers
 2. Verify controller injection is running before routes are registered
 3. Check the debug logs to confirm methods are being patched
-4. Ensure backend controller method signatures match common controller definitions
+4. Ensure backend controller method signatures match common controller definitions exactly
 
 For more detailed information, see `backend/src/utils/README-controller-injection.md`.
+
+## LLM Provider System
+
+Discura implements an LLM (Large Language Model) provider system that integrates with various AI model providers, with a focus on OpenRouter integration and Vercel AI SDK. This system follows the project's core architectural principles:
+
+### Architecture Overview
+
+1. **Backend-Only Integration**: All provider-specific logic, API interactions, and business logic exist ONLY in the backend.
+   - Provider discovery, caching, and model mapping live in `backend/src/services/llm.service.ts`
+   - OpenRouter API integration resides in `backend/src/services/openrouter.service.ts`
+   - Vercel AI SDK integration is handled in `backend/src/services/vercel-ai-sdk.service.ts`
+
+2. **Centralized Types**: Provider and model types are defined in the common package:
+   - API types in `common/src/types/api/llm.ts` with `@tsoaModel` decorator
+   - Non-API shared types in `common/src/types/llm.ts`
+
+3. **Controller Definition**: The API contract is defined in `common/src/controllers/llm.controller.ts`
+
+4. **Frontend API Client**: Frontend components use the generated API client in `frontend/src/api`
+
+5. **Provider Enum Syncing**: When modifying the `LLMProvider` enum in `common/src/types/llm.ts`, always update the corresponding `LlmProviderConstants` interface in `common/src/types/api/constants.ts` to maintain synchronization between the two. This ensures type safety when using constants in the frontend.
+
+### Provider Integration Architecture
+
+The LLM provider system offers two key integration approaches along with direct provider integration:
+
+#### 1. OpenRouter Native SDK Integration
+
+OpenRouter is implemented using the official `@openrouter/ai-sdk-provider` from the Vercel AI SDK ecosystem:
+
+1. **Native AI SDK Provider**:
+   - Uses official `createOpenRouter` function from `@openrouter/ai-sdk-provider`
+   - Fully compatible with Vercel AI's streaming primitives
+   - Provides direct access to all OpenRouter features with proper type support
+
+2. **Model Variant Slug Handling**:
+   - Uses the `model_variant_slug` format for optimal model routing through OpenRouter
+   - Backend automatically maps standard model slugs (e.g., `anthropic/claude-3-5-sonnet`) to their corresponding `model_variant_slug` values
+   - Special handling for routing endpoints like `auto`, `best`, `fastest`, and `cheapest`
+
+3. **Special Routing Capabilities**:
+   - `openrouter/auto`: Automatically selects the best model based on the request
+   - `openrouter/best`: Routes to the highest quality model available
+   - `openrouter/fastest`: Routes to the fastest-responding model
+   - `openrouter/cheapest`: Routes to the most cost-effective model
+
+4. **Configuration**:
+   - Configured via `OPENROUTER_KEY` environment variable
+   - Optional `OPENROUTER_REFERER` for attribution
+   - Custom headers support for proper attribution and tracking
+
+#### 2. Provider-Specific Model Access
+
+Individual provider models can be accessed either directly or through OpenRouter:
+
+1. **Uses Backend Caching**: 
+   - Default cache TTL: 24 hours (configurable via environment variables)
+   - OpenRouter-specific cache TTL: 12 hours (configurable)
+   - Rate limit protections with configurable cool-down periods
+
+2. **Implements Tiered Fallback**:
+   - Attempts to fetch from OpenRouter API
+   - Falls back to cached data if OpenRouter is unavailable
+   - Falls back to default models if cache is missing
+
+#### 3. Vercel AI SDK Integration
+
+The Vercel AI SDK integration provides a flexible, streaming-ready interface to all LLM providers:
+
+1. **Provider Registry**:
+   - Dynamically constructs a provider registry based on available API keys
+   - Supports all native AI SDK providers: OpenAI, Anthropic, Google, Mistral, Cohere, DeepSeek, Amazon, Azure, Fireworks, TogetherAI, Perplexity, DeepInfra, xAI, Ollama, Hugging Face, Cerebras, ElevenLabs, Gladia, AssemblyAI, Rev.ai, Deepgram, LMNT, Hume, and OpenRouter
+   - Allows custom OpenAI-compatible providers with custom endpoints (e.g., Qwen, Chutes, Microsoft, Anyscale, Voyage, LMStudio, etc.)
+
+2. **Environment Configuration**:
+   - Providers are configured via environment variables in the format `${PROVIDER}_KEY`
+   - Provider availability is determined by the presence of API keys
+   - Custom providers can be added through the API with validation
+
+3. **Model Mapping**:
+   - Automatic mapping between internal model IDs and provider-specific IDs
+   - Support for streaming completions with proper backpressure handling
+   - Graceful fallbacks when specific providers are unavailable
+
+4. **Management API**:
+   - Enable/disable providers via API endpoints
+   - Add/remove/update custom providers through the API
+   - Force refresh provider model caches
+
+### Implementation Guidelines
+
+1. **Frontend Components**:
+   - Should ONLY fetch model data through the API client: `import { api } from 'src/api'`
+   - Must use generated types: `import { LLMCompletionRequestDto } from 'src/api'`
+   - Should never implement provider-specific logic or caching
+
+2. **Backend Services**:
+   - Implement provider-specific logic and API interactions
+   - Handle rate limiting, caching, and error recovery
+   - Map external provider formats to internal model structure
+
+3. **Correct API Flow**:
+   - Frontend requests model data from backend
+   - Backend fetches from external providers or cache
+   - Backend processes and returns standardized model data
+   - Frontend displays models and handles user selections
+
+4. **Environment Configuration**:
+   - Cache durations and rate limits are configurable via environment variables
+   - API keys are stored only in backend environment variables
+   - Provider status (enabled/disabled) is stored in `provider-config.json`
+
+### Key Files & Components
+
+1. **Backend**:
+   - `llm.service.ts`: Main provider registry with caching
+   - `openrouter.service.ts`: OpenRouter API integration
+   - `vercel-ai-sdk.service.ts`: Vercel AI SDK integration
+   - `llm.controller.ts`: API endpoints implementation
+
+2. **Frontend**:
+   - API client: Generated from OpenAPI spec
+   - `ModelSelector.tsx`: UI component for model selection
+   - `LLMChat.tsx`: Example component using selected models
+
+Remember: The backend is the ONLY component that should directly interact with LLM provider APIs. The frontend should ONLY use the API client to retrieve model data and make completion requests.
 
 ## Project Status (May 2025)
 
@@ -365,9 +493,18 @@ For more detailed information, see `backend/src/utils/README-controller-injectio
 
 8.  **Discord Integration**: ⏳ In Progress.
     *   Ongoing work on bot startup, event handling, and error reporting.
+    *   Updating message handling with proper channel type checking
+    *   Implementing error recovery for disconnections
 
 9.  **Database Schema Alignment**: ⏳ In Progress.
-    *   Ensuring database schema (Sequelize models) aligns with API types.
+    *   Ensuring database schema aligns with API types.
+    *   Implementing adapter pattern consistently across all models
+
+10. **OpenRouter Integration**: ✅ Completed.
+    *   Implemented backend provider registry with OpenRouter API
+    *   Added tiered caching system with configurable TTLs
+    *   Implemented rate limiting protections
+    *   Added support for latest model variants
 
 ### Next Steps
 
@@ -379,28 +516,25 @@ For more detailed information, see `backend/src/utils/README-controller-injectio
 6.  Further enhance error handling and user feedback mechanisms.
 7.  Complete all necessary documentation.
 
-## Using Context7
+## Using Context7: resolve-library-id & get-library-docs
 
 When you're uncertain about how to use a specific program, tool, framework, component, class, or API within the Discura project, leverage Context7 to get up-to-date documentation:
 
-1. **Activate Context7**: Add the phrase `use context7` at the end of your query when asking about any library, API, or framework you're unsure about. For example:
-   - "How do I implement TSOA controllers in the common package? use context7"
-   - "What's the best way to define API types with @tsoaModel? use context7"
-   - "How to use Zustand for state management in our frontend? use context7"
-
-2. **Benefits of Context7**:
+1. **Benefits of Context7**:
    - Retrieves current, version-specific documentation directly from source
    - Provides relevant code examples that work with our project structure
    - Eliminates outdated or hallucinated API references
    - Ensures compatibility with our architecture
 
-3. **When to Use Context7**:
+2. **When to Use Context7**:
    - When implementing a new feature using an unfamiliar library
    - When troubleshooting API integration issues
    - When uncertain about the correct syntax or usage pattern
    - When documentation from other sources seems outdated or contradictory
 
-Context7 is particularly valuable for understanding correct implementation patterns for TSOA, Sequelize, Discord.js, and other libraries central to our project architecture.
+3. **How to Use Context7**:
+   - First call `resolve-library-id` with the library name to get the correct Context7 library ID
+   - Then call `get-library-docs` with the returned ID to fetch accurate documentation
 
 ---
 
@@ -435,7 +569,7 @@ NEVER edit generated files (e.g., `frontend/src/api/generated/`, `frontend/src/a
 3. **Import Errors After Generation**
    * **Problem**: TypeScript errors when importing generated types
    * **Solutions**:
-     1. **Backend**: Use `import { Type } from '@discura/common/schema/types';`
+     1. **Backend**: Use `import { Type } from '@discura/common';`
      2. **Frontend**: Use `import { Type } from 'src/api';` (or path to `frontend/src/api/index.ts`)
      3. Check that `common/dist` contains declaration files
      4. Verify `package.json` dependencies include `"@discura/common": "file:../common"`
@@ -454,7 +588,7 @@ NEVER edit generated files (e.g., `frontend/src/api/generated/`, `frontend/src/a
      1. NEVER define duplicate types
      2. Run `./generate-api-types.sh` after ANY change to API types
      3. Ensure frontend imports ONLY from `frontend/src/api/index.ts`
-     4. Verify backend imports from `@discura/common/schema/types`
+     4. Verify backend imports from `@discura/common`
 
 6. **Controller Implementation Errors**
    * **Problem**: Seeing "Method not implemented in common package" errors
@@ -464,3 +598,12 @@ NEVER edit generated files (e.g., `frontend/src/api/generated/`, `frontend/src/a
      3. Verify controller injection is running before routes are registered (in `backend/src/index.ts`)
      4. Set the logging level to `debug` to see detailed patching information
      5. Ensure method signatures match exactly between common and backend controllers
+
+7. **OpenRouter Integration Issues**
+   * **Problem**: OpenRouter models not appearing or rate limits being hit
+   * **Solutions**:
+     1. Check environment variable `USE_OPENROUTER` is set to `true`
+     2. Verify OpenRouter API key is properly set in backend `.env`
+     3. Adjust cache TTLs via environment variables if needed: `OPENROUTER_CACHE_TTL`, `MODEL_CACHE_TTL`
+     4. Check backend logs for rate limiting warnings
+     5. Ensure frontend is properly requesting models through the API client

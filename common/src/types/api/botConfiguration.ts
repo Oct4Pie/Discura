@@ -8,6 +8,9 @@ export enum ImageProvider {
   MIDJOURNEY = "midjourney",
 }
 
+// Import LLMProvider from llm.ts instead of duplicating it
+import { LLMProvider } from "./llm";
+
 /**
  * @tsoaModel
  */
@@ -48,17 +51,6 @@ export interface Tool {
   description: string;
   parameters: ToolParameter[];
   implementation: string; // JavaScript code as string
-}
-
-/**
- * LLM Provider Enum
- * @tsoaModel
- */
-export enum LLMProvider {
-  OPENAI = "openai",
-  ANTHROPIC = "anthropic",
-  GOOGLE = "google",
-  CUSTOM = "custom",
 }
 
 /**

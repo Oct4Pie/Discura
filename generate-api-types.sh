@@ -4,6 +4,9 @@ set -e
 # Store the absolute path to the root directory for easier navigation
 ROOT_DIR="$(dirname "$(realpath "$0")")"
 
+rm -rf "$ROOT_DIR/common/src/schema" # Clean up old schema
+rm -rf "$ROOT_DIR/frontend/src/api/generated" # Clean up old routes
+
 echo "🔄 Bootstrapping type definitions to break circular dependencies..."
 cd "$ROOT_DIR/common"
 node scripts/bootstrap-types.js

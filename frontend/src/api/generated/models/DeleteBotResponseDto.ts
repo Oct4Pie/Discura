@@ -2,11 +2,11 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { BotResponseDto } from './BotResponseDto';
 /**
- * Bots Response Data
+ * Delete Bot Response DTO
  */
-export type BotsResponseDto = {
-    bots: Array<BotResponseDto>;
+export type DeleteBotResponseDto = {
+    message: string;
+    success: boolean;
 };
 

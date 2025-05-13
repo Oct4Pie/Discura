@@ -1,4 +1,4 @@
-import { User, UserAdapter } from './adapters/user.adapter';
+import { User, UserAdapter } from "./adapters/user.adapter";
 
 // Re-export the User class and adapter for backward compatibility
 export { User, UserAdapter };

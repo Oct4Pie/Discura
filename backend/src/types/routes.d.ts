@@ -6,4 +6,4 @@
 /// <reference types="@discura/common/routes" />
 
 // Export the routes types from common
-export * from '@discura/common/routes';
+export * from "@discura/common/routes";

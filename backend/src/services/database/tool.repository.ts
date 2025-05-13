@@ -1,6 +1,6 @@
-import { BaseRepository } from './base.repository';
-import { db } from './database.factory';
-import { logger } from '../../utils/logger';
+import { BaseRepository } from "./base.repository";
+import { db } from "./database.factory";
+import { logger } from "../../utils/logger";
 
 /**
  * Tool definition entity representing a row in the tool_definitions table
@@ -23,7 +23,7 @@ export class ToolRepository extends BaseRepository<ToolDefinitionEntity> {
   private static instance: ToolRepository;
 
   private constructor() {
-    super('tool_definitions');
+    super("tool_definitions");
   }
 
   /**
@@ -41,9 +41,12 @@ export class ToolRepository extends BaseRepository<ToolDefinitionEntity> {
    */
   async findByBotId(botId: string): Promise<ToolDefinitionEntity[]> {
     try {
-      return await this.findByField('bot_id', botId);
+      return await this.findByField("bot_id", botId);
     } catch (error) {
-      logger.error(`Error fetching tool definitions for bot ID ${botId}:`, error);
+      logger.error(
+        `Error fetching tool definitions for bot ID ${botId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -54,11 +57,14 @@ export class ToolRepository extends BaseRepository<ToolDefinitionEntity> {
   async findEnabledByBotId(botId: string): Promise<ToolDefinitionEntity[]> {
     try {
       return await db.query<ToolDefinitionEntity>(
-        'SELECT * FROM tool_definitions WHERE bot_id = ? AND enabled = 1',
-        [botId]
+        "SELECT * FROM tool_definitions WHERE bot_id = ? AND enabled = 1",
+        [botId],
       );
     } catch (error) {
-      logger.error(`Error fetching enabled tool definitions for bot ID ${botId}:`, error);
+      logger.error(
+        `Error fetching enabled tool definitions for bot ID ${botId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -69,8 +75,8 @@ export class ToolRepository extends BaseRepository<ToolDefinitionEntity> {
   async findToolById(id: number): Promise<ToolDefinitionEntity | null> {
     try {
       return await db.get<ToolDefinitionEntity>(
-        'SELECT * FROM tool_definitions WHERE id = ?',
-        [id]
+        "SELECT * FROM tool_definitions WHERE id = ?",
+        [id],
       );
     } catch (error) {
       logger.error(`Error fetching tool definition with ID ${id}:`, error);
@@ -81,14 +87,20 @@ export class ToolRepository extends BaseRepository<ToolDefinitionEntity> {
   /**
    * Find tool definition by name and bot ID
    */
-  async findByNameAndBotId(name: string, botId: string): Promise<ToolDefinitionEntity | null> {
+  async findByNameAndBotId(
+    name: string,
+    botId: string,
+  ): Promise<ToolDefinitionEntity | null> {
     try {
       return await db.get<ToolDefinitionEntity>(
-        'SELECT * FROM tool_definitions WHERE name = ? AND bot_id = ?',
-        [name, botId]
+        "SELECT * FROM tool_definitions WHERE name = ? AND bot_id = ?",
+        [name, botId],
       );
     } catch (error) {
-      logger.error(`Error fetching tool definition ${name} for bot ID ${botId}:`, error);
+      logger.error(
+        `Error fetching tool definition ${name} for bot ID ${botId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -96,22 +108,24 @@ export class ToolRepository extends BaseRepository<ToolDefinitionEntity> {
   /**
    * Create a new tool definition
    */
-  async createToolDefinition(tool: Omit<ToolDefinitionEntity, 'id' | 'created_at' | 'updated_at'>): Promise<ToolDefinitionEntity> {
+  async createToolDefinition(
+    tool: Omit<ToolDefinitionEntity, "id" | "created_at" | "updated_at">,
+  ): Promise<ToolDefinitionEntity> {
     try {
       const now = new Date().toISOString();
       const toolDefinition: ToolDefinitionEntity = {
         ...tool,
         created_at: now,
-        updated_at: now
+        updated_at: now,
       };
 
       const id = await this.create(toolDefinition);
       return {
         ...toolDefinition,
-        id: id as number
+        id: id as number,
       };
     } catch (error) {
-      logger.error('Error creating tool definition:', error);
+      logger.error("Error creating tool definition:", error);
       throw error;
     }
   }
@@ -119,22 +133,20 @@ export class ToolRepository extends BaseRepository<ToolDefinitionEntity> {
   /**
    * Update a tool definition
    */
-  async updateToolDefinition(id: number, updates: Partial<ToolDefinitionEntity>): Promise<boolean> {
+  async updateToolDefinition(
+    id: number,
+    updates: Partial<ToolDefinitionEntity>,
+  ): Promise<boolean> {
     try {
       const updatedTool = {
         ...updates,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       // Delete any id field from updates to prevent overwriting the primary key
       delete updatedTool.id;
-      
-      return await db.update(
-        this.tableName,
-        updatedTool,
-        'id = ?',
-        [id]
-      ) > 0;
+
+      return (await db.update(this.tableName, updatedTool, "id = ?", [id])) > 0;
     } catch (error) {
       logger.error(`Error updating tool definition ${id}:`, error);
       throw error;
@@ -146,11 +158,14 @@ export class ToolRepository extends BaseRepository<ToolDefinitionEntity> {
    */
   async toggleEnabled(id: number, enabled: boolean): Promise<boolean> {
     try {
-      return await this.updateToolDefinition(id, { 
-        enabled: enabled ? 1 : 0 
+      return await this.updateToolDefinition(id, {
+        enabled: enabled ? 1 : 0,
       });
     } catch (error) {
-      logger.error(`Error toggling tool definition ${id} enabled status:`, error);
+      logger.error(
+        `Error toggling tool definition ${id} enabled status:`,
+        error,
+      );
       throw error;
     }
   }
@@ -160,7 +175,7 @@ export class ToolRepository extends BaseRepository<ToolDefinitionEntity> {
    */
   async deleteToolDefinition(id: number): Promise<boolean> {
     try {
-      return await db.delete(this.tableName, 'id = ?', [id]) > 0;
+      return (await db.delete(this.tableName, "id = ?", [id])) > 0;
     } catch (error) {
       logger.error(`Error deleting tool definition ${id}:`, error);
       throw error;
@@ -172,9 +187,12 @@ export class ToolRepository extends BaseRepository<ToolDefinitionEntity> {
    */
   async deleteAllForBot(botId: string): Promise<boolean> {
     try {
-      return await db.delete(this.tableName, 'bot_id = ?', [botId]) > 0;
+      return (await db.delete(this.tableName, "bot_id = ?", [botId])) > 0;
     } catch (error) {
-      logger.error(`Error deleting all tool definitions for bot ${botId}:`, error);
+      logger.error(
+        `Error deleting all tool definitions for bot ${botId}:`,
+        error,
+      );
       throw error;
     }
   }

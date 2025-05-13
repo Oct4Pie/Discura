@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { FrontendBot, toBotModel, toBotModels, BotConfiguration } from '../types';
-import { BotsService, CreateBotRequest, UpdateBotRequest } from '../api';
+import { AuthenticationService, BotsService } from '../api';
+import { CreateBotRequestDto, TokenValidationResult, UpdateBotRequestDto } from '../api';
+import { OpenAPI } from '../api/generated/core/OpenAPI';
+import { request } from '../api/generated/core/request';
 
 interface BotsState {
   bots: FrontendBot[];
@@ -16,6 +19,7 @@ interface BotsState {
   startBot: (id: string) => Promise<FrontendBot>;
   stopBot: (id: string) => Promise<FrontendBot>;
   updateBotConfiguration: (id: string, config: Partial<BotConfiguration>) => Promise<FrontendBot>;
+  validateToken: (token: string) => Promise<TokenValidationResult>;
 }
 
 export const useBotStore = create<BotsState>((set, get) => ({
@@ -66,7 +70,7 @@ export const useBotStore = create<BotsState>((set, get) => ({
     
     try {
       // Use the TSOA-generated API client
-      const response = await BotsService.createBot(botData as CreateBotRequest);
+      const response = await BotsService.createBot(botData as CreateBotRequestDto);
       const bot = toBotModel(response);
       
       set(state => ({
@@ -87,7 +91,7 @@ export const useBotStore = create<BotsState>((set, get) => ({
     
     try {
       // Use the TSOA-generated API client
-      const response = await BotsService.updateBot(id, botData as UpdateBotRequest);
+      const response = await BotsService.updateBot(id, botData as UpdateBotRequestDto);
       const bot = toBotModel(response);
       
       set(state => ({
@@ -180,5 +184,32 @@ export const useBotStore = create<BotsState>((set, get) => ({
     };
     
     return get().updateBot(id, { configuration: updatedConfig as any });
+  },
+  
+  validateToken: async (token: string): Promise<TokenValidationResult> => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      // Use direct API request since the validateDiscordBotToken endpoint isn't in the generated API
+      const response = await request<TokenValidationResult>(OpenAPI, {
+        method: 'POST',
+        url: '/bots/validate-token',
+        body: { token },
+        mediaType: 'application/json',
+      });
+      
+      set({ isLoading: false });
+      return response;
+    } catch (error) {
+      console.error('Error validating Discord token:', error);
+      set({ error: 'Failed to validate token', isLoading: false });
+      
+      // Return a failed validation result when the API call fails
+      return {
+        valid: false,
+        messageContentEnabled: false,
+        error: error instanceof Error ? error.message : 'Unknown error validating token'
+      };
+    }
   }
 }));

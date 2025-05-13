@@ -206,6 +206,127 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/llm/providers/{provider}/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get models for a specific provider
+         *
+         *     Returns the models available for the specified provider.
+         *     Results are cached to avoid rate limiting but will be refreshed
+         *     if the cache is too old. */
+        get: operations["GetProviderModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm/models/all-providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get models for all available providers
+         *
+         *     Returns models available for all providers in the system.
+         *     Results are cached to avoid rate limiting but will be refreshed
+         *     if the cache is too old. */
+        get: operations["GetAllProviderModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm/providers/{provider}/models/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Force refresh models for a provider
+         *
+         *     Forces a refresh of the model cache for the specified provider.
+         *     This will make a new API call to the provider to get the latest models. */
+        post: operations["RefreshProviderModels"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm/providers/{provider}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Enable or disable a provider
+         *
+         *     Updates the status of a provider to either enabled or disabled.
+         *     Providers must be enabled to be used in the system. */
+        put: operations["UpdateProviderStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm/providers/custom": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Configure a custom provider
+         *
+         *     Adds or updates a custom provider configuration.
+         *     Custom providers must follow the OpenAI-compatible API format. */
+        post: operations["ConfigureCustomProvider"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm/providers/custom/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Remove a custom provider
+         *
+         *     Removes a custom provider from the system by name. */
+        delete: operations["RemoveCustomProvider"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bots/{botId}/knowledge": {
         parameters: {
             query?: never;
@@ -398,6 +519,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bots/{id}/configuration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Update bot configuration
+         *
+         *     Updates the configuration of a bot without changing other properties.
+         *     This is a specialized endpoint for updating bot configuration settings. */
+        put: operations["UpdateBotConfiguration"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bots/{id}/invite": {
         parameters: {
             query?: never;
@@ -473,6 +614,22 @@ export interface components {
         ToggleToolStatusRequest: {
             enabled: boolean;
         };
+        /** @description Model capabilities and features */
+        ModelCapabilities: {
+            input_modalities: string[];
+            output_modalities: string[];
+            supports_tool_calling?: boolean;
+            supports_streaming?: boolean;
+            supports_vision?: boolean;
+        };
+        /** @description Model pricing information */
+        ModelPricing: {
+            /** Format: double */
+            prompt_tokens: number;
+            /** Format: double */
+            completion_tokens: number;
+            currency?: string;
+        };
         /** @description LLM Model Data Structure */
         LLMModelData: {
             id: string;
@@ -480,6 +637,14 @@ export interface components {
             /** Format: double */
             created: number;
             owned_by: string;
+            display_name: string;
+            provider_model_id: string;
+            capabilities?: components["schemas"]["ModelCapabilities"];
+            /** Format: double */
+            context_length?: number;
+            pricing?: components["schemas"]["ModelPricing"];
+            /** Format: double */
+            max_tokens?: number;
         };
         /** @description LLM Models Response */
         LLMModelsResponseDto: {
@@ -544,10 +709,95 @@ export interface components {
             user?: string;
         };
         /**
-         * @description LLM Provider Enum
+         * @description LLM Provider Enum - Supported providers
          * @enum {string}
          */
-        LLMProvider: "openai" | "anthropic" | "google" | "custom";
+        LLMProvider: "openai" | "anthropic" | "google" | "groq" | "cohere" | "deepseek" | "mistral" | "amazon" | "azure" | "fireworks" | "togetherai" | "perplexity" | "deepinfra" | "xai" | "ollama" | "huggingface" | "cerebras" | "elevenlabs" | "gladia" | "assemblyai" | "revai" | "deepgram" | "lmnt" | "hume" | "openrouter" | "custom";
+        /** @description Provider Models Response - Contains models available for a specific
+         *     provider */
+        ProviderModelsResponseDto: {
+            provider: components["schemas"]["LLMProvider"];
+            provider_display_name: string;
+            models: components["schemas"]["LLMModelData"][];
+            /** Format: double */
+            last_updated: number;
+        };
+        /** @description All Provider Models Response - Contains models for all available
+         *     providers */
+        AllProviderModelsResponseDto: {
+            providers: components["schemas"]["ProviderModelsResponseDto"][];
+        };
+        /** @description Custom Provider Configuration */
+        CustomProviderConfig: {
+            name: string;
+            endpoint_url: string;
+            api_key_env_var: string;
+            models: components["schemas"]["LLMModelData"][];
+        };
+        /** @description Token Validation Result */
+        TokenValidationResult: {
+            valid: boolean;
+            messageContentEnabled: boolean;
+            botId?: string;
+            username?: string;
+            error?: string;
+        };
+        /** @description Construct a type with a set of properties K of type T */
+        "Record_string.any_": {
+            [key: string]: unknown;
+        };
+        /** @description Provider Configuration - Used to enable/disable and configure providers */
+        ProviderConfiguration: {
+            enabled: boolean;
+            config?: components["schemas"]["Record_string.any_"];
+            custom_providers?: components["schemas"]["CustomProviderConfig"][];
+        };
+        /** @description Construct a type with a set of properties K of type T */
+        "Record_LLMProvider.ProviderConfiguration_": {
+            openai: components["schemas"]["ProviderConfiguration"];
+            anthropic: components["schemas"]["ProviderConfiguration"];
+            google: components["schemas"]["ProviderConfiguration"];
+            groq: components["schemas"]["ProviderConfiguration"];
+            cohere: components["schemas"]["ProviderConfiguration"];
+            deepseek: components["schemas"]["ProviderConfiguration"];
+            mistral: components["schemas"]["ProviderConfiguration"];
+            amazon: components["schemas"]["ProviderConfiguration"];
+            azure: components["schemas"]["ProviderConfiguration"];
+            fireworks: components["schemas"]["ProviderConfiguration"];
+            togetherai: components["schemas"]["ProviderConfiguration"];
+            perplexity: components["schemas"]["ProviderConfiguration"];
+            deepinfra: components["schemas"]["ProviderConfiguration"];
+            xai: components["schemas"]["ProviderConfiguration"];
+            ollama: components["schemas"]["ProviderConfiguration"];
+            huggingface: components["schemas"]["ProviderConfiguration"];
+            cerebras: components["schemas"]["ProviderConfiguration"];
+            elevenlabs: components["schemas"]["ProviderConfiguration"];
+            gladia: components["schemas"]["ProviderConfiguration"];
+            assemblyai: components["schemas"]["ProviderConfiguration"];
+            revai: components["schemas"]["ProviderConfiguration"];
+            deepgram: components["schemas"]["ProviderConfiguration"];
+            lmnt: components["schemas"]["ProviderConfiguration"];
+            hume: components["schemas"]["ProviderConfiguration"];
+            openrouter: components["schemas"]["ProviderConfiguration"];
+            custom: components["schemas"]["ProviderConfiguration"];
+        };
+        /** @description Provider Registry Configuration - Contains configuration for all
+         *     providers */
+        ProviderRegistryConfiguration: {
+            providers: components["schemas"]["Record_LLMProvider.ProviderConfiguration_"];
+        };
+        /** @description LLM Response data */
+        LLMResponse: {
+            text: string;
+            generateImage?: boolean;
+            imagePrompt?: string;
+            toolCalls?: {
+                content?: string;
+                type?: string;
+                arguments: unknown;
+                name: string;
+            }[];
+        };
         /** @description Knowledge Item Data */
         KnowledgeItemDto: {
             id: number | string;
@@ -564,9 +814,10 @@ export interface components {
             botId: string;
             items: components["schemas"]["KnowledgeItemDto"][];
         };
-        /** @description Simple message response */
+        /** @description Message Response DTO */
         MessageResponseDto: {
             message: string;
+            success: boolean;
         };
         /** @description User Response Data */
         UserResponseDto: {
@@ -586,7 +837,7 @@ export interface components {
          * @description Bot Status Enum
          * @enum {string}
          */
-        BotStatus: "offline" | "online" | "error";
+        BotStatus: "offline" | "online" | "error" | "starting" | "stopping";
         KnowledgeBase: {
             id: string;
             name: string;
@@ -646,26 +897,109 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
-        /** @description Bots Response Data */
-        BotsResponseDto: {
+        /** @description Get All Bots Response DTO */
+        GetAllBotsResponseDto: {
             bots: components["schemas"]["BotResponseDto"][];
         };
-        /** @description Create Bot Request */
-        CreateBotRequest: {
+        /** @description Get Bot Response DTO */
+        GetBotResponseDto: {
+            bot: components["schemas"]["BotResponseDto"];
+        };
+        /** @description Create Bot Response DTO */
+        CreateBotResponseDto: {
+            id: string;
+            userId: string;
+            name: string;
+            discordToken?: string;
+            applicationId: string;
+            status: components["schemas"]["BotStatus"];
+            intents: string[];
+            configuration: components["schemas"]["BotConfiguration"];
+            createdAt: string;
+            updatedAt: string;
+        };
+        /** @description Create Bot Request DTO */
+        CreateBotRequestDto: {
             name: string;
             discordToken: string;
-            applicationId: string;
+            applicationId?: string;
             intents?: string[];
             configuration?: components["schemas"]["BotConfiguration"];
         };
-        /** @description Update Bot Request */
-        UpdateBotRequest: {
+        /** @description Update Bot Response DTO */
+        UpdateBotResponseDto: {
+            id: string;
+            userId: string;
+            name: string;
+            discordToken?: string;
+            applicationId: string;
+            status: components["schemas"]["BotStatus"];
+            intents: string[];
+            configuration: components["schemas"]["BotConfiguration"];
+            createdAt: string;
+            updatedAt: string;
+        };
+        /** @description Update Bot Request DTO */
+        UpdateBotRequestDto: {
             name?: string;
             discordToken?: string;
             applicationId?: string;
             intents?: string[];
             status?: components["schemas"]["BotStatus"];
             configuration?: components["schemas"]["BotConfiguration"];
+        };
+        /** @description Delete Bot Response DTO */
+        DeleteBotResponseDto: {
+            message: string;
+            success: boolean;
+        };
+        /** @description Start Bot Response DTO */
+        StartBotResponseDto: {
+            id: string;
+            userId: string;
+            name: string;
+            discordToken?: string;
+            applicationId: string;
+            status: components["schemas"]["BotStatus"];
+            intents: string[];
+            configuration: components["schemas"]["BotConfiguration"];
+            createdAt: string;
+            updatedAt: string;
+        };
+        /** @description Stop Bot Response DTO */
+        StopBotResponseDto: {
+            id: string;
+            userId: string;
+            name: string;
+            discordToken?: string;
+            applicationId: string;
+            status: components["schemas"]["BotStatus"];
+            intents: string[];
+            configuration: components["schemas"]["BotConfiguration"];
+            createdAt: string;
+            updatedAt: string;
+        };
+        /** @description Update Bot Configuration Response DTO */
+        UpdateBotConfigurationResponseDto: {
+            id: string;
+            userId: string;
+            name: string;
+            discordToken?: string;
+            applicationId: string;
+            status: components["schemas"]["BotStatus"];
+            intents: string[];
+            configuration: components["schemas"]["BotConfiguration"];
+            createdAt: string;
+            updatedAt: string;
+            message: string;
+        };
+        /** @description Update Bot Configuration Request DTO */
+        UpdateBotConfigurationRequestDto: {
+            configuration: components["schemas"]["BotConfiguration"];
+        };
+        /** @description Generate Bot Invite Link Response DTO */
+        GenerateBotInviteLinkResponseDto: {
+            inviteUrl: string;
         };
         /** @description Bot status structure for API */
         BotStatusConstants: {
@@ -688,9 +1022,53 @@ export interface components {
             OPENAI: string;
             ANTHROPIC: string;
             GOOGLE: string;
+            GROQ: string;
+            COHERE: string;
+            DEEPSEEK: string;
+            MISTRAL: string;
+            AMAZON: string;
+            AZURE: string;
+            FIREWORKS: string;
+            TOGETHERAI: string;
+            PERPLEXITY: string;
+            DEEPINFRA: string;
+            XAI: string;
+            OLLAMA: string;
+            HUGGINGFACE: string;
+            CEREBRAS: string;
+            ELEVENLABS: string;
+            GLADIA: string;
+            ASSEMBLYAI: string;
+            REVAI: string;
+            DEEPGRAM: string;
+            LMNT: string;
+            HUME: string;
+            OPENROUTER: string;
             CUSTOM: string;
             LABELS: {
                 custom: string;
+                openrouter: string;
+                hume: string;
+                lmnt: string;
+                deepgram: string;
+                revai: string;
+                assemblyai: string;
+                gladia: string;
+                elevenlabs: string;
+                cerebras: string;
+                huggingface: string;
+                ollama: string;
+                xai: string;
+                deepinfra: string;
+                perplexity: string;
+                togetherai: string;
+                fireworks: string;
+                azure: string;
+                amazon: string;
+                mistral: string;
+                deepseek: string;
+                cohere: string;
+                groq: string;
                 google: string;
                 anthropic: string;
                 openai: string;
@@ -1122,6 +1500,253 @@ export interface operations {
             };
         };
     };
+    GetProviderModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["LLMProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderModelsResponseDto"];
+                };
+            };
+            /** @description Provider Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    GetAllProviderModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllProviderModelsResponseDto"];
+                };
+            };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    RefreshProviderModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["LLMProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderModelsResponseDto"];
+                };
+            };
+            /** @description Provider Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    UpdateProviderStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["LLMProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    enabled: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enabled: boolean;
+                        provider: components["schemas"]["LLMProvider"];
+                        success: boolean;
+                    };
+                };
+            };
+            /** @description Provider Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    ConfigureCustomProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomProviderConfig"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        provider: components["schemas"]["CustomProviderConfig"];
+                        success: boolean;
+                    };
+                };
+            };
+            /** @description Invalid Provider Configuration */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    RemoveCustomProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        removed: boolean;
+                        success: boolean;
+                    };
+                };
+            };
+            /** @description Provider Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
     GetKnowledgeItems: {
         parameters: {
             query?: never;
@@ -1333,7 +1958,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BotsResponseDto"];
+                    "application/json": components["schemas"]["GetAllBotsResponseDto"];
                 };
             };
         };
@@ -1347,7 +1972,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateBotRequest"];
+                "application/json": components["schemas"]["CreateBotRequestDto"];
             };
         };
         responses: {
@@ -1357,7 +1982,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BotResponseDto"];
+                    "application/json": components["schemas"]["CreateBotResponseDto"];
                 };
             };
         };
@@ -1380,9 +2005,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        bot: components["schemas"]["BotResponseDto"];
-                    };
+                    "application/json": components["schemas"]["GetBotResponseDto"];
                 };
             };
         };
@@ -1399,7 +2022,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateBotRequest"];
+                "application/json": components["schemas"]["UpdateBotRequestDto"];
             };
         };
         responses: {
@@ -1409,7 +2032,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BotResponseDto"];
+                    "application/json": components["schemas"]["UpdateBotResponseDto"];
                 };
             };
         };
@@ -1432,7 +2055,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MessageResponseDto"];
+                    "application/json": components["schemas"]["DeleteBotResponseDto"];
                 };
             };
         };
@@ -1455,7 +2078,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BotResponseDto"];
+                    "application/json": components["schemas"]["StartBotResponseDto"];
                 };
             };
         };
@@ -1478,7 +2101,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BotResponseDto"];
+                    "application/json": components["schemas"]["StopBotResponseDto"];
+                };
+            };
+        };
+    };
+    UpdateBotConfiguration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unique identifier of the bot */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBotConfigurationRequestDto"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateBotConfigurationResponseDto"];
                 };
             };
         };
@@ -1501,9 +2151,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        inviteUrl: string;
-                    };
+                    "application/json": components["schemas"]["GenerateBotInviteLinkResponseDto"];
                 };
             };
         };

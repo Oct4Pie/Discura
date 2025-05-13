@@ -1,9 +1,9 @@
 /**
  * Express request type extensions for authentication
  */
-import { Request } from 'express';
-import * as jwt from 'jsonwebtoken';
-import { JwtPayload } from '@discura/common/types';
+import { JwtPayload } from "@discura/common";
+import { Request } from "express";
+import * as jwt from "jsonwebtoken";
 
 // Re-export the JwtPayload from common package
 export { JwtPayload };
@@ -18,11 +18,11 @@ declare global {
       username: string;
       discriminator: string;
       avatar: string | null;
-      email: string | null; 
+      email: string | null;
       createdAt?: Date;
       updatedAt?: Date;
     }
-    
+
     // We can't override the existing user property, so we don't modify it here
   }
 }

@@ -32,6 +32,7 @@
         "frontend"
     ],
     "dependencies": {
+        "@openrouter/ai-sdk-provider": "^0.4.5",
         "mkdirp": "^3.0.1"
     }
 }

@@ -6,6 +6,39 @@
  */
 
 /**
+ * LLM Provider Enum - Supported providers
+ * @tsoaModel
+ */
+export enum LLMProvider {
+  OPENAI = "openai",
+  ANTHROPIC = "anthropic",
+  GOOGLE = "google",
+  GROQ = "groq",
+  COHERE = "cohere",
+  DEEPSEEK = "deepseek",
+  MISTRAL = "mistral",
+  AMAZON = "amazon",
+  AZURE = "azure",
+  FIREWORKS = "fireworks",
+  TOGETHERAI = "togetherai",
+  PERPLEXITY = "perplexity",
+  DEEPINFRA = "deepinfra",
+  XAI = "xai",
+  OLLAMA = "ollama",
+  HUGGINGFACE = "huggingface",
+  CEREBRAS = "cerebras",
+  ELEVENLABS = "elevenlabs",
+  GLADIA = "gladia",
+  ASSEMBLYAI = "assemblyai",
+  REVAI = "revai",
+  DEEPGRAM = "deepgram",
+  LMNT = "lmnt",
+  HUME = "hume",
+  OPENROUTER = "openrouter",
+  CUSTOM = "custom",
+}
+
+/**
  * LLM Model Data Structure
  * @tsoaModel
  */
@@ -14,6 +47,12 @@ export interface LLMModelData {
   object: string;
   created: number;
   owned_by: string;
+  display_name: string; // Required now
+  provider_model_id: string; // Required now, ID used by the provider's API
+  capabilities?: ModelCapabilities;
+  context_length?: number;
+  pricing?: ModelPricing;
+  max_tokens?: number;
 }
 
 /**
@@ -23,6 +62,76 @@ export interface LLMModelData {
 export interface LLMModelsResponseDto {
   object: string;
   data: LLMModelData[];
+}
+
+/**
+ * Model pricing information
+ * @tsoaModel
+ */
+export interface ModelPricing {
+  prompt_tokens: number;
+  completion_tokens: number;
+  currency?: string;
+}
+
+/**
+ * Model capabilities and features
+ * @tsoaModel
+ */
+export interface ModelCapabilities {
+  input_modalities: string[];
+  output_modalities: string[];
+  supports_tool_calling?: boolean;
+  supports_streaming?: boolean;
+  supports_vision?: boolean;
+}
+
+/**
+ * Custom Provider Configuration
+ * @tsoaModel
+ */
+export interface CustomProviderConfig {
+  name: string;
+  endpoint_url: string;
+  api_key_env_var: string;
+  models: LLMModelData[];
+}
+
+/**
+ * Provider Models Response - Contains models available for a specific provider
+ * @tsoaModel
+ */
+export interface ProviderModelsResponseDto {
+  provider: LLMProvider;
+  provider_display_name: string;
+  models: LLMModelData[]; // Changed from EnhancedLLMModelData to LLMModelData
+  last_updated: number; // timestamp when models were last fetched from provider
+}
+
+/**
+ * All Provider Models Response - Contains models for all available providers
+ * @tsoaModel
+ */
+export interface AllProviderModelsResponseDto {
+  providers: ProviderModelsResponseDto[];
+}
+
+/**
+ * Provider Configuration - Used to enable/disable and configure providers
+ * @tsoaModel
+ */
+export interface ProviderConfiguration {
+  enabled: boolean;
+  config?: Record<string, any>;
+  custom_providers?: CustomProviderConfig[];
+}
+
+/**
+ * Provider Registry Configuration - Contains configuration for all providers
+ * @tsoaModel
+ */
+export interface ProviderRegistryConfiguration {
+  providers: Record<LLMProvider, ProviderConfiguration>;
 }
 
 /**
@@ -84,4 +193,32 @@ export interface LLMCompletionResponseDto {
   model: string;
   choices: LLMCompletionResponseChoice[];
   usage: LLMCompletionResponseUsage;
+}
+
+/**
+ * Token Validation Result
+ * @tsoaModel
+ */
+export interface TokenValidationResult {
+  valid: boolean;
+  messageContentEnabled: boolean;
+  botId?: string;
+  username?: string;
+  error?: string;
+}
+
+/**
+ * LLM Response data
+ * @tsoaModel
+ */
+export interface LLMResponse {
+  text: string;
+  generateImage?: boolean;
+  imagePrompt?: string;
+  toolCalls?: Array<{
+    name: string;
+    arguments: any;
+    type?: string;
+    content?: string;
+  }>;
 }

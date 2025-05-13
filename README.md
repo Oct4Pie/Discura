@@ -136,6 +136,31 @@ If you see `"Method not implemented in common package"` errors:
 3. Check the debug logs to confirm methods are being patched
 4. Ensure backend controller method signatures match common controller definitions
 
+## LLM Provider System
+
+Discura implements an LLM (Large Language Model) provider system that integrates with various AI model providers, with a focus on OpenRouter integration and Vercel AI SDK. This system follows the project's core architectural principles:
+
+### Architecture Overview
+
+1. **Backend-Only Integration**: All provider-specific logic, API interactions, and business logic exist ONLY in the backend.
+   - Provider discovery, caching, and model mapping live in `backend/src/services/llm.service.ts`
+   - OpenRouter API integration resides in `backend/src/services/openrouter.service.ts`
+   - Vercel AI SDK integration is handled in `backend/src/services/vercel-ai-sdk.service.ts`
+
+2. **Centralized Types**: Provider and model types are defined in the common package:
+   - API types in `common/src/types/api/llm.ts` with `@tsoaModel` decorator
+   - Non-API shared types in `common/src/types/llm.ts`
+
+3. **Controller Definition**: The API contract is defined in `common/src/controllers/llm.controller.ts`
+
+4. **Frontend API Client**: Frontend components use the generated API client in `frontend/src/api`
+
+5. **Provider Enum Syncing**: When modifying the `LLMProvider` enum in `common/src/types/api/llm.ts`, always update the corresponding `LlmProviderConstants` interface in `common/src/types/api/constants.ts` to maintain synchronization between the two. This ensures type safety when using constants in the frontend.
+
+### Provider Integration Architecture
+
+// ...existing code...
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

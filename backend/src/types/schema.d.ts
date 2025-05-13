@@ -6,4 +6,4 @@
 /// <reference types="@discura/common/schema" />
 
 // Export the schema types from common
-export * from '@discura/common/schema';
+export * from "@discura/common/schema";

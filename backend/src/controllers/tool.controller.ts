@@ -1,14 +1,15 @@
-import { Request } from 'express';
-import { ToolController as CommonToolController } from '@discura/common/controllers';
+import { ToolController as CommonToolController } from "@discura/common/controllers";
 import {
   ToolDefinitionDto,
   ToolDefinitionsResponseDto,
   CreateToolRequest,
   UpdateToolRequest,
-  ToggleToolStatusRequest
-} from '@discura/common/types';
-import { ToolAdapter } from '../models/adapters/tool.adapter';
-import { logger } from '../utils/logger';
+  ToggleToolStatusRequest,
+} from "@discura/common";
+import { Request } from "express";
+
+import { ToolAdapter } from "../models/adapters/tool.adapter";
+import { logger } from "../utils/logger";
 
 /**
  * Implementation of the ToolController for managing tool definitions
@@ -17,7 +18,9 @@ export class ToolController extends CommonToolController {
   /**
    * Get all tool definitions for a bot
    */
-  public async getToolsByBotId(botId: string): Promise<ToolDefinitionsResponseDto> {
+  public async getToolsByBotId(
+    botId: string,
+  ): Promise<ToolDefinitionsResponseDto> {
     try {
       logger.info(`Fetching all tool definitions for bot ${botId}`);
       const tools = await ToolAdapter.getByBotId(botId);
@@ -31,13 +34,18 @@ export class ToolController extends CommonToolController {
   /**
    * Get enabled tool definitions for a bot
    */
-  public async getEnabledToolsByBotId(botId: string): Promise<ToolDefinitionsResponseDto> {
+  public async getEnabledToolsByBotId(
+    botId: string,
+  ): Promise<ToolDefinitionsResponseDto> {
     try {
       logger.info(`Fetching enabled tool definitions for bot ${botId}`);
       const tools = await ToolAdapter.getEnabledByBotId(botId);
       return { tools };
     } catch (error) {
-      logger.error(`Error getting enabled tool definitions for bot ${botId}:`, error);
+      logger.error(
+        `Error getting enabled tool definitions for bot ${botId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -49,12 +57,12 @@ export class ToolController extends CommonToolController {
     try {
       logger.info(`Fetching tool definition with ID ${id}`);
       const tool = await ToolAdapter.getById(id);
-      
+
       if (!tool) {
         this.setStatus(404);
         throw new Error(`Tool definition with ID ${id} not found`);
       }
-      
+
       return tool;
     } catch (error) {
       logger.error(`Error getting tool definition with ID ${id}:`, error);
@@ -65,15 +73,19 @@ export class ToolController extends CommonToolController {
   /**
    * Create a new tool definition
    */
-  public async createTool(request: CreateToolRequest): Promise<ToolDefinitionDto> {
+  public async createTool(
+    request: CreateToolRequest,
+  ): Promise<ToolDefinitionDto> {
     try {
-      logger.info(`Creating new tool definition for bot ${request.botId}: ${request.name}`);
+      logger.info(
+        `Creating new tool definition for bot ${request.botId}: ${request.name}`,
+      );
       return await ToolAdapter.create({
         botId: request.botId,
         name: request.name,
         description: request.description,
         schema: request.schema,
-        enabled: request.enabled
+        enabled: request.enabled,
       });
     } catch (error) {
       logger.error(`Error creating tool definition:`, error);
@@ -84,25 +96,28 @@ export class ToolController extends CommonToolController {
   /**
    * Update a tool definition
    */
-  public async updateTool(id: number, request: UpdateToolRequest): Promise<ToolDefinitionDto> {
+  public async updateTool(
+    id: number,
+    request: UpdateToolRequest,
+  ): Promise<ToolDefinitionDto> {
     try {
       logger.info(`Updating tool definition with ID ${id}`);
-      
+
       // Check if tool exists
       const tool = await ToolAdapter.getById(id);
       if (!tool) {
         this.setStatus(404);
         throw new Error(`Tool definition with ID ${id} not found`);
       }
-      
+
       // Update tool
       const success = await ToolAdapter.update(id, request);
       if (!success) {
         throw new Error(`Failed to update tool definition with ID ${id}`);
       }
-      
+
       // Return updated tool
-      return await ToolAdapter.getById(id) as ToolDefinitionDto;
+      return (await ToolAdapter.getById(id)) as ToolDefinitionDto;
     } catch (error) {
       logger.error(`Error updating tool definition with ID ${id}:`, error);
       throw error;
@@ -112,25 +127,32 @@ export class ToolController extends CommonToolController {
   /**
    * Toggle tool enabled status
    */
-  public async toggleToolStatus(id: number, request: ToggleToolStatusRequest): Promise<ToolDefinitionDto> {
+  public async toggleToolStatus(
+    id: number,
+    request: ToggleToolStatusRequest,
+  ): Promise<ToolDefinitionDto> {
     try {
-      logger.info(`Toggling tool definition ${id} status to ${request.enabled ? 'enabled' : 'disabled'}`);
-      
+      logger.info(
+        `Toggling tool definition ${id} status to ${request.enabled ? "enabled" : "disabled"}`,
+      );
+
       // Check if tool exists
       const tool = await ToolAdapter.getById(id);
       if (!tool) {
         this.setStatus(404);
         throw new Error(`Tool definition with ID ${id} not found`);
       }
-      
+
       // Toggle status
       const success = await ToolAdapter.toggleEnabled(id, request.enabled);
       if (!success) {
-        throw new Error(`Failed to toggle status of tool definition with ID ${id}`);
+        throw new Error(
+          `Failed to toggle status of tool definition with ID ${id}`,
+        );
       }
-      
+
       // Return updated tool
-      return await ToolAdapter.getById(id) as ToolDefinitionDto;
+      return (await ToolAdapter.getById(id)) as ToolDefinitionDto;
     } catch (error) {
       logger.error(`Error toggling tool definition ${id} status:`, error);
       throw error;
@@ -143,14 +165,14 @@ export class ToolController extends CommonToolController {
   public async deleteTool(id: number): Promise<void> {
     try {
       logger.info(`Deleting tool definition with ID ${id}`);
-      
+
       // Check if tool exists
       const tool = await ToolAdapter.getById(id);
       if (!tool) {
         this.setStatus(404);
         throw new Error(`Tool definition with ID ${id} not found`);
       }
-      
+
       // Delete tool
       const success = await ToolAdapter.delete(id);
       if (!success) {
@@ -170,7 +192,10 @@ export class ToolController extends CommonToolController {
       logger.info(`Deleting all tool definitions for bot ${botId}`);
       await ToolAdapter.deleteAllForBot(botId);
     } catch (error) {
-      logger.error(`Error deleting all tool definitions for bot ${botId}:`, error);
+      logger.error(
+        `Error deleting all tool definitions for bot ${botId}:`,
+        error,
+      );
       throw error;
     }
   }

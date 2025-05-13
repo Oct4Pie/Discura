@@ -1,11 +1,11 @@
 /**
  * Tool API Types
- * 
+ *
  * This file contains all API types related to the Tool service.
  * These are defined with @tsoaModel decorator to be picked up by the API generation process.
  */
 
-import { Tool, ToolParameter } from './botConfiguration';
+import { Tool, ToolParameter } from "./botConfiguration";
 
 // Re-export Tool and ToolParameter from botConfiguration for backward compatibility
 export { Tool, ToolParameter };

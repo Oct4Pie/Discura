@@ -1,22 +1,23 @@
 // src/middlewares/authentication.ts - JWT authentication for TSOA
-import { Request } from 'express';
-import * as jwt from 'jsonwebtoken';
-import config from '../config';
-import { JwtPayload } from '@discura/common/types/auth';
-import { logger } from '../utils/logger';
+import { JwtPayload } from "@discura/common/types/auth";
+import { Request } from "express";
+import * as jwt from "jsonwebtoken";
+
+import config from "../config";
+import { logger } from "../utils/logger";
 
 export function expressAuthentication(
   request: Request,
   securityName: string,
-  scopes?: string[]
+  scopes?: string[],
 ): Promise<any> {
-  if (securityName === 'jwt') {
+  if (securityName === "jwt") {
     // Log raw authorization header for debugging malformed JWT issues
-    const rawAuthHeader = request.headers['authorization'];
+    const rawAuthHeader = request.headers["authorization"];
     logger.info(`[Auth] Raw Authorization header: ${rawAuthHeader}`);
 
     // Extract token from Bearer schema
-    const token = rawAuthHeader?.toString().split(' ')[1] ?? '';
+    const token = rawAuthHeader?.toString().split(" ")[1] ?? "";
 
     return new Promise((resolve, reject) => {
       if (!token) {
@@ -35,6 +36,6 @@ export function expressAuthentication(
       });
     });
   }
-  
+
   return Promise.reject(new Error("Invalid security name"));
 }

@@ -135,7 +135,39 @@ try {
 
 `;
 
-  const skipTypes = ["Record_string.any_"];
+  // Map to keep track of Record types that need to be processed as TypeScript native Record types
+  const recordTypeMap = new Map();
+
+  // Helper function to detect Record types from TSOA generated names
+  function detectRecordType(name) {
+    // Simple Record type like Record_string.any_
+    const simpleRecordMatch = name.match(/^Record_([^\.]+)\.([^_]+)_$/);
+    if (simpleRecordMatch) {
+      return {
+        keyType: simpleRecordMatch[1],
+        valueType: simpleRecordMatch[2],
+        typeName: `Record<${simpleRecordMatch[1]}, ${simpleRecordMatch[2]}>`
+      };
+    }
+    return null;
+  }
+
+  // First pass to identify all Record types
+  for (const name of Object.keys(schemas)) {
+    const recordType = detectRecordType(name);
+    if (recordType) {
+      // Store info for later use
+      recordTypeMap.set(name, recordType);
+    }
+  }
+
+  // Helper function to convert Record types in references
+  function sanitizeTypeName(typeName) {
+    if (recordTypeMap.has(typeName)) {
+      return recordTypeMap.get(typeName).typeName;
+    }
+    return typeName;
+  }
 
   // Helper function to determine if a schema seems incomplete
   function isIncompleteSchema(schemaData) {
@@ -160,18 +192,18 @@ try {
     return false;
   }
 
-  // Helper function to convert problematic types to proper TS syntax
-  function sanitizeTypeName(typeName) {
-    // Convert Record_string.any_ to Record<string, any>
-    if (typeName === "Record_string.any_") {
-      return "Record<string, any>";
-    }
-    return typeName;
-  }
-
   // Process schemas to create TypeScript interfaces and enums
   for (const [name, schemaData] of Object.entries(schemas)) {
-    // Skip types that were already generated as nested types or should be skipped
+    // If it's a Record type, generate a type alias instead of an interface
+    if (recordTypeMap.has(name)) {
+      const { keyType, valueType, typeName } = recordTypeMap.get(name);
+      console.log(`[sync-types.js] Converting Record type: ${name} to ${typeName}`);
+      
+      const safeTypeName = name.replace(/\./g, '_');
+      output += `// Generated from TSOA Record type: ${name}\n`;
+      output += `export type ${safeTypeName} = ${typeName};\n\n`;
+      continue;
+    }
 
     // Check if the schema represents an enum (string type with an enum array)
     if (schemaData.type === "string" && Array.isArray(schemaData.enum)) {
@@ -287,7 +319,7 @@ try {
             default:
               if (propData.$ref) {
                 const refType = propData.$ref.split("/").pop();
-                typeName = sanitizeTypeName(refType);
+                typeName = sanitizeTypeName(refType); 
               } else if (propData.enum) {
                 typeName = propData.enum.map((v) => `"${v}"`).join(" | ");
               }
