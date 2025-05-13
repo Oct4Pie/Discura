@@ -1,5 +1,6 @@
 import { TokenValidationResult } from "@discura/common";
 import axios from "axios";
+import { Client, GatewayIntentBits } from "discord.js";
 
 import { logger } from "../utils/logger";
 
@@ -32,53 +33,43 @@ export async function validateBotToken(
       };
     }
 
-    // Now check if the bot has the message content intent enabled
-    // We need to get the application from the Discord API
+    // Try to connect to the Discord Gateway with Message Content Intent
+    let client: Client | null = null;
     try {
-      const applicationResponse = await axios.get(
-        "https://discord.com/api/v10/oauth2/applications/@me",
-        {
-          headers: {
-            Authorization: `Bot ${token}`,
-          },
-        },
-      );
+      client = new Client({
+        intents: [
+          GatewayIntentBits.Guilds,
+          GatewayIntentBits.GuildMessages,
+          GatewayIntentBits.MessageContent,
+        ],
+      });
 
-      // Check if the bot has the message content intent flag set
-      // Message content intent is represented by the value 1 << 15 (32768) in the flags
-      // See: https://discord.com/developers/docs/topics/gateway#gateway-intents
-      const messageContentIntent = 1 << 15;
+      // Try to login
+      await client.login(token);
 
-      // The intent flags are in the flags field
-      const botFlags = applicationResponse.data.flags || 0;
-      const messageContentEnabled =
-        (botFlags & messageContentIntent) === messageContentIntent;
-
+      // If login succeeds, Message Content Intent is enabled
+      await client.destroy();
       return {
         valid: true,
-        messageContentEnabled,
+        messageContentEnabled: true,
         botId: response.data.id,
         username: response.data.username,
-        error: messageContentEnabled
-          ? undefined
-          : "Message content intent is not enabled for this bot",
       };
-    } catch (appError) {
-      logger.error("Error fetching application data:", appError);
-
-      // Token is valid (we got user data) but we couldn't verify intents
+    } catch (intentError: any) {
+      if (client) await client.destroy();
+      logger.error("Message Content Intent check failed:", intentError);
       return {
         valid: true,
         messageContentEnabled: false,
         botId: response.data.id,
         username: response.data.username,
-        error: "Could not verify message content intent status",
+        error:
+          intentError?.message ||
+          "Message Content Intent is not enabled or token is missing required permissions.",
       };
     }
   } catch (error) {
     logger.error("Error validating Discord token:", error);
-
-    // Check for specific error codes to provide better error messages
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
         return {
@@ -100,7 +91,6 @@ export async function validateBotToken(
         };
       }
     }
-
     return {
       valid: false,
       messageContentEnabled: false,

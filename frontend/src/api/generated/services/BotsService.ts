@@ -10,6 +10,7 @@ import type { GetAllBotsResponseDto } from '../models/GetAllBotsResponseDto';
 import type { GetBotResponseDto } from '../models/GetBotResponseDto';
 import type { StartBotResponseDto } from '../models/StartBotResponseDto';
 import type { StopBotResponseDto } from '../models/StopBotResponseDto';
+import type { TokenValidationResult } from '../models/TokenValidationResult';
 import type { UpdateBotConfigurationRequestDto } from '../models/UpdateBotConfigurationRequestDto';
 import type { UpdateBotConfigurationResponseDto } from '../models/UpdateBotConfigurationResponseDto';
 import type { UpdateBotRequestDto } from '../models/UpdateBotRequestDto';
@@ -193,6 +194,27 @@ export class BotsService {
             path: {
                 'id': id,
             },
+        });
+    }
+    /**
+     * Validate Discord bot token
+     *
+     * Validates a Discord bot token and checks if message content intent is enabled.
+     * This endpoint doesn't require authentication as it's used during bot creation.
+     * @param requestBody
+     * @returns TokenValidationResult Ok
+     * @throws ApiError
+     */
+    public static validateToken(
+        requestBody: {
+            token: string;
+        },
+    ): CancelablePromise<TokenValidationResult> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/bots/validate-token',
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
 }

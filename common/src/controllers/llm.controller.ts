@@ -73,7 +73,7 @@ export class LLMController extends Controller {
   @Response<ErrorResponseDto>(500, "Server Error")
   public async createChatCompletion(
     @Body() requestBody: LLMCompletionRequestDto,
-    @Request() request: ExpressRequest
+    @Request() request: ExpressRequest,
   ): Promise<LLMCompletionResponseDto> {
     // Implementation will be provided by backend
     throw new Error("Method not implemented in common package");
@@ -132,7 +132,7 @@ export class LLMController extends Controller {
   @Response<ErrorResponseDto>(404, "Provider Not Found")
   @Response<ErrorResponseDto>(500, "Server Error")
   public async checkProviderAvailability(
-    @Path("provider") provider: LLMProvider
+    @Path("provider") provider: LLMProvider,
   ): Promise<{ available: boolean }> {
     // Implementation will be provided by backend
     // This parameter explicitly uses LLMProvider to ensure it's included in generated types
@@ -151,7 +151,7 @@ export class LLMController extends Controller {
   @Response<ErrorResponseDto>(404, "Provider Not Found")
   @Response<ErrorResponseDto>(500, "Server Error")
   public async getProviderModels(
-    @Path("provider") provider: LLMProvider
+    @Path("provider") provider: LLMProvider,
   ): Promise<ProviderModelsResponseDto> {
     // Implementation will be provided by backend
     throw new Error("Method not implemented in common package");
@@ -183,7 +183,7 @@ export class LLMController extends Controller {
   @Response<ErrorResponseDto>(404, "Provider Not Found")
   @Response<ErrorResponseDto>(500, "Server Error")
   public async refreshProviderModels(
-    @Path("provider") provider: LLMProvider
+    @Path("provider") provider: LLMProvider,
   ): Promise<ProviderModelsResponseDto> {
     // Implementation will be provided by backend
     throw new Error("Method not implemented in common package");
@@ -201,7 +201,7 @@ export class LLMController extends Controller {
   @Response<ErrorResponseDto>(500, "Server Error")
   public async updateProviderStatus(
     @Path("provider") provider: LLMProvider,
-    @Body() requestBody: { enabled: boolean }
+    @Body() requestBody: { enabled: boolean },
   ): Promise<{ success: boolean; provider: LLMProvider; enabled: boolean }> {
     // Implementation will be provided by backend
     throw new Error("Method not implemented in common package");
@@ -218,7 +218,7 @@ export class LLMController extends Controller {
   @Response<ErrorResponseDto>(400, "Invalid Provider Configuration")
   @Response<ErrorResponseDto>(500, "Server Error")
   public async configureCustomProvider(
-    @Body() requestBody: CustomProviderConfig
+    @Body() requestBody: CustomProviderConfig,
   ): Promise<{ success: boolean; provider: CustomProviderConfig }> {
     // Implementation will be provided by backend
     throw new Error("Method not implemented in common package");
@@ -234,7 +234,7 @@ export class LLMController extends Controller {
   @Response<ErrorResponseDto>(404, "Provider Not Found")
   @Response<ErrorResponseDto>(500, "Server Error")
   public async removeCustomProvider(
-    @Path("name") name: string
+    @Path("name") name: string,
   ): Promise<{ success: boolean; removed: boolean }> {
     // Implementation will be provided by backend
     throw new Error("Method not implemented in common package");
@@ -256,7 +256,7 @@ export class LLMController extends Controller {
       tokenValidation: TokenValidationResult;
       providerRegistry: ProviderRegistryConfiguration;
       providerConfig: ProviderConfiguration;
-    }
+    },
   ): Promise<{
     tokenValidation: TokenValidationResult;
     providerRegistry: ProviderRegistryConfiguration;
@@ -265,10 +265,10 @@ export class LLMController extends Controller {
     // This method should only contain type definitions, not implementation
     throw new Error("Method not implemented in common package");
   }
-  
+
   /**
    * Get direct LLM response from a provider
-   * 
+   *
    * This endpoint is used to get a direct response from a provider.
    * It's intended for internal use and is hidden from the API documentation.
    */
@@ -278,11 +278,12 @@ export class LLMController extends Controller {
   @Response<ErrorResponseDto>(400, "Invalid Request")
   @Response<ErrorResponseDto>(500, "Server Error")
   public async getDirectLLMResponse(
-    @Body() requestBody: { 
+    @Body()
+    requestBody: {
       provider: LLMProvider;
       prompt: string;
       model?: string;
-    }
+    },
   ): Promise<LLMResponse> {
     // This method ensures LLMResponse is included in generated types
     throw new Error("Method not implemented in common package");

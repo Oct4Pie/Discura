@@ -1,4 +1,3 @@
-import { IMAGE_PROVIDER, DEFAULTS } from "@discura/common/constants";
 import {
   BotResponseDto,
   BotStatus,
@@ -7,6 +6,7 @@ import {
   Tool,
   BotConfiguration,
 } from "@discura/common";
+import { IMAGE_PROVIDER, DEFAULTS } from "@discura/common/constants";
 import { v4 as uuidv4 } from "uuid";
 
 import { BotRepository } from "../../services/database/bot.repository";
@@ -181,7 +181,7 @@ export class BotAdapter {
       // Get bot data
       const botData = await db.get<BotDbEntity>(
         "SELECT * FROM bots WHERE id = ?",
-        [id]
+        [id],
       );
 
       if (!botData) {
@@ -191,7 +191,7 @@ export class BotAdapter {
       // Get configuration data
       const configData = await db.get<BotConfigurationDbEntity>(
         "SELECT * FROM bot_configurations WHERE bot_id = ?",
-        [id]
+        [id],
       );
 
       return new Bot(botData, configData);
@@ -209,7 +209,7 @@ export class BotAdapter {
       // Get all bots for the user
       const botDataList = await db.query<BotDbEntity>(
         "SELECT * FROM bots WHERE user_id = ? ORDER BY created_at DESC",
-        [userId]
+        [userId],
       );
 
       if (botDataList.length === 0) {
@@ -222,13 +222,13 @@ export class BotAdapter {
 
       const configDataList = await db.query<BotConfigurationDbEntity>(
         `SELECT * FROM bot_configurations WHERE bot_id IN (${placeholders})`,
-        botIds
+        botIds,
       );
 
       // Map to create bot instances with their configurations
       return botDataList.map((botData) => {
         const configData = configDataList.find(
-          (config) => config.bot_id === botData.id
+          (config) => config.bot_id === botData.id,
         );
         return new Bot(botData, configData);
       });
@@ -246,7 +246,7 @@ export class BotAdapter {
       // Get all bots with the specified status
       const botDataList = await db.query<BotDbEntity>(
         "SELECT * FROM bots WHERE status = ?",
-        [status]
+        [status],
       );
 
       if (botDataList.length === 0) {
@@ -259,13 +259,13 @@ export class BotAdapter {
 
       const configDataList = await db.query<BotConfigurationDbEntity>(
         `SELECT * FROM bot_configurations WHERE bot_id IN (${placeholders})`,
-        botIds
+        botIds,
       );
 
       // Map to create bot instances with their configurations
       return botDataList.map((botData) => {
         const configData = configDataList.find(
-          (config) => config.bot_id === botData.id
+          (config) => config.bot_id === botData.id,
         );
         return new Bot(botData, configData);
       });
@@ -322,7 +322,7 @@ export class BotAdapter {
       name: string;
       discord_token: string;
       status: BotStatus; // Updated to use directly imported BotStatus
-    }>
+    }>,
   ): Promise<boolean> {
     try {
       const updateData = {
@@ -343,7 +343,7 @@ export class BotAdapter {
    */
   static async updateConfiguration(
     botId: string,
-    config: BotConfiguration
+    config: BotConfiguration,
   ): Promise<boolean> {
     try {
       const now = new Date().toISOString();
@@ -351,7 +351,7 @@ export class BotAdapter {
       // Check if configuration exists
       const existingConfig = await db.get<BotConfigurationDbEntity>(
         "SELECT * FROM bot_configurations WHERE bot_id = ?",
-        [botId]
+        [botId],
       );
 
       const configData = {
@@ -516,13 +516,13 @@ export class BotAdapter {
 
       const configDataList = await db.query<BotConfigurationDbEntity>(
         `SELECT * FROM bot_configurations WHERE bot_id IN (${placeholders})`,
-        botIds
+        botIds,
       );
 
       // Map to create bot instances with their configurations
       return botDataList.map((botData) => {
         const configData = configDataList.find(
-          (config) => config.bot_id === botData.id
+          (config) => config.bot_id === botData.id,
         );
         return new Bot(botData, configData);
       });

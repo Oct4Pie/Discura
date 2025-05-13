@@ -1,4 +1,3 @@
-import { LLMController as CommonLLMController } from "@discura/common/controllers";
 import {
   LLMProvider,
   LLMModelsResponseDto,
@@ -9,6 +8,7 @@ import {
   CustomProviderConfig,
   LLMResponse,
 } from "@discura/common";
+import { LLMController as CommonLLMController } from "@discura/common/controllers";
 import { Request } from "express";
 
 import {
@@ -275,16 +275,14 @@ export class LLMController extends CommonLLMController {
   /**
    * Get direct LLM response from a provider
    */
-  public async getDirectLLMResponse(
-    requestBody: {
-      provider: LLMProvider;
-      prompt: string;
-      model?: string;
-    }
-  ): Promise<LLMResponse> {
+  public async getDirectLLMResponse(requestBody: {
+    provider: LLMProvider;
+    prompt: string;
+    model?: string;
+  }): Promise<LLMResponse> {
     try {
       const { provider, prompt, model } = requestBody;
-      
+
       // Generate a random userId and botId for this direct call
       const userId = `direct-${Date.now()}`;
       const botId = `direct-${provider}-${Date.now()}`;

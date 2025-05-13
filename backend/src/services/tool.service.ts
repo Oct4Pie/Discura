@@ -1,11 +1,12 @@
 import { Tool } from "@discura/common";
-import { logger } from "../utils/logger";
+
 import { BotAdapter } from "../models/adapters/bot.adapter";
+import { logger } from "../utils/logger";
 
 // Execute tool calls
 export const executeTools = async (
   toolCalls: any[],
-  availableTools: Tool[]
+  availableTools: Tool[],
 ): Promise<any[]> => {
   const results = [];
 
@@ -90,7 +91,7 @@ export const evaluateToolResult = (toolResult: any, originalCall: any): any => {
   try {
     // Implement the tool evaluation logic here
     logger.info(
-      `Evaluating tool result for ${originalCall?.name || "unknown tool"}`
+      `Evaluating tool result for ${originalCall?.name || "unknown tool"}`,
     );
 
     // Basic evaluation implementation
@@ -127,12 +128,12 @@ export const evaluateToolResult = (toolResult: any, originalCall: any): any => {
  */
 export const findMatchingTools = (
   message: string,
-  availableTools: Tool[]
+  availableTools: Tool[],
 ): Tool[] => {
   try {
     // Implement more sophisticated tool matching logic here
     logger.info(
-      `Finding tools that match message: "${message.substring(0, 20)}..."`
+      `Finding tools that match message: "${message.substring(0, 20)}..."`,
     );
 
     // Basic implementation that extends the stub from the common package
@@ -144,7 +145,7 @@ export const findMatchingTools = (
       ].filter((kw) => kw.length > 3); // Only use keywords longer than 3 chars
 
       return keywords.some((keyword) =>
-        message.toLowerCase().includes(keyword)
+        message.toLowerCase().includes(keyword),
       );
     });
   } catch (error) {
@@ -163,7 +164,7 @@ export const findMatchingTools = (
 export const processToolCommand = async (
   botId: string,
   toolName: string,
-  toolInput: string
+  toolInput: string,
 ): Promise<string> => {
   try {
     logger.info(`Processing tool command: ${toolName} for bot ${botId}`);
@@ -181,7 +182,7 @@ export const processToolCommand = async (
     // Find the requested tool
     const tool = bot.configuration.tools?.find(
       (t: { name: string; id: string }) =>
-        t.name === toolName || t.id === toolName
+        t.name === toolName || t.id === toolName,
     );
 
     if (!tool) {
@@ -199,7 +200,7 @@ export const processToolCommand = async (
         // If not valid JSON, treat as a simple string input
         // Find the first parameter that's required and use the input as its value
         const firstParam = tool.parameters.find(
-          (p: { required: boolean; name: string }) => p.required
+          (p: { required: boolean; name: string }) => p.required,
         );
         if (firstParam) {
           args[firstParam.name] = toolInput;

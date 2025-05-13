@@ -1,9 +1,9 @@
-import { KnowledgeController as CommonKnowledgeController } from "@discura/common/controllers";
 import {
   KnowledgeItemDto,
   KnowledgeBaseResponseDto,
   MessageResponseDto,
 } from "@discura/common";
+import { KnowledgeController as CommonKnowledgeController } from "@discura/common/controllers";
 import { Request } from "express";
 
 import { BotAdapter } from "../models/adapters/bot.adapter";
@@ -214,7 +214,7 @@ export class KnowledgeController extends CommonKnowledgeController {
 
       return {
         message: "Knowledge item deleted successfully",
-        success: true
+        success: true,
       };
     } catch (error) {
       logger.error(

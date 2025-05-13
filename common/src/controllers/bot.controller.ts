@@ -35,6 +35,7 @@ import {
   GenerateBotInviteLinkResponseDto,
   ErrorResponseDto,
   MessageResponseDto,
+  TokenValidationResult,
 } from "../types/api";
 import { CONTROLLER_ROUTES, BASE_ROUTES, BOT_PATHS } from "../types/routes";
 
@@ -200,6 +201,20 @@ export class BotController extends Controller {
     @Path() id: string,
     @Request() request: ExpressRequest,
   ): Promise<GenerateBotInviteLinkResponseDto> {
+    // Implementation will be provided by backend
+    throw new Error("Method not implemented in common package");
+  }
+
+  /**
+   * Validate Discord bot token
+   *
+   * Validates a Discord bot token and checks if message content intent is enabled.
+   * This endpoint doesn't require authentication as it's used during bot creation.
+   */
+  @Post("validate-token")
+  public async validateToken(
+    @Body() requestBody: { token: string },
+  ): Promise<TokenValidationResult> {
     // Implementation will be provided by backend
     throw new Error("Method not implemented in common package");
   }

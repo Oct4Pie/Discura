@@ -34,9 +34,10 @@ import { expressAuthentication as backendAuthentication } from "./middlewares/au
 import { setupPassport } from "./middlewares/passport";
 import { requestLogger } from "./middlewares/requestLogger";
 import routes from "./routes";
-import { db } from "./services/database/database.factory";
-import { logger } from "./utils/logger";
 import { initializeAllBots, stopAllBots } from "./services/bot.service";
+import { db } from "./services/database/database.factory";
+import { fetchOpenRouterModels } from "./services/openrouter.service";
+import { logger } from "./utils/logger";
 
 import { RegisterRoutes } from "@discura/common/routes";
 
@@ -153,8 +154,16 @@ function startServer() {
   // Initialize all bots that were running when the server was last stopped
   // after server is fully started
   setTimeout(() => {
-    initializeAllBots().catch(error => {
+    // Initialize bots
+    initializeAllBots().catch((error) => {
       logger.error("Error initializing bots:", error);
+    });
+    
+    // Refresh OpenRouter models cache in the background
+    fetchOpenRouterModels(true).then(() => {
+      logger.info('OpenRouter models cache refreshed successfully');
+    }).catch((error) => {
+      logger.error('Error refreshing OpenRouter models cache:', error);
     });
   }, 2000);
 

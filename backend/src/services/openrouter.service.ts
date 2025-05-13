@@ -16,7 +16,7 @@ import { logger } from "../utils/logger";
 const OPENROUTER_MODELS_CACHE_FILE = path.join(
   process.cwd(),
   "data",
-  "openrouter-models-cache.json",
+  "provider-models-cache.json",
 );
 
 // Cache TTL in milliseconds (default: 12 hours)
@@ -32,7 +32,7 @@ let lastRequestTimestamp = 0;
 // Cache for OpenRouter models
 let modelsCache: {
   timestamp: number;
-  models: any[];
+  models: any[] | { data: any[] } | Record<string, any>;
 } | null = null;
 
 /**
@@ -104,7 +104,15 @@ export async function fetchOpenRouterModels(
   // Use cache if available and not expired, unless forced refresh
   if (modelsCache && !isCacheExpired() && !forceRefresh) {
     logger.info("Using cached OpenRouter models");
-    return modelsCache.models;
+    // Handle both old and new cache formats
+    if (Array.isArray(modelsCache.models)) {
+      return modelsCache.models;
+    } else if (modelsCache.models?.data && Array.isArray(modelsCache.models.data)) {
+      return modelsCache.models.data;
+    } else {
+      logger.warn("Cache format is unexpected, forcing refresh");
+      // Continue with refresh
+    }
   }
 
   // Check if we need to throttle requests
@@ -114,7 +122,15 @@ export async function fetchOpenRouterModels(
     // If cache exists, return it even if expired
     if (modelsCache) {
       logger.info("Using expired cache due to throttling");
-      return modelsCache.models;
+      // Handle both old and new cache formats
+      if (Array.isArray(modelsCache.models)) {
+        return modelsCache.models;
+      } else if (modelsCache.models?.data && Array.isArray(modelsCache.models.data)) {
+        return modelsCache.models.data;
+      } else {
+        logger.warn("Cache format is unexpected but using as fallback");
+        return Array.isArray(modelsCache.models) ? modelsCache.models : [];
+      }
     }
 
     // If no cache, wait for the throttle period
@@ -139,7 +155,14 @@ export async function fetchOpenRouterModels(
       },
     );
 
-    // Update cache
+    // Extract models array from response, handling both old and new formats
+    const modelsArray = Array.isArray(response.data) 
+      ? response.data 
+      : (response.data?.data || []);
+
+    logger.info(`Received ${modelsArray.length} models from OpenRouter API`);
+
+    // Update cache, preserving the original structure for backward compatibility
     modelsCache = {
       timestamp: Date.now(),
       models: response.data,
@@ -148,14 +171,21 @@ export async function fetchOpenRouterModels(
     // Save to disk
     await saveCache();
 
-    return response.data;
+    return modelsArray;
   } catch (error) {
     logger.error("Error fetching OpenRouter models:", error);
 
     // If cache exists, return it even if expired
     if (modelsCache) {
       logger.info("Using expired cache due to API error");
-      return modelsCache.models;
+      // Handle both old and new cache formats
+      if (Array.isArray(modelsCache.models)) {
+        return modelsCache.models;
+      } else if (modelsCache.models?.data && Array.isArray(modelsCache.models.data)) {
+        return modelsCache.models.data;
+      } else {
+        return [];
+      }
     }
 
     // If no cache, return empty array
@@ -222,7 +252,8 @@ export function groupModelsByProvider(models: any[]): Record<string, any[]> {
   const result: Record<string, any[]> = {};
 
   for (const model of models) {
-    const provider = model.author.toLowerCase();
+    // Use provider_name from the endpoint if available, otherwise fall back to author
+    const provider = (model.endpoint?.provider_name || model.author || 'unknown').toLowerCase();
 
     if (!result[provider]) {
       result[provider] = [];
@@ -241,6 +272,7 @@ export function mapOpenRouterProviderToLLMProvider(
   providerName: string,
 ): LLMProvider {
   const nameMapping: Record<string, LLMProvider> = {
+    // Major providers
     openai: LLMProvider.OPENAI,
     anthropic: LLMProvider.ANTHROPIC,
     google: LLMProvider.GOOGLE,
@@ -252,13 +284,26 @@ export function mapOpenRouterProviderToLLMProvider(
     perplexity: LLMProvider.PERPLEXITY,
     together: LLMProvider.TOGETHERAI,
     togetherai: LLMProvider.TOGETHERAI,
-    meta: LLMProvider.HUGGINGFACE, // Map Meta models to HuggingFace for now
+    meta: LLMProvider.HUGGINGFACE,
     "meta-llama": LLMProvider.HUGGINGFACE,
+    llama: LLMProvider.HUGGINGFACE,
     microsoft: LLMProvider.AZURE,
     "aleph-alpha": LLMProvider.CUSTOM,
     cloudflare: LLMProvider.CUSTOM,
     bedrock: LLMProvider.AMAZON,
     amazon: LLMProvider.AMAZON,
+    
+    // Add OpenRouter gateway providers
+    "anyscale": LLMProvider.CUSTOM,
+    "voyage": LLMProvider.CUSTOM,
+    "openrouter": LLMProvider.OPENROUTER,
+    "deepinfra": LLMProvider.DEEPINFRA,
+    "chutes": LLMProvider.CUSTOM,
+    "replicate": LLMProvider.CUSTOM,
+    "qwen": LLMProvider.CUSTOM,
+    "lmstudio": LLMProvider.CUSTOM,
+    "nous": LLMProvider.CUSTOM,
+    "nousresearch": LLMProvider.CUSTOM,
   };
 
   return nameMapping[providerName.toLowerCase()] || LLMProvider.CUSTOM;
@@ -268,35 +313,45 @@ export function mapOpenRouterProviderToLLMProvider(
  * Convert OpenRouter model to our EnhancedLLMModelData format
  */
 export function convertOpenRouterModelToEnhancedModel(model: any) {
-  // Extract capabilities
+  // Use endpoint info if available (for better provider information)
+  const endpoint = model.endpoint || {};
+  
+  // Extract capabilities based on available fields
   const capabilities = {
     input_modalities: model.input_modalities || ["text"],
     output_modalities: model.output_modalities || ["text"],
     supports_streaming: true,
-    supports_tool_calling: model.endpoint?.supports_tool_parameters || false,
+    supports_tool_calling: endpoint.supports_tool_parameters || false,
     supports_vision: (model.input_modalities || []).includes("image") || false,
   };
 
-  // Extract pricing
-  const pricing = model.endpoint?.pricing
-    ? {
-        prompt_tokens: parseFloat(model.endpoint.pricing.prompt || "0"),
-        completion_tokens: parseFloat(model.endpoint.pricing.completion || "0"),
-      }
-    : undefined;
+  // Use provider_name from endpoint for accurate provider identification
+  const providerName = endpoint.provider_name || model.author || "unknown";
+  
+  // Use provider_model_id from endpoint for Vercel AI SDK integration
+  const providerModelId = endpoint.provider_model_id || model.hf_slug || model.slug;
 
-  // Map to our format
+  // For debugging
+  logger.debug(`Converting OpenRouter model: 
+    slug: ${model.slug}, 
+    provider: ${providerName}, 
+    model_id: ${providerModelId}`);
+  
   return {
     id: model.slug,
     object: "model",
-    created: new Date(model.created_at).getTime() / 1000,
-    owned_by: model.author,
+    created: new Date(model.created_at || Date.now()).getTime() / 1000,
+    owned_by: providerName,
     display_name: model.short_name || model.name,
-    provider_model_id: model.endpoint?.provider_model_id || model.slug,
-    context_length: model.context_length,
+    provider_model_id: providerModelId,
+    context_length: model.context_length || 4096,
     capabilities,
-    pricing,
-    // Store the model_variant_slug for native OpenRouter provider
-    model_variant_slug: model.endpoint?.model_variant_slug,
+    // Additional useful metadata
+    pricing: endpoint.pricing ? {
+      prompt_tokens: parseFloat(endpoint.pricing.prompt || "0"),
+      completion_tokens: parseFloat(endpoint.pricing.completion || "0"),
+    } : undefined,
+    model_variant_slug: endpoint.model_variant_slug,
+    provider_display_name: endpoint.provider_display_name
   };
 }

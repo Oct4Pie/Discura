@@ -1,3 +1,4 @@
+import { BotConfiguration, LLMProvider, ImageProvider } from "@discura/common";
 import {
   Client,
   Message,
@@ -13,10 +14,9 @@ import {
   DMChannel,
   ThreadChannel,
   Collection,
+  TextBasedChannel,
 } from "discord.js";
 import { v4 as uuidv4 } from "uuid";
-import { BotConfiguration, LLMProvider, ImageProvider } from "@discura/common";
-import { Bot } from "../models/bot.model";
 
 import { generateImage } from "./image.service";
 import { callLLM } from "./llm.service";
@@ -24,10 +24,11 @@ import {
   evaluateToolResult,
   executeTools,
   findMatchingTools,
+  processToolCommand,
 } from "./tool.service";
 import { BotAdapter } from "../models/adapters/bot.adapter";
+import { Bot } from "../models/bot.model";
 import { logger } from "../utils/logger";
-import { processToolCommand } from "./tool.service";
 
 // Store typing indicators for each channel
 const typingIndicators = new Map<string, NodeJS.Timeout>();
@@ -106,7 +107,7 @@ function generateSystemPrompt(botConfig: BotConfiguration): string {
 
 // Start typing indicator in channel
 async function startTypingIndicator(
-  channel: TextChannel | DMChannel | ThreadChannel
+  channel: TextChannel | DMChannel | ThreadChannel,
 ) {
   try {
     // If there's an existing typing indicator for this channel, clear it
@@ -123,7 +124,7 @@ async function startTypingIndicator(
       channel.sendTyping().catch((err) => {
         logger.warn(
           `Failed to maintain typing indicator in channel ${channel.id}:`,
-          err
+          err,
         );
         clearInterval(typingInterval);
         typingIndicators.delete(channel.id);
@@ -135,7 +136,7 @@ async function startTypingIndicator(
   } catch (error) {
     logger.warn(
       `Failed to start typing indicator in channel ${channel.id}:`,
-      error
+      error,
     );
   }
 }
@@ -164,7 +165,7 @@ function addToConversationHistory(
   userId: string,
   role: string,
   content: string,
-  username?: string
+  username?: string,
 ) {
   const key = `${channelId}_${userId}`;
   const history = getConversationHistory(channelId, userId);
@@ -188,7 +189,7 @@ function addToConversationHistory(
 export const handleMessage = async (
   client: Client,
   message: Message,
-  bot: Bot
+  bot: Bot,
 ) => {
   // Ignore messages from bots or without content
   if (message.author.bot || !message.content) return;
@@ -216,7 +217,7 @@ export const handleMessage = async (
   try {
     // Start typing indicator to show the bot is "thinking"
     await startTypingIndicator(
-      channel as TextChannel | DMChannel | ThreadChannel
+      channel as TextChannel | DMChannel | ThreadChannel,
     );
 
     // Add the user's message to history
@@ -225,29 +226,31 @@ export const handleMessage = async (
       message.author.id,
       "user",
       content,
-      message.author.username
+      message.author.username,
     );
 
     // Get conversation history
     const history = getConversationHistory(channel.id, message.author.id);
 
     // Generate system prompt from bot configuration
-    const systemPrompt = generateSystemPrompt(bot.configuration || {
-      systemPrompt: "You are a helpful Discord bot assistant.",
-      personality: "",
-      traits: [],
-      backstory: "",
-      llmProvider: LLMProvider.OPENAI,
-      llmModel: "gpt-3.5-turbo",
-      apiKey: "",
-      imageGeneration: {
-        enabled: false,
-        provider: ImageProvider.MIDJOURNEY, // Fixed: Using enum value instead of string literal
+    const systemPrompt = generateSystemPrompt(
+      bot.configuration || {
+        systemPrompt: "You are a helpful Discord bot assistant.",
+        personality: "",
+        traits: [],
+        backstory: "",
+        llmProvider: LLMProvider.OPENAI,
+        llmModel: "gpt-3.5-turbo",
+        apiKey: "",
+        imageGeneration: {
+          enabled: false,
+          provider: ImageProvider.MIDJOURNEY, // Fixed: Using enum value instead of string literal
+        },
+        toolsEnabled: false,
+        tools: [],
+        knowledge: [],
       },
-      toolsEnabled: false,
-      tools: [],
-      knowledge: []
-    });
+    );
 
     // Call the LLM with the conversation history and system prompt
     const response = await callLLM({
@@ -267,7 +270,7 @@ export const handleMessage = async (
         channel.id,
         message.author.id,
         "assistant",
-        response.text
+        response.text,
       );
     }
 
@@ -279,37 +282,41 @@ export const handleMessage = async (
     ) {
       try {
         // Generate an image based on the prompt
-        const imageUrl = await generateImage(
-          response.imagePrompt || content,
-          {
-            provider: bot.configuration?.imageGeneration?.provider || "openai",
-            apiKey: bot.configuration?.apiKey || "",
-            model: bot.configuration?.imageGeneration?.model,
-            enabled: true
-          }
-        );
-
-        // Send the response with the image
-        sentMessage = await (channel as TextChannel).send({
-          content: response.text,
-          files: imageUrl
-            ? [{ attachment: imageUrl, name: "generated-image.png" }]
-            : [],
+        const imageUrl = await generateImage(response.imagePrompt || content, {
+          provider: bot.configuration?.imageGeneration?.provider || "openai",
+          apiKey: bot.configuration?.apiKey || "",
+          model: bot.configuration?.imageGeneration?.model,
+          enabled: true,
         });
+
+        // Use type guard to ensure channel is text-based before sending
+        if (channel.isTextBased() && "send" in channel) {
+          // Send the response with the image
+          sentMessage = await channel.send({
+            content: response.text,
+            files: imageUrl
+              ? [{ attachment: imageUrl, name: "generated-image.png" }]
+              : [],
+          });
+        }
       } catch (imageError) {
         logger.error(`Image generation error for bot ${bot.id}:`, imageError);
 
         // If image generation fails, just send the text response
-        sentMessage = await (channel as TextChannel).send({
-          content: `${response.text}\n\n*(Failed to generate image: Something went wrong with image generation)*`,
-        });
+        if (channel.isTextBased() && "send" in channel) {
+          sentMessage = await channel.send({
+            content: `${response.text}\n\n*(Failed to generate image: Something went wrong with image generation)*`,
+          });
+        }
       }
     } else {
       // Send regular text response
-      sentMessage = await (channel as TextChannel).send(
-        response?.text ||
-          "I'm sorry, I'm having trouble processing that request."
-      );
+      if (channel.isTextBased() && "send" in channel) {
+        sentMessage = await channel.send(
+          response?.text ||
+            "I'm sorry, I'm having trouble processing that request.",
+        );
+      }
     }
 
     logger.info(`Bot ${bot.id} responded to message in channel ${channel.id}`);
@@ -319,13 +326,15 @@ export const handleMessage = async (
 
     try {
       // Send error message to channel
-      await (channel as TextChannel).send(
-        "I'm sorry, I encountered an error while processing your request. Please try again later."
-      );
+      if (channel.isTextBased() && "send" in channel) {
+        await channel.send(
+          "I'm sorry, I encountered an error while processing your request. Please try again later.",
+        );
+      }
     } catch (sendError) {
       logger.error(
         `Failed to send error message for bot ${bot.id}:`,
-        sendError
+        sendError,
       );
     }
   } finally {
@@ -341,7 +350,7 @@ export const handleMessage = async (
  */
 async function handleSlashCommand(
   interaction: ChatInputCommandInteraction,
-  bot: any
+  bot: any,
 ): Promise<void> {
   // Handle different slash commands here...
   const commandName = interaction.commandName;
@@ -374,7 +383,7 @@ async function handleSlashCommand(
           provider: bot.configuration?.imageGeneration?.provider || "openai",
           apiKey: bot.configuration?.apiKey || "",
           model: bot.configuration?.imageGeneration?.model,
-          enabled: true
+          enabled: true,
         });
 
         if (imageUrl) {
@@ -384,13 +393,13 @@ async function handleSlashCommand(
           });
         } else {
           await interaction.editReply(
-            "Failed to generate image. Please try again."
+            "Failed to generate image. Please try again.",
           );
         }
       } catch (error) {
         logger.error(`Error generating image for bot ${bot.id}:`, error);
         await interaction.editReply(
-          "Failed to generate image due to an error. Please try again later."
+          "Failed to generate image due to an error. Please try again later.",
         );
       }
     } else if (commandName === "tool" && bot.configuration?.toolsEnabled) {
@@ -406,13 +415,13 @@ async function handleSlashCommand(
         const result = await processToolCommand(
           bot.id,
           toolName,
-          toolInput || ""
+          toolInput || "",
         );
         await interaction.editReply(result || "Tool executed successfully.");
       } catch (error) {
         logger.error(`Error processing tool command for bot ${bot.id}:`, error);
         await interaction.editReply(
-          `Error executing tool: ${(error as Error).message}`
+          `Error executing tool: ${(error as Error).message}`,
         );
       }
     } else {
@@ -425,7 +434,7 @@ async function handleSlashCommand(
       // Try to respond with an error message if we haven't replied yet
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(
-          "An error occurred while processing this command."
+          "An error occurred while processing this command.",
         );
       } else {
         await interaction.reply({
@@ -446,7 +455,7 @@ async function handleSlashCommand(
  */
 async function handleButtonInteraction(
   interaction: ButtonInteraction,
-  bot: any
+  bot: any,
 ): Promise<void> {
   try {
     await interaction.deferUpdate();
@@ -491,7 +500,7 @@ async function handleButtonInteraction(
  */
 async function handleModalSubmitInteraction(
   interaction: ModalSubmitInteraction,
-  bot: any
+  bot: any,
 ): Promise<void> {
   try {
     await interaction.deferReply({ ephemeral: true });
@@ -531,7 +540,7 @@ async function handleModalSubmitInteraction(
  */
 async function handleContextMenuInteraction(
   interaction: ContextMenuCommandInteraction,
-  bot: any
+  bot: any,
 ): Promise<void> {
   // Extract the command name
   const commandName = interaction.commandName;
@@ -590,7 +599,7 @@ async function handleContextMenuInteraction(
  */
 async function handleAutocompleteInteraction(
   interaction: AutocompleteInteraction,
-  bot: any
+  bot: any,
 ): Promise<void> {
   // Get the command name and focused option
   const commandName = interaction.commandName;
@@ -612,7 +621,7 @@ async function handleAutocompleteInteraction(
         value: tool.id,
       }))
       .filter((choice: { name: string; value: string }) =>
-        choice.name.toLowerCase().includes(focusedOption.value.toLowerCase())
+        choice.name.toLowerCase().includes(focusedOption.value.toLowerCase()),
       );
 
     // Respond with matching choices (max 25 choices as per Discord's limit)

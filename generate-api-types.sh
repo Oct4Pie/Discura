@@ -7,6 +7,12 @@ ROOT_DIR="$(dirname "$(realpath "$0")")"
 rm -rf "$ROOT_DIR/common/src/schema" # Clean up old schema
 rm -rf "$ROOT_DIR/frontend/src/api/generated" # Clean up old routes
 
+# Fetch latest OpenRouter models
+echo "🔄 Fetching latest OpenRouter models..."
+cd "$ROOT_DIR/backend"
+node "$ROOT_DIR/scripts/fetch-openrouter-models.js" || echo "⚠️ Warning: OpenRouter model fetch failed but continuing with API generation"
+cd "$ROOT_DIR"
+
 echo "🔄 Bootstrapping type definitions to break circular dependencies..."
 cd "$ROOT_DIR/common"
 node scripts/bootstrap-types.js
@@ -29,10 +35,6 @@ echo "🔨 Generating routes with TSOA using enhanced module resolution..."
 node -e "require('./common/scripts/tsoa-bootstrap').generateRoutes()"
 
 echo "✅ Routes generated successfully in common/src/routes"
-
-# echo "🔄 Copying routes to backend src directory for backend compilation..."
-# mkdir -p "$ROOT_DIR/backend/src/generated"
-# cp -f "$ROOT_DIR/common/src/routes/routes.ts" "$ROOT_DIR/backend/src/generated/routes.ts"
 
 # Build the common package without dependencies on backend files
 echo "📦 Building common package with generated types..."

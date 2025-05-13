@@ -55,6 +55,7 @@ import GridItem from "../components/GridItem";
 import TabPanel from "../components/TabPanel";
 import { useBotStore } from "../stores/botStore";
 import PersonalityPreview from "../components/PersonalityPreview";
+import ModelSelector from "../components/ModelSelector";
 
 const BotDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -86,8 +87,14 @@ const BotDetail = () => {
   const [traits, setTraits] = useState<string[]>([]);
   const [newTrait, setNewTrait] = useState("");
   const [backstory, setBackstory] = useState("");
-  const [llmProvider, setLlmProvider] = useState<LLMProvider>(LLMProvider.OPENAI);
-  const [llmModel, setLlmModel] = useState("");
+  
+  // Combined model ID in format "provider/model"
+  const [selectedModel, setSelectedModel] = useState<string>("openai/gpt-3.5-turbo");
+  
+  // Derived values for backward compatibility
+  const llmProvider = selectedModel.split('/')[0] as LLMProvider;
+  const llmModel = selectedModel.split('/').slice(1).join('/');
+  
   const [apiKey, setApiKey] = useState("");
   const [imageGenEnabled, setImageGenEnabled] = useState(false);
   const [imageProvider, setImageProvider] = useState<ImageProvider>(ImageProvider.OPENAI);
@@ -111,8 +118,7 @@ const BotDetail = () => {
       setBackstory(currentBot.configuration?.backstory || "");
       
       const provider = currentBot.configuration?.llmProvider || "openai";
-      setLlmProvider(provider as LLMProvider);
-      setLlmModel(currentBot.configuration?.llmModel || "");
+      setSelectedModel(`${provider}/${currentBot.configuration?.llmModel || "gpt-3.5-turbo"}`);
       setApiKey(currentBot.configuration?.apiKey || "");
       
       setImageGenEnabled(currentBot.configuration?.imageGeneration?.enabled || false);
@@ -330,14 +336,20 @@ const BotDetail = () => {
           </IconButton>
           
           <Box>
-            <Typography variant="h4" component="h1" fontWeight={600} gutterBottom>
-              {currentBot.name}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Typography variant="h4" component="h1" fontWeight={600}>
+                {currentBot.name}
+              </Typography>
+              <BotStatusBadge status={currentBot.status as BotStatus} />
+            </Box>
+            
+            <Typography variant="body2" color="text.secondary">
+              {currentBot.configuration?.personality || "No personality defined"}
             </Typography>
-            <BotStatusBadge status={currentBot.status as BotStatus} />
           </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, mt: { xs: 2, sm: 0 }, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
           <Button 
             variant="outlined"
             startIcon={<LinkIcon />}
@@ -451,6 +463,7 @@ const BotDetail = () => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   InputLabelProps={{ shrink: true }}
+                  placeholder="Enter a descriptive name for your bot"
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
@@ -465,33 +478,139 @@ const BotDetail = () => {
                   fullWidth
                   label="Application ID"
                   value={currentBot.applicationId}
-                  InputProps={{ readOnly: true }}
+                  InputProps={{ 
+                    readOnly: true,
+                    sx: {
+                      backgroundColor: alpha(theme.palette.grey[100], 0.8),
+                      fontFamily: 'monospace',
+                    } 
+                  }}
                   InputLabelProps={{ shrink: true }}
+                  variant="outlined"
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      backgroundColor: alpha(theme.palette.common.white, 0.9),
                       borderRadius: 1.5, // Custom border radius for text field
                     }
                   }}
                 />
               </GridItem>
 
-              <GridItem item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="password"
-                  label="Discord Token"
-                  value={currentBot.discordToken}
-                  InputProps={{ readOnly: true }}
-                  InputLabelProps={{ shrink: true }}
-                  helperText="For security, the token is masked"
+              <GridItem item xs={12}>
+                <Paper
+                  elevation={0}
                   sx={{
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: alpha(theme.palette.common.white, 0.9),
-                      borderRadius: 1.5, // Custom border radius for text field
-                    }
+                    p: 3,
+                    borderRadius: 1.5,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                    backgroundColor: alpha(theme.palette.background.paper, 0.8),
                   }}
-                />
+                >
+                  <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                    Discord Bot Token
+                  </Typography>
+                  
+                  <Box sx={{ mb: 2 }}>
+                    <TextField
+                      fullWidth
+                      type="password"
+                      value="••••••••••••••••••••••••••••••••••••••••••"
+                      InputProps={{
+                        readOnly: true,
+                        startAdornment: (
+                          <Box 
+                            component="span"
+                            sx={{
+                              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                              color: theme.palette.primary.main,
+                              py: 0.5,
+                              px: 1,
+                              borderRadius: 1,
+                              mr: 1,
+                              fontSize: '0.8rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            SECURED
+                          </Box>
+                        ),
+                      }}
+                      variant="outlined"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: alpha(theme.palette.common.white, 0.9),
+                          borderRadius: 1.5,
+                        }
+                      }}
+                    />
+                  </Box>
+                  
+                  <Alert 
+                    severity="info" 
+                    sx={{ 
+                      mb: 2,
+                      borderRadius: 1,
+                      border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
+                    }}
+                  >
+                    For security, Discord bot tokens are encrypted and cannot be viewed after creation.
+                    If you need to update your token, you can use the form below.
+                  </Alert>
+                  
+                  <Box
+                    component="form"
+                    sx={{
+                      display: 'flex',
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      gap: 2,
+                      alignItems: { xs: 'stretch', sm: 'flex-start' },
+                    }}
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      // You would need to implement a method to update just the token
+                      if (id && document.getElementById('new-token')) {
+                        const tokenInput = document.getElementById('new-token') as HTMLInputElement;
+                        if (tokenInput && tokenInput.value) {
+                          updateBot(id, { discordToken: tokenInput.value })
+                            .then(() => {
+                              tokenInput.value = '';
+                              toast.success("Bot token updated successfully");
+                            })
+                            .catch((error) => {
+                              console.error("Error updating token:", error);
+                              toast.error("Failed to update bot token");
+                            });
+                        }
+                      }
+                    }}
+                  >
+                    <TextField
+                      id="new-token"
+                      label="New Discord Token"
+                      placeholder="Enter new bot token from Discord Developer Portal"
+                      fullWidth
+                      sx={{
+                        flexGrow: 1,
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: alpha(theme.palette.common.white, 0.9),
+                          borderRadius: 1.5,
+                        }
+                      }}
+                    />
+                    <Button
+                      type="submit"
+                      variant="outlined"
+                      color="primary"
+                      sx={{
+                        px: 3,
+                        borderRadius: 1,
+                        height: { xs: 'auto', sm: 56 },
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Update Token
+                    </Button>
+                  </Box>
+                </Paper>
               </GridItem>
             </Box>
 
@@ -668,58 +787,19 @@ const BotDetail = () => {
         <TabPanel value={tabValue} index={2}>
           <CardContent>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-              <GridItem item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="llm-provider-label">LLM Provider</InputLabel>
-                  <Select
-                    labelId="llm-provider-label"
-                    value={llmProvider}
-                    label="LLM Provider"
-                    onChange={(e) => setLlmProvider(e.target.value as LLMProvider)}
-                    sx={{
-                      backgroundColor: alpha(theme.palette.common.white, 0.9),
-                      borderRadius: 1.5, // Custom border radius for select
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderRadius: 1.5,
-                      }
-                    }}
-                  >
-                    <MenuItem value={LLMProvider.OPENAI}>OpenAI</MenuItem>
-                    <MenuItem value={LLMProvider.ANTHROPIC}>Anthropic</MenuItem>
-                    <MenuItem value={LLMProvider.GOOGLE}>Google</MenuItem>
-                    <MenuItem value={LLMProvider.CUSTOM}>Custom</MenuItem>
-                  </Select>
-                </FormControl>
-              </GridItem>
-
-              <GridItem item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Model"
-                  value={llmModel}
-                  onChange={(e) => setLlmModel(e.target.value)}
-                  placeholder={
-                    llmProvider === LLMProvider.OPENAI
-                      ? "gpt-3.5-turbo"
-                      : llmProvider === LLMProvider.ANTHROPIC
-                      ? "claude-3-sonnet-20240229"
-                      : llmProvider === LLMProvider.GOOGLE
-                      ? "gemini-pro"
-                      : "API endpoint URL"
-                  }
-                  helperText={
-                    llmProvider === LLMProvider.CUSTOM
-                      ? "For custom providers, enter the API endpoint"
-                      : "The model to use for this bot"
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: alpha(theme.palette.common.white, 0.9),
-                      borderRadius: 1.5, // Custom border radius for text field
-                    }
-                  }}
+              <GridItem item xs={12}>
+                <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 2 }}>
+                  LLM Provider and Model
+                </Typography>
+                
+                <ModelSelector 
+                  onModelSelect={(modelId) => setSelectedModel(modelId)}
+                  defaultModel={selectedModel}
                 />
+                
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  Select the AI model that powers your bot's responses. This determines the capabilities and quality of your bot.
+                </Typography>
               </GridItem>
 
               <GridItem item xs={12}>

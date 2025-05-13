@@ -1,5 +1,4 @@
-import { BotStatus } from "@discura/common/types"; // Updated import path
-
+import { BotStatus } from "@discura/common";
 import { Bot, BotAdapter } from "./adapters/bot.adapter";
 
 // Re-export the Bot class and adapter for backward compatibility

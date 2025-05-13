@@ -533,22 +533,6 @@ const DEFAULT_MODELS: LLMModelData[] = [
     display_name: "GPT-3.5 Turbo", // Added required property
     provider_model_id: "gpt-3.5-turbo", // Added required property
   },
-  {
-    id: "gpt-4",
-    object: "model",
-    created: Math.floor(Date.now() / 1000) - 86400 * 60, // 60 days ago
-    owned_by: "openai",
-    display_name: "GPT-4", // Added required property
-    provider_model_id: "gpt-4", // Added required property
-  },
-  {
-    id: "claude-3-opus-20240229",
-    object: "model",
-    created: Math.floor(Date.now() / 1000) - 86400 * 45, // 45 days ago
-    owned_by: "anthropic",
-    display_name: "Claude 3 Opus", // Added required property
-    provider_model_id: "claude-3-opus-20240229", // Added required property
-  },
 ];
 
 // Model cache
@@ -621,16 +605,83 @@ async function loadProviderConfig(): Promise<ProviderRegistryConfiguration> {
 async function loadModelCache(): Promise<void> {
   try {
     const data = await fs.readFile(CACHE_FILE, "utf-8");
-    modelCache = JSON.parse(data) as ModelCache;
+    const parsedCache = JSON.parse(data);
 
-    // Ensure the structure is complete
-    if (!modelCache.openRouterLastFetch) {
-      modelCache.openRouterLastFetch = 0;
+    if (
+      parsedCache &&
+      typeof parsedCache === "object" &&
+      parsedCache.models && // Check for the OpenRouter-style structure first
+      Array.isArray(parsedCache.models.data) &&
+      typeof parsedCache.timestamp === "number"
+    ) {
+      logger.info(
+        "Processing OpenRouter-style model cache file (models.data found)."
+      );
+      const rawModels: any[] = parsedCache.models.data;
+      const cacheTimestamp = parsedCache.timestamp;
+
+      const validModels = filterValidModels(rawModels);
+      const modelsByProviderName = groupModelsByProvider(validModels);
+
+      const newProviders: Record<LLMProvider, ProviderModelsResponseDto> =
+        {} as Record<LLMProvider, ProviderModelsResponseDto>;
+
+      for (const [providerName, modelsInGroup] of Object.entries(
+        modelsByProviderName
+      )) {
+        const llmProviderEnum =
+          mapOpenRouterProviderToLLMProvider(providerName);
+        if (llmProviderEnum) {
+          const enhancedModels = modelsInGroup.map(
+            convertOpenRouterModelToEnhancedModel
+          );
+          newProviders[llmProviderEnum] = {
+            provider: llmProviderEnum,
+            provider_display_name:
+              PROVIDER_DISPLAY_NAMES[llmProviderEnum] || providerName,
+            models: enhancedModels,
+            last_updated: cacheTimestamp,
+          };
+        } else {
+          logger.warn(
+            `Could not map OpenRouter provider name "${providerName}" to an LLMProvider enum. Skipping these models.`
+          );
+        }
+      }
+
+      modelCache = {
+        timestamp: cacheTimestamp,
+        openRouterLastFetch: cacheTimestamp, // Assume this cache is from an OpenRouter fetch
+        providers: newProviders,
+      };
+      logger.info(
+        "Successfully processed and loaded OpenRouter-style model cache."
+      );
+    } else if (
+      // Fallback to existing logic for provider-centric cache
+      parsedCache &&
+      typeof parsedCache === "object" &&
+      typeof parsedCache.timestamp === "number" &&
+      typeof parsedCache.providers === "object" &&
+      parsedCache.providers !== null
+    ) {
+      modelCache = parsedCache as ModelCache;
+      if (typeof modelCache.openRouterLastFetch !== "number") {
+        modelCache.openRouterLastFetch = 0; // Default if missing
+      }
+      logger.info("Loaded provider-centric model cache from file.");
+    } else {
+      logger.warn(
+        "Model cache file found but has unrecognized or invalid structure. Discarding and will create a new one."
+      );
+      modelCache = null;
     }
-
-    logger.info("Loaded model cache from file");
   } catch (error) {
-    logger.info("No model cache file found, will create one on next fetch");
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.info(
+      `No valid model cache file found or error during processing (error: ${errorMessage}). Will create a new one.`
+    );
+    modelCache = null;
   }
 }
 
@@ -660,36 +711,86 @@ async function saveModelCache(): Promise<void> {
  */
 async function initializeModelCache(): Promise<void> {
   try {
-    await loadModelCache();
+    await loadModelCache(); // Sets modelCache to null if issues with the file or missing 'providers'
 
-    // If cache doesn't exist or is expired, create a new one with default values
+    let cacheNeedsSaving = false;
+
     if (!modelCache) {
+      logger.info(
+        "No existing cache or invalid cache structure loaded. Initializing a new model cache."
+      );
       modelCache = {
         timestamp: Date.now(),
         openRouterLastFetch: 0,
-        // Use an object type assertion to satisfy TypeScript's requirement
-        providers: {} as Record<LLMProvider, ProviderModelsResponseDto>
+        providers: {} as Record<LLMProvider, ProviderModelsResponseDto>,
       };
+      // A new cache might need saving if providers are added, handled below.
+    } else {
+      // Cache was loaded, but ensure 'providers' object and 'openRouterLastFetch' exist and are correct type.
+      // This handles cases where the cache file might be from an old version, an external script,
+      // or a previous save that didn't include the full structure.
+      if (
+        typeof modelCache.providers !== "object" ||
+        modelCache.providers === null
+      ) {
+        logger.warn(
+          "Loaded model cache is missing 'providers' object or it's not an object. Initializing 'providers' field."
+        );
+        modelCache.providers = {} as Record<
+          LLMProvider,
+          ProviderModelsResponseDto
+        >;
+        cacheNeedsSaving = true; // Cache structure was modified
+      }
+      if (typeof modelCache.openRouterLastFetch !== "number") {
+        logger.warn(
+          "Loaded model cache is missing 'openRouterLastFetch' or it's not a number. Initializing 'openRouterLastFetch'."
+        );
+        modelCache.openRouterLastFetch = 0;
+        cacheNeedsSaving = true; // Cache structure was modified
+      }
+    }
 
-      // Initialize with default models for each provider
-      const config = await loadProviderConfig();
+    // At this point, modelCache is guaranteed to be non-null,
+    // and modelCache.providers is guaranteed to be an object.
+    const config = await loadProviderConfig();
 
-      // Initialize providers object with an entry for each LLMProvider enum value
-      Object.values(LLMProvider).forEach(provider => {
-        if (config.providers[provider]?.enabled && modelCache) {
-          modelCache.providers[provider] = {
+    Object.values(LLMProvider).forEach((provider) => {
+      if (config.providers[provider]?.enabled) {
+        if (!modelCache!.providers[provider]) {
+          logger.info(`Initializing entry for provider ${provider} in cache.`);
+          modelCache!.providers[provider] = {
             provider,
             provider_display_name: PROVIDER_DISPLAY_NAMES[provider],
             models: DEFAULT_PROVIDER_MODELS[provider] || [],
-            last_updated: Date.now(),
+            last_updated: 0, // Force immediate fetch
           };
+          cacheNeedsSaving = true;
         }
-      });
+      }
+    });
 
+    if (cacheNeedsSaving) {
+      logger.info("Saving updated model cache after initialization.");
       await saveModelCache();
     }
   } catch (error) {
     logger.error("Error initializing model cache:", error);
+    // Fallback: ensure modelCache is at least minimally valid to prevent cascading errors
+    if (
+      !modelCache ||
+      typeof modelCache.providers !== "object" ||
+      modelCache.providers === null
+    ) {
+      modelCache = {
+        timestamp: Date.now(),
+        openRouterLastFetch: 0,
+        providers: {} as Record<LLMProvider, ProviderModelsResponseDto>,
+      };
+      logger.info(
+        "Fallback: Re-initialized modelCache due to critical error during initialization."
+      );
+    }
   }
 }
 
@@ -754,54 +855,111 @@ async function fetchModelsFromOpenRouter(): Promise<
     if (shouldThrottleOpenRouter()) {
       logger.info("Using cached OpenRouter data due to rate limiting");
       // Return empty result to trigger fallback to cached models
-      return {} as Record<LLMProvider, LLMModelData[]>;
+      const emptyResult = {} as Record<LLMProvider, LLMModelData[]>;
+      Object.values(LLMProvider).forEach((provider) => {
+        emptyResult[provider] = [];
+      });
+      return emptyResult;
     }
 
-    // Update the last request timestamp
-    openRouterLastRequest = Date.now();
-
     // Fetch models from OpenRouter
-    const openRouterModels = await fetchOpenRouterModels();
+    const openRouterModelsResponse = await fetchOpenRouterModels(); // This is from openrouter.service
+
+    logger.info(
+      `Received ${Array.isArray(openRouterModelsResponse) ? openRouterModelsResponse.length : "non-array"} OpenRouter models response`
+    );
+
+    // Safety check - if we didn't get any models, return empty result
+    if (!openRouterModelsResponse || openRouterModelsResponse.length === 0) {
+      logger.warn("OpenRouter returned empty or invalid models array");
+      const emptyResult = {} as Record<LLMProvider, LLMModelData[]>;
+      Object.values(LLMProvider).forEach((provider) => {
+        emptyResult[provider] = [];
+      });
+      return emptyResult;
+    }
+
+    const currentFetchTimestamp = Date.now(); // Timestamp of this successful fetch
 
     // Update the last successful fetch timestamp in cache
     if (modelCache) {
-      modelCache.openRouterLastFetch = Date.now();
-      await saveModelCache();
+      modelCache.openRouterLastFetch = currentFetchTimestamp;
     }
 
     // Reset rate limit flag since request was successful
     openRouterRateLimitHit = false;
 
     // Filter out any hidden or disabled models
-    const validModels = filterValidModels(openRouterModels);
+    const validModels = filterValidModels(openRouterModelsResponse);
 
-    // Group models by provider
+    // Group models by provider name from the endpoint.provider_name field
     const modelsByProviderName = groupModelsByProvider(validModels);
 
     // Create a mapping from our LLMProvider enum to lists of models
-    const result: Record<LLMProvider, LLMModelData[]> = Object.entries(
-      modelsByProviderName
-    ).reduce(
-      (acc, [providerName, models]) => {
-        // Map the provider name to our LLMProvider enum
-        const provider = mapOpenRouterProviderToLLMProvider(providerName);
+    const groupedResult: Record<LLMProvider, LLMModelData[]> = {} as Record<
+      LLMProvider,
+      LLMModelData[]
+    >;
 
-        if (!acc[provider]) {
-          acc[provider] = [];
-        }
+    // Initialize result with empty arrays for all providers to prevent undefined errors
+    Object.values(LLMProvider).forEach((provider) => {
+      groupedResult[provider] = [];
+    });
 
+    // Populate with actual models where available
+    Object.entries(modelsByProviderName).forEach(([providerName, models]) => {
+      // Map the provider name to our LLMProvider enum
+      const providerEnum = mapOpenRouterProviderToLLMProvider(providerName);
+
+      logger.debug(
+        `Mapping provider ${providerName} to internal provider ${providerEnum}`
+      );
+
+      if (providerEnum) {
+        // Ensure providerEnum is valid before using as key
         // Convert OpenRouter models to our LLMModelData format
         const enhancedModels = models.map(
           convertOpenRouterModelToEnhancedModel
         );
-        acc[provider] = [...acc[provider], ...enhancedModels];
 
-        return acc;
-      },
-      {} as Record<LLMProvider, LLMModelData[]>
-    );
+        // Add to our result - this ensures we have an array even if empty
+        groupedResult[providerEnum] = [
+          ...(groupedResult[providerEnum] || []),
+          ...enhancedModels,
+        ];
+      } else {
+        logger.warn(
+          `Could not map provider name \"${providerName}\" from OpenRouter to a known LLMProvider. These models will be skipped.`
+        );
+      }
+    });
 
-    return result;
+    // Update modelCache with all fetched provider data from this successful API call
+    if (modelCache) {
+      // modelCache.openRouterLastFetch is already set to currentFetchTimestamp
+
+      Object.entries(groupedResult).forEach(([providerStr, modelsInGroup]) => {
+        const providerKey = providerStr as LLMProvider; // String enum key to enum type
+        const displayName = PROVIDER_DISPLAY_NAMES[providerKey] || providerKey;
+
+        // Update the provider's entry with the models fetched (or an empty array if none)
+        // and set its last_updated to the current fetch's timestamp.
+        modelCache!.providers[providerKey] = {
+          provider: providerKey,
+          provider_display_name: displayName,
+          models: modelsInGroup,
+          last_updated: currentFetchTimestamp,
+        };
+      });
+
+      modelCache.timestamp = currentFetchTimestamp; // Update overall cache timestamp
+      await saveModelCache(); // Save all accumulated changes to the cache
+      logger.info(
+        "Updated model cache with fresh data from OpenRouter for all relevant providers."
+      );
+    }
+
+    return groupedResult;
   } catch (error) {
     logger.error("Error fetching models from OpenRouter:", error);
 
@@ -811,7 +969,13 @@ async function fetchModelsFromOpenRouter(): Promise<
       openRouterRateLimitHit = true;
     }
 
-    return {} as Record<LLMProvider, LLMModelData[]>;
+    // Return a properly structured empty result
+    const emptyResult = {} as Record<LLMProvider, LLMModelData[]>;
+    Object.values(LLMProvider).forEach((provider) => {
+      emptyResult[provider] = [];
+    });
+
+    return emptyResult;
   }
 }
 
@@ -841,38 +1005,142 @@ async function fetchProviderModels(
         (customProvider: CustomProviderConfig) => customProvider.models
       );
     }
-    // Use OpenRouter if enabled and not a custom provider
+    // Special handling for OpenRouter provider - always use direct OpenRouter service
+    else if (provider === LLMProvider.OPENROUTER) {
+      try {
+        // Fetch models directly from OpenRouter public API (no auth required)
+        const openRouterModels = await fetchOpenRouterModels();
+
+        if (openRouterModels && openRouterModels.length > 0) {
+          // Add special routing endpoints as the first models
+          const routingEndpoints: LLMModelData[] = [
+            {
+              id: "openrouter/auto",
+              object: "model",
+              created: Math.floor(Date.now() / 1000) - 86400,
+              owned_by: "openrouter",
+              display_name: "OpenRouter Auto",
+              provider_model_id: "auto",
+              context_length: 128000,
+              capabilities: {
+                input_modalities: ["text"],
+                output_modalities: ["text"],
+                supports_streaming: true,
+              },
+            },
+            {
+              id: "openrouter/best",
+              object: "model",
+              created: Math.floor(Date.now() / 1000) - 86400,
+              owned_by: "openrouter",
+              display_name: "OpenRouter Best",
+              provider_model_id: "best",
+              context_length: 128000,
+              capabilities: {
+                input_modalities: ["text"],
+                output_modalities: ["text"],
+                supports_streaming: true,
+              },
+            },
+            {
+              id: "openrouter/fastest",
+              object: "model",
+              created: Math.floor(Date.now() / 1000) - 86400,
+              owned_by: "openrouter",
+              display_name: "OpenRouter Fastest",
+              provider_model_id: "fastest",
+              context_length: 128000,
+              capabilities: {
+                input_modalities: ["text"],
+                output_modalities: ["text"],
+                supports_streaming: true,
+              },
+            },
+            {
+              id: "openrouter/cheapest",
+              object: "model",
+              created: Math.floor(Date.now() / 1000) - 86400,
+              owned_by: "openrouter",
+              display_name: "OpenRouter Cheapest",
+              provider_model_id: "cheapest",
+              context_length: 128000,
+              capabilities: {
+                input_modalities: ["text"],
+                output_modalities: ["text"],
+                supports_streaming: true,
+              },
+            },
+          ];
+
+          // Filter the models to just get valid ones for display
+          const validModels = filterValidModels(openRouterModels);
+
+          // Convert from OpenRouter format to our LLMModelData format
+          const enhancedModels = validModels.map(
+            convertOpenRouterModelToEnhancedModel
+          );
+
+          // Combine routing endpoints with regular models
+          models = [...routingEndpoints, ...enhancedModels];
+
+          logger.info(
+            `Fetched ${models.length} models from OpenRouter API (${enhancedModels.length} regular models plus 4 routing endpoints)`
+          );
+        } else {
+          // If we didn't get any models, fall back to defaults
+          models = DEFAULT_PROVIDER_MODELS[provider] || [];
+          logger.warn("OpenRouter returned no models, using defaults");
+        }
+      } catch (error) {
+        logger.error("Error fetching OpenRouter models:", error);
+        models = DEFAULT_PROVIDER_MODELS[provider] || [];
+      }
+    }
+    // Use OpenRouter if enabled for getting all provider models
     else if (useOpenRouter) {
       try {
-        // Fetch provider models from OpenRouter
-        const openRouterModels = await fetchModelsFromOpenRouter();
-        models = openRouterModels[provider] || [];
+        // Fetch all models from OpenRouter (already grouped by LLMProvider and converted to LLMModelData)
+        const allGroupedModels = await fetchModelsFromOpenRouter();
 
-        // If no models were found via OpenRouter, fall back to defaults
-        if (models.length === 0) {
-          // Check if we have cached models before falling back to defaults
+        if (
+          allGroupedModels &&
+          allGroupedModels[provider] &&
+          allGroupedModels[provider].length > 0
+        ) {
+          models = allGroupedModels[provider];
+          logger.info(
+            `Found ${models.length} models for provider ${provider} from OpenRouter data`
+          );
+        } else {
+          // If no models found for this specific provider in the OpenRouter data,
+          // or if allGroupedModels is empty/null, or if the specific provider array is empty.
+          logger.info(
+            `No models for provider ${provider} found in OpenRouter data, or OpenRouter data itself is empty/missing this provider.`
+          );
           if (modelCache?.providers[provider]?.models.length) {
-            logger.info(
-              `Using cached models for ${provider} as OpenRouter returned none`
-            );
+            logger.info(`Falling back to cached models for ${provider}`);
             models = modelCache.providers[provider].models;
           } else {
+            logger.info(`Falling back to default models for ${provider}`);
             models = DEFAULT_PROVIDER_MODELS[provider] || [];
           }
         }
       } catch (error) {
         logger.error(
-          `Error fetching ${provider} models from OpenRouter:`,
+          `Error fetching or processing ${provider} models via OpenRouter:`,
           error
         );
 
-        // Use cached models if available, otherwise fall back to defaults
+        // Fallback logic in case of error during fetch/processing
         if (modelCache?.providers[provider]?.models.length) {
           logger.info(
-            `Using cached models for ${provider} due to OpenRouter fetch error`
+            `Using cached models for ${provider} due to OpenRouter fetch/processing error`
           );
           models = modelCache.providers[provider].models;
         } else {
+          logger.info(
+            `Using default models for ${provider} due to OpenRouter fetch/processing error and no cache`
+          );
           models = DEFAULT_PROVIDER_MODELS[provider] || [];
         }
       }
@@ -906,11 +1174,6 @@ async function fetchProviderModels(
   } catch (error) {
     logger.error(`Error fetching models for provider ${provider}:`, error);
 
-    // Determine retry delay based on whether this is a repeated failure
-    const retryDelay = openRouterRateLimitHit
-      ? CACHE_RETRY_DELAY * 5
-      : CACHE_RETRY_DELAY;
-
     // Return cached models if available, otherwise use defaults
     const cachedModels = modelCache?.providers?.[provider]?.models || [];
     const defaultModels = DEFAULT_PROVIDER_MODELS[provider] || [];
@@ -921,7 +1184,7 @@ async function fetchProviderModels(
       provider,
       provider_display_name: PROVIDER_DISPLAY_NAMES[provider],
       models: fallbackModels,
-      last_updated: Date.now() - DEFAULT_CACHE_TTL + retryDelay, // Set to expire after retry delay
+      last_updated: Date.now(),
     };
   }
 }
@@ -972,7 +1235,14 @@ export const getProviderModels = async (
     return modelCache.providers[provider];
   } catch (error) {
     logger.error(`Error getting models for provider ${provider}:`, error);
-    throw error;
+
+    // Return a fallback response with default models rather than throwing
+    return {
+      provider,
+      provider_display_name: PROVIDER_DISPLAY_NAMES[provider],
+      models: DEFAULT_PROVIDER_MODELS[provider] || [],
+      last_updated: Date.now(),
+    };
   }
 };
 
@@ -990,7 +1260,19 @@ export const getAllProviderModels =
 
       // Fetch models for all enabled providers
       const providerModelsPromises = enabledProviders.map((provider) =>
-        getProviderModels(provider)
+        getProviderModels(provider).catch((error) => {
+          // Log the error but return a fallback response for this provider
+          logger.error(
+            `Error getting models for provider ${provider} in getAllProviderModels:`,
+            error
+          );
+          return {
+            provider,
+            provider_display_name: PROVIDER_DISPLAY_NAMES[provider],
+            models: DEFAULT_PROVIDER_MODELS[provider] || [],
+            last_updated: Date.now(),
+          };
+        })
       );
 
       const providerModels = await Promise.all(providerModelsPromises);
@@ -1000,7 +1282,18 @@ export const getAllProviderModels =
       };
     } catch (error) {
       logger.error("Error getting all provider models:", error);
-      throw error;
+
+      // Return fallback data with default models for each provider
+      const fallbackProviders = Object.values(LLMProvider).map((provider) => ({
+        provider,
+        provider_display_name: PROVIDER_DISPLAY_NAMES[provider],
+        models: DEFAULT_PROVIDER_MODELS[provider] || [],
+        last_updated: Date.now(),
+      }));
+
+      return {
+        providers: fallbackProviders,
+      };
     }
   };
 
@@ -1124,10 +1417,10 @@ export const createChatCompletionWithVercelAi = async (
           msg.role === "user"
             ? "user"
             : msg.role === "assistant"
-            ? "assistant"
-            : msg.role === "system"
-            ? "system"
-            : "user",
+              ? "assistant"
+              : msg.role === "system"
+                ? "system"
+                : "user",
         content: msg.content,
         name: msg.name,
       }));
@@ -1188,10 +1481,10 @@ export const createChatCompletionWithVercelAi = async (
           msg.role === "user"
             ? "user"
             : msg.role === "assistant"
-            ? "assistant"
-            : msg.role === "system"
-            ? "system"
-            : "user",
+              ? "assistant"
+              : msg.role === "system"
+                ? "system"
+                : "user",
         content: msg.content,
         name: msg.name,
       }));
@@ -1501,17 +1794,22 @@ function calculateTokenCount(
           return acc + 150; // Rough estimate for image description
         }
         // Handle reasoning parts
-        else if (part.type === "reasoning" && typeof part.reasoning === "string") {
+        else if (
+          part.type === "reasoning" &&
+          typeof part.reasoning === "string"
+        ) {
           return acc + Math.ceil(part.reasoning.length / 4);
         }
         // Handle tool call parts
         else if (part.type === "tool_call" && part.tool_call) {
-          const nameTokens = typeof part.tool_call.name === "string"
-            ? Math.ceil(part.tool_call.name.length / 4)
-            : 0;
-          const argsTokens = typeof part.tool_call.arguments === "string"
-            ? Math.ceil(part.tool_call.arguments.length / 4)
-            : 0;
+          const nameTokens =
+            typeof part.tool_call.name === "string"
+              ? Math.ceil(part.tool_call.name.length / 4)
+              : 0;
+          const argsTokens =
+            typeof part.tool_call.arguments === "string"
+              ? Math.ceil(part.tool_call.arguments.length / 4)
+              : 0;
           return acc + nameTokens + argsTokens;
         }
       }
@@ -1522,12 +1820,13 @@ function calculateTokenCount(
   // For tool content or other object structures
   if (typeof content === "object") {
     // Type guard to check for tool result objects
-    const isToolResult = (obj: any): obj is { type: string; content: any } => 
-      obj && typeof obj === "object" && 
-      typeof obj.type === "string" && 
+    const isToolResult = (obj: any): obj is { type: string; content: any } =>
+      obj &&
+      typeof obj === "object" &&
+      typeof obj.type === "string" &&
       obj.type === "tool_result" &&
-      'content' in obj;
-    
+      "content" in obj;
+
     // Check if it's a tool result with content property
     if (isToolResult(content)) {
       const toolContent = content.content;
@@ -1538,7 +1837,7 @@ function calculateTokenCount(
         return Math.ceil(JSON.stringify(toolContent).length / 4);
       }
     }
-    
+
     // Try to estimate based on JSON stringification for any other object
     return Math.ceil(JSON.stringify(content).length / 4);
   }
@@ -1599,10 +1898,10 @@ export const callLLM = async (request: {
     // Use provided parameters if available, otherwise use bot configuration
     const llmProvider = request.provider || bot.configuration.llmProvider;
     const llmModel = request.model || bot.configuration.llmModel;
-    
+
     // Prepare messages array for Vercel AI SDK
     const messages = [];
-    
+
     // Add system message if available
     if (request.systemPrompt) {
       messages.push({
@@ -1610,7 +1909,7 @@ export const callLLM = async (request: {
         content: request.systemPrompt,
       });
     }
-    
+
     // Add history if available
     if (request.history && request.history.length > 0) {
       messages.push(...request.history);
@@ -1622,7 +1921,7 @@ export const callLLM = async (request: {
         name: request.username || undefined,
       });
     }
-    
+
     // Use Vercel AI SDK via createChatCompletion
     const completionRequest: LLMCompletionRequestDto = {
       model: llmModel,
@@ -1633,29 +1932,33 @@ export const callLLM = async (request: {
       frequency_penalty: 0,
       presence_penalty: 0,
     };
-    
+
     // Call the Vercel AI SDK integration
     try {
-      const completion = await createChatCompletion(completionRequest, request.userId);
-      
+      const completion = await createChatCompletion(
+        completionRequest,
+        request.userId
+      );
+
       // Extract the assistant's message
       const assistantMessage = completion.choices[0]?.message;
       if (!assistantMessage || !assistantMessage.content) {
         throw new Error("No valid response received from LLM");
       }
-      
+
       // Check if the response indicates image generation is needed
       // This is a simple heuristic - in a production system, you would
       // use proper function/tool calling
-      const shouldGenerateImage = 
+      const shouldGenerateImage =
         assistantMessage.content.includes("![") || // Markdown image syntax
         assistantMessage.content.toLowerCase().includes("generate an image") ||
         assistantMessage.content.toLowerCase().includes("create an image");
-      
+
       let imagePrompt = null;
       if (shouldGenerateImage) {
         // Simple extraction of image description
-        const pattern = /!\[.*?\]\((.+?)\)|generate an image of (.+?)(?:\.|$)|create an image of (.+?)(?:\.|$)/i;
+        const pattern =
+          /!\[.*?\]\((.+?)\)|generate an image of (.+?)(?:\.|$)|create an image of (.+?)(?:\.|$)/i;
         const match = assistantMessage.content.match(pattern);
         if (match) {
           imagePrompt = match[1] || match[2] || match[3];
@@ -1664,7 +1967,7 @@ export const callLLM = async (request: {
           imagePrompt = request.prompt;
         }
       }
-      
+
       return {
         text: assistantMessage.content,
         generateImage: shouldGenerateImage,
@@ -1672,10 +1975,12 @@ export const callLLM = async (request: {
       };
     } catch (error) {
       logger.error(`Error generating completion with Vercel AI SDK: ${error}`);
-      
+
       // Fall back to legacy direct API calls if Vercel AI SDK fails
-      logger.info(`Falling back to direct API call for provider ${llmProvider}`);
-      
+      logger.info(
+        `Falling back to direct API call for provider ${llmProvider}`
+      );
+
       // Legacy direct API integration
       const { apiKey } = bot.configuration;
       switch (llmProvider) {

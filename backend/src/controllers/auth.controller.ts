@@ -1,4 +1,3 @@
-import { AuthController as CommonAuthController } from "@discura/common/controllers";
 import {
   ErrorResponseDto,
   MessageResponseDto,
@@ -6,6 +5,7 @@ import {
   UserResponseDto,
   BotResponseDto,
 } from "@discura/common/";
+import { AuthController as CommonAuthController } from "@discura/common/controllers";
 import { JwtPayload } from "@discura/common/types/auth";
 import { Request } from "express";
 import jwt from "jsonwebtoken";

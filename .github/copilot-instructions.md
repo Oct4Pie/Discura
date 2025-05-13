@@ -12,9 +12,13 @@
 - [API Type Troubleshooting](#api-type-troubleshooting)
 - [Controller Injection Mechanism](#controller-injection-mechanism)
 - [LLM Provider System](#llm-provider-system)
+- [Discord Integration](#discord-integration)
 - [Project Status](#project-status)
+- [TypeScript Error Resolution](#typescript-error-resolution)
 - [Using Context7](#using-context7)
 - [Troubleshooting Guide](#troubleshooting-guide)
+- [Database Patterns](#database-patterns)
+- [Testing & Quality Assurance](#testing--quality-assurance)
 
 ## Core Mandates
 
@@ -452,6 +456,123 @@ The Vercel AI SDK integration provides a flexible, streaming-ready interface to 
 
 Remember: The backend is the ONLY component that should directly interact with LLM provider APIs. The frontend should ONLY use the API client to retrieve model data and make completion requests.
 
+## Discord Integration
+
+The Discura platform includes a robust Discord bot integration system that connects LLM capabilities with Discord servers. This integration follows our architectural principles with all Discord-specific logic implemented in the backend.
+
+### Discord Integration Architecture
+
+1. **Backend-Only Implementation**: All Discord API interactions are contained within the backend:
+   - Bot client management in `backend/src/services/discord.service.ts`
+   - Message handling in `backend/src/services/message.service.ts`
+   - Bot lifecycle management in `backend/src/services/bot.service.ts`
+
+2. **Multi-Bot Support**: The system supports running multiple Discord bots simultaneously:
+   - Each bot has its own configuration, Discord token, and LLM settings
+   - Bots are isolated from each other with separate client instances
+   - Configuration changes can be applied without restarting other bots
+
+3. **Event Handling**: Discord events are processed through a centralized system:
+   - Message events are routed through `message.service.ts`
+   - Command interactions (slash commands, buttons, modals) are handled consistently
+   - Error handling includes automatic reconnection and status reporting
+
+### Bot Configuration Guidelines
+
+1. **Configuration Structure**: Bot configurations must follow the `BotConfiguration` interface:
+   ```typescript
+   // Important fields in the BotConfiguration interface
+   interface BotConfiguration {
+     systemPrompt: string;       // Base instructions for the LLM
+     personality?: string;       // Brief personality description
+     traits?: string[];          // List of personality traits
+     backstory?: string;         // Detailed backstory
+     llmProvider: LLMProvider;   // MUST be an enum value, not the enum type
+     llmModel: string;           // Model identifier
+     imageGeneration?: {
+       enabled: boolean;
+       provider: ImageProvider;  // MUST be an enum value, not the enum type
+       model?: string;
+     };
+     // ...other configuration options
+   }
+   ```
+
+2. **Discord Event Handling**: When implementing Discord event handlers:
+   - Always use proper TypeScript channel type checking with type guards
+   - Handle rate limits appropriately to avoid Discord API restrictions
+   - Implement proper error recovery for network issues
+
+3. **Enum Usage**: When working with enums in bot configurations:
+   - Always use specific enum values: `LLMProvider.OPENAI`, not `typeof LLMProvider`
+   - Import enums from the correct location: `import { LLMProvider } from '@discura/common/types';`
+   - Validate enum values when received from API requests
+
+### Bot Lifecycle Management
+
+The bot lifecycle follows this pattern:
+1. Bot configuration created/updated via API
+2. Bot started/stopped via API endpoints
+3. Discord client initialized with proper intents and handlers
+4. Events processed through appropriate service methods
+5. LLM requests made through the provider system
+6. Responses sent back to Discord
+
+### Implementation Patterns
+
+1. **Typing Indicators**: Use proper typing indicators that refresh before timeout:
+   ```typescript
+   // Example from message.service.ts
+   startTypingIndicator(channel: TextChannel | DMChannel | ThreadChannel) {
+     // Clear any existing typing indicator
+     const existingTyping = typingIndicators.get(channel.id);
+     if (existingTyping) clearInterval(existingTyping);
+     
+     // Start typing
+     channel.sendTyping();
+     
+     // Keep typing indicator active with periodic refreshes
+     const typingInterval = setInterval(() => {
+       channel.sendTyping().catch(err => {
+         // Error handling
+       });
+     }, 5000); // Discord typing indicator lasts ~10s, refresh every 5s
+     
+     typingIndicators.set(channel.id, typingInterval);
+   }
+   ```
+
+2. **Channel Type Guards**: Always check channel types before operations:
+   ```typescript
+   if (!channel.isTextBased()) return;
+   
+   // For specific channel type operations
+   if (channel.type === ChannelType.DM) {
+     // DM-specific logic
+   } else if (channel.type === ChannelType.GuildText) {
+     // Text channel logic
+   }
+   ```
+
+3. **Error Recovery**: Implement proper connection recovery:
+   ```typescript
+   client.on('disconnect', (event) => {
+     logger.warn(`Bot ${botId} disconnected with code ${event.code}`);
+     
+     // Attempt reconnection based on the error code
+     if (isRecoverableError(event.code)) {
+       setTimeout(() => {
+         attemptReconnect(client, botId);
+       }, RECONNECT_DELAY);
+     } else {
+       // Update bot status to ERROR
+       updateBotStatus(botId, BotStatus.ERROR);
+     }
+   });
+   ```
+
+Remember: All Discord-specific code must remain in the backend. The frontend should only interact with Discord functionality through the API endpoints.
+
 ## Project Status (May 2025)
 
 ### Current Tasks & Recent Completions
@@ -546,6 +667,141 @@ When you're uncertain about how to use a specific program, tool, framework, comp
 
 NEVER edit generated files (e.g., `frontend/src/api/generated/`, `frontend/src/api/schema.ts`, `common/src/schema/*`, `common/src/routes/*`). ONLY edit the source of truth (`common/src/types/api/` for API types, `common/src/controllers/` for routes) so the changes will be reflected in the generated files after running `./generate-api-types.sh`.
 
+## TypeScript Error Resolution
+
+Discura uses a sophisticated TypeScript setup with strict typing. Here are guidelines for resolving common TypeScript errors:
+
+### Enum Value vs Enum Type Errors
+
+One of the most common errors involves using enum types instead of enum values:
+
+1. **Problem**: Using `typeof Enum` instead of a specific enum value
+   ```typescript
+   // INCORRECT
+   const config: BotConfiguration = {
+     llmProvider: typeof LLMProvider, // Error: Type 'typeof LLMProvider' is not assignable to type 'LLMProvider'
+     // ...other fields
+   };
+   ```
+
+2. **Solution**: Always use specific enum values
+   ```typescript
+   // CORRECT
+   const config: BotConfiguration = {
+     llmProvider: LLMProvider.OPENAI, // Using a specific enum value
+     // ...other fields
+   };
+   ```
+
+3. **Checking for Enum Values**: When validating if a value is a valid enum value:
+   ```typescript
+   // Use Object.values to check enum membership
+   if (Object.values(LLMProvider).includes(providerId as LLMProvider)) {
+     // Valid enum value
+   }
+   ```
+
+### Import Resolution Errors
+
+1. **Problem**: "Cannot find module" or "Has no exported member" errors
+   ```
+   error TS2307: Cannot find module '@discura/common/types' or its corresponding type declarations.
+   error TS2724: '"../api"' has no exported member named 'CreateBotRequest'. Did you mean 'CreateBotRequestDto'?
+   ```
+
+2. **Solutions**:
+   - For API types, use the correct import path and name:
+     ```typescript
+     // INCORRECT: import { CreateBotRequest } from '../api';
+     // CORRECT:
+     import { CreateBotRequestDto } from '../api';
+     ```
+   - For non-API shared types, check the export path:
+     ```typescript
+     // Make sure the type is exported in common/src/types/index.ts
+     import { BotStatus } from '@discura/common/types';
+     ```
+   - After API type changes, always run `./generate-api-types.sh`
+
+### Type Compatibility Errors
+
+1. **Problem**: Incompatible types when working with API responses
+   ```
+   Type '{ /* some properties */ }' is not assignable to type 'BotConfiguration'
+   ```
+
+2. **Solutions**:
+   - Ensure object literals match the expected interface exactly:
+     ```typescript
+     // Partial updates are allowed with Partial<T>
+     updateBotConfiguration(id, config as Partial<BotConfiguration>);
+     
+     // Full objects must match the interface exactly
+     const fullConfig: BotConfiguration = {
+       // Include all required properties
+     };
+     ```
+   - Use type assertions judiciously and only when necessary:
+     ```typescript
+     // Use type assertions only when you're certain about the type
+     const botData = getBotData() as BotData;
+     ```
+
+### Working with DOM and Discord.js Types
+
+1. **Problem**: Type narrowing with Discord.js channel types
+   ```typescript
+   // Error: Property 'send' does not exist on type 'Channel'.
+   channel.send("Hello"); 
+   ```
+
+2. **Solution**: Use type guards and proper channel type checking:
+   ```typescript
+   if (channel.isTextBased()) {
+     // Now TypeScript knows this is a TextBasedChannel
+     channel.send("Hello");
+   }
+   
+   // For more specific operations:
+   if (channel.type === ChannelType.GuildText) {
+     // Now TypeScript knows this is specifically a TextChannel
+     channel.threads.create({ name: "New Thread" });
+   }
+   ```
+
+3. **Event Handler Types**: Properly type Discord.js event handlers:
+   ```typescript
+   client.on(Events.MessageCreate, async (message: Message) => {
+     // Properly typed message object
+   });
+   ```
+
+### Declaration File Issues
+
+If you encounter errors related to missing declarations:
+
+1. **Problem**: "Implicit any" errors or "Could not find a declaration file" errors:
+   ```
+   error TS7016: Could not find a declaration file for module '@some/module'
+   ```
+
+2. **Solutions**:
+   - Check if type definitions exist in `@types` packages:
+     ```bash
+     npm install --save-dev @types/module-name
+     ```
+   - Create simple declaration stubs in a `.d.ts` file for untyped modules:
+     ```typescript
+     // In src/types/custom.d.ts
+     declare module 'untyped-module' {
+       const value: any;
+       export default value;
+     }
+     ```
+   - For project modules, make sure paths are correctly configured in tsconfig.json
+
+Remember: TypeScript errors are helpful guides to ensuring type safety. The goal is not to silence them with `any` or `!` assertions, but to fix the underlying type issues.
+
 ## Troubleshooting Guide
 
 ### Common API Generation Issues
@@ -607,3 +863,330 @@ NEVER edit generated files (e.g., `frontend/src/api/generated/`, `frontend/src/a
      3. Adjust cache TTLs via environment variables if needed: `OPENROUTER_CACHE_TTL`, `MODEL_CACHE_TTL`
      4. Check backend logs for rate limiting warnings
      5. Ensure frontend is properly requesting models through the API client
+
+## Database Patterns
+
+Discura uses a SQLite database (`data/discura.db`) with an adapter pattern for data access. Follow these guidelines when working with database functionality:
+
+### Adapter Pattern Implementation
+
+The database layer follows a strict adapter pattern to separate database operations from business logic:
+
+1. **Model Definitions**: Database models defined in `backend/src/models/`:
+   ```typescript
+   // Example model definition
+   export interface BotModel {
+     id: string;
+     name: string;
+     applicationId: string;
+     discordToken: string;
+     configuration: BotConfigurationJSON;
+     user: string;
+     status: string;
+     createdAt: string;
+     updatedAt: string;
+   }
+   ```
+
+2. **Adapters**: Implement CRUD operations in adapter classes in `backend/src/models/adapters/`:
+   ```typescript
+   // Example adapter implementation
+   export class BotAdapter {
+     static async findById(id: string): Promise<BotModel | null> {
+       // Database logic
+     }
+
+     static async create(data: Partial<BotModel>): Promise<BotModel> {
+       // Database logic
+     }
+     
+     // Other CRUD operations
+   }
+   ```
+
+3. **Service Layer**: Services consume adapters rather than directly accessing the database:
+   ```typescript
+   // Example service using an adapter
+   export async function getBotById(id: string): Promise<BotModel | null> {
+     return BotAdapter.findById(id);
+   }
+   ```
+
+### Type Mapping Between Database and API
+
+When database models don't exactly match API types, implement explicit mapping functions:
+
+```typescript
+// Example mapper between database model and API type
+export function toBotResponseDto(model: BotModel): BotResponseDto {
+  return {
+    id: model.id,
+    name: model.name,
+    applicationId: model.applicationId,
+    // Map other fields as needed
+    status: model.status as BotStatus,
+    // Parse JSON fields if needed
+    configuration: model.configuration ? JSON.parse(model.configuration) : undefined,
+    createdAt: new Date(model.createdAt),
+    updatedAt: new Date(model.updatedAt)
+  };
+}
+```
+
+### Schema Migration Strategy
+
+For schema changes, follow these steps:
+
+1. Update the model interface in `backend/src/models/`
+2. Update any affected adapter code
+3. Create a migration script if needed for existing data
+4. Update any mappers between database models and API types
+5. Test with both new and existing data
+
+### Best Practices
+
+1. **JSON Serialization**: For complex objects stored as JSON:
+   ```typescript
+   // When storing
+   const configJson = JSON.stringify(configuration);
+   
+   // When retrieving
+   const config = JSON.parse(model.configuration);
+   ```
+
+2. **Type Guards**: Use type guards when working with database results:
+   ```typescript
+   if (result && typeof result === 'object' && 'id' in result) {
+     // Safe to use result as the expected model
+   }
+   ```
+
+3. **Database Operations**: Keep database operations in adapters only:
+   - Controllers should NEVER contain direct database queries
+   - Services should use adapters for all data access
+   - Adapters should handle all SQL/query logic
+
+4. **Error Handling**: Implement proper error handling for database operations:
+   ```typescript
+   try {
+     const result = await BotAdapter.create(data);
+     return result;
+   } catch (error) {
+     logger.error('Database error:', error);
+     throw new DatabaseError('Failed to create bot', error);
+   }
+   ```
+
+These patterns ensure separation of concerns and make database changes more manageable.
+
+## Testing & Quality Assurance
+
+Discura implements comprehensive testing strategies to ensure code quality. Follow these guidelines for testing and quality assurance:
+
+### Testing Architecture
+
+The testing approach follows a multi-layered strategy:
+
+1. **Unit Tests**: Test individual functions, classes, and components in isolation:
+   - Backend services and utilities
+   - Frontend components and hooks
+   - Shared utilities in the common package
+
+2. **Integration Tests**: Test interactions between subsystems:
+   - API endpoints with database functionality
+   - Controller integration tests
+   - Frontend component integration with API clients
+
+3. **End-to-End Tests**: Test complete user workflows:
+   - Discord bot interactions
+   - User authentication flows
+   - Multi-step processes (e.g., bot creation, configuration, and starting)
+
+### Test Implementation Guidelines
+
+#### Backend Tests
+
+Backend tests use Jest and Supertest, following these conventions:
+
+```typescript
+// Example backend test
+describe('Bot Service', () => {
+  beforeEach(() => {
+    // Setup test database or mocks
+    jest.resetAllMocks();
+  });
+  
+  it('should create a new bot with valid data', async () => {
+    // Arrange
+    const userData = { /* test data */ };
+    
+    // Act
+    const result = await createBot(userData);
+    
+    // Assert
+    expect(result).toHaveProperty('id');
+    expect(BotAdapter.create).toHaveBeenCalledWith(expect.objectContaining({
+      user: userData.userId
+    }));
+  });
+  
+  it('should throw an error when creating a bot with invalid data', async () => {
+    // Arrange, Act, Assert
+    await expect(createBot({})).rejects.toThrow();
+  });
+});
+```
+
+#### Frontend Tests
+
+Frontend tests use React Testing Library and MSW for API mocking:
+
+```typescript
+// Example frontend test
+describe('BotList Component', () => {
+  // Setup MSW handlers to mock API responses
+  beforeAll(() => server.listen());
+  afterEach(() => server.resetHandlers());
+  afterAll(() => server.close());
+  
+  it('renders bot list when API returns data', async () => {
+    // Arrange - set up mock response
+    server.use(
+      rest.get('/api/bots', (req, res, ctx) => {
+        return res(ctx.json({ bots: [/* test data */] }));
+      })
+    );
+    
+    // Act
+    render(<BotList />);
+    
+    // Assert
+    expect(await screen.findByText('My Test Bot')).toBeInTheDocument();
+  });
+  
+  it('shows error state when API fails', async () => {
+    // Arrange - simulate API error
+    server.use(
+      rest.get('/api/bots', (req, res, ctx) => {
+        return res(ctx.status(500));
+      })
+    );
+    
+    // Act
+    render(<BotList />);
+    
+    // Assert
+    expect(await screen.findByText('Failed to load bots')).toBeInTheDocument();
+  });
+});
+```
+
+#### Type Testing
+
+Use TypeScript testing patterns to validate type correctness:
+
+```typescript
+// Example type test
+describe('Type Compatibility', () => {
+  it('BotResponseDto should be compatible with frontend Bot type', () => {
+    // This will cause a compile-time error if types are incompatible
+    const checkTypes = <T extends BotResponseDto>(_: T) => {};
+    
+    // Create a mock that matches the frontend Bot interface
+    const frontendBot: Bot = {
+      id: '123',
+      name: 'Test Bot',
+      status: BotStatus.OFFLINE,
+      // ...other required properties
+    };
+    
+    // This will fail to compile if types are incompatible
+    checkTypes(frontendBot);
+  });
+});
+```
+
+### Mocking Strategies
+
+1. **API Mocking**: Use MSW (Mock Service Worker) for frontend API mocks:
+   ```typescript
+   // Setup in setupTests.ts
+   import { setupServer } from 'msw/node';
+   import { rest } from 'msw';
+   
+   export const server = setupServer(
+     rest.get('/api/bots', (req, res, ctx) => {
+       return res(ctx.json({ bots: [] }));
+     }),
+     // Other handler definitions
+   );
+   ```
+
+2. **Database Mocking**: Use Jest mocks for database adapters:
+   ```typescript
+   // Mock the adapter
+   jest.mock('../models/adapters/bot.adapter', () => ({
+     BotAdapter: {
+       findById: jest.fn(),
+       create: jest.fn(),
+       // Other methods
+     }
+   }));
+   ```
+
+3. **External Service Mocking**: Mock third-party services:
+   ```typescript
+   // Mock OpenRouter API responses
+   jest.mock('../services/openrouter.service', () => ({
+     fetchModels: jest.fn().mockResolvedValue([/* mock models */]),
+     // Other methods
+   }));
+   ```
+
+### Test Coverage Requirements
+
+Each part of the codebase has specific coverage requirements:
+
+1. **Backend Services**: Minimum 80% code coverage, with critical paths at 100%
+2. **API Controllers**: 100% coverage for all endpoints
+3. **Frontend Components**: Minimum 70% coverage, with all user interactions tested
+4. **Common Package Utilities**: 90% coverage
+
+### Continuous Integration Testing
+
+The CI pipeline runs all tests on each pull request:
+
+1. **Lint Checks**: ESLint and Prettier validation
+2. **Type Checking**: Full TypeScript compilation with `--strict`
+3. **Unit Tests**: All Jest tests
+4. **Integration Tests**: API and service integration tests
+5. **E2E Tests**: Core user workflows
+
+### Test Debugging Tips
+
+1. **Logging in Tests**: Add temporary console logs with a clear prefix:
+   ```typescript
+   console.log('[TEST DEBUG]', JSON.stringify(result, null, 2));
+   ```
+
+2. **Single Test Execution**: Run a specific test with:
+   ```bash
+   npm test -- -t "should create a new bot"
+   ```
+
+3. **Test Environment Variables**: Set `DEBUG=msw*` to see detailed API mock information.
+
+4. **Test Data Generators**: Use factory functions to generate test data:
+   ```typescript
+   function createTestBot(overrides = {}) {
+     return {
+       id: 'test-id',
+       name: 'Test Bot',
+       status: BotStatus.OFFLINE,
+       // ...other defaults
+       ...overrides
+     };
+   }
+   ```
+
+Following these testing guidelines ensures that code changes are thoroughly validated before deployment.

@@ -1,4 +1,3 @@
-import { BotController as CommonBotController } from "@discura/common/controllers";
 import {
   CreateBotRequestDto,
   CreateBotResponseDto,
@@ -13,7 +12,11 @@ import {
   GenerateBotInviteLinkResponseDto,
   DeleteBotResponseDto,
   BotStatus,
+  TokenValidationResult,
 } from "@discura/common";
+import { BotController as CommonBotController } from "@discura/common/controllers";
+import { Request } from "express";
+
 import {
   createBot,
   getBotsByUser,
@@ -25,7 +28,7 @@ import {
   deleteBot,
   generateBotInviteLink,
 } from "../services/bot.service";
-import { Request } from "express";
+import { validateBotToken } from "../services/discord.service";
 import { logger } from "../utils/logger";
 
 export class BotController extends CommonBotController {
@@ -37,7 +40,7 @@ export class BotController extends CommonBotController {
    */
   public async createBot(
     requestBody: CreateBotRequestDto,
-    request: Request
+    request: Request,
   ): Promise<CreateBotResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -99,7 +102,7 @@ export class BotController extends CommonBotController {
    */
   public async getBotById(
     id: string,
-    request: Request
+    request: Request,
   ): Promise<GetBotResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -139,7 +142,7 @@ export class BotController extends CommonBotController {
    */
   public async startBotById(
     id: string,
-    request: Request
+    request: Request,
   ): Promise<StartBotResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -208,7 +211,7 @@ export class BotController extends CommonBotController {
    */
   public async stopBotById(
     id: string,
-    request: Request
+    request: Request,
   ): Promise<StopBotResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -261,7 +264,7 @@ export class BotController extends CommonBotController {
   public async updateBot(
     id: string,
     requestBody: UpdateBotRequestDto,
-    request: Request
+    request: Request,
   ): Promise<UpdateBotResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -308,7 +311,7 @@ export class BotController extends CommonBotController {
   public async updateBotConfiguration(
     id: string,
     requestBody: UpdateBotConfigurationRequestDto,
-    request: Request
+    request: Request,
   ): Promise<UpdateBotConfigurationResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -328,7 +331,7 @@ export class BotController extends CommonBotController {
       // Check if bot belongs to user - use bot.user instead of bot.userId
       if (bot.user !== userId) {
         throw new Error(
-          "You do not have permission to update this bot's configuration"
+          "You do not have permission to update this bot's configuration",
         );
       }
 
@@ -338,7 +341,7 @@ export class BotController extends CommonBotController {
       // Make sure we have a bot returned
       if (!updatedBot) {
         throw new Error(
-          "Failed to update bot configuration: Bot not found after update"
+          "Failed to update bot configuration: Bot not found after update",
         );
       }
 
@@ -392,7 +395,7 @@ export class BotController extends CommonBotController {
    */
   public async deleteBot(
     id: string,
-    request: Request
+    request: Request,
   ): Promise<DeleteBotResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -446,7 +449,7 @@ export class BotController extends CommonBotController {
    */
   public async generateInviteLink(
     id: string,
-    request: Request
+    request: Request,
   ): Promise<GenerateBotInviteLinkResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -466,7 +469,7 @@ export class BotController extends CommonBotController {
       // Check if bot belongs to user - use bot.user instead of bot.userId
       if (bot.user !== userId) {
         throw new Error(
-          "You do not have permission to generate an invite link for this bot"
+          "You do not have permission to generate an invite link for this bot",
         );
       }
 
@@ -488,6 +491,47 @@ export class BotController extends CommonBotController {
       }
 
       throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Validate Discord bot token
+   * @param requestBody Object containing the token to validate
+   * @returns Validation result with token information
+   */
+  public async validateToken(requestBody: {
+    token: string;
+  }): Promise<TokenValidationResult> {
+    try {
+      logger.info("Validating Discord bot token");
+
+      if (!requestBody.token) {
+        return {
+          valid: false,
+          messageContentEnabled: false,
+          error: "No token provided",
+        };
+      }
+
+      // Call the Discord service to validate the token
+      const validationResult = await validateBotToken(requestBody.token);
+
+      if (validationResult.valid) {
+        logger.info(
+          `Token validation successful for bot ${validationResult.botId}`,
+        );
+      } else {
+        logger.warn(`Token validation failed: ${validationResult.error}`);
+      }
+
+      return validationResult;
+    } catch (error: any) {
+      logger.error("Token validation error:", error);
+      return {
+        valid: false,
+        messageContentEnabled: false,
+        error: `Token validation failed: ${error.message}`,
+      };
     }
   }
 }

@@ -1,5 +1,3 @@
-import * as constants from "@discura/common/constants";
-import { ConstantsController as CommonConstantsController } from "@discura/common/controllers";
 import {
   ConstantsResponseDto,
   BotStatusConstants,
@@ -8,6 +6,8 @@ import {
   DefaultsConstants,
   DiscordApiConstants,
 } from "@discura/common";
+import * as constants from "@discura/common/constants";
+import { ConstantsController as CommonConstantsController } from "@discura/common/controllers";
 
 import { logger } from "../utils/logger";
 

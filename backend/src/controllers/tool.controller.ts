@@ -1,4 +1,3 @@
-import { ToolController as CommonToolController } from "@discura/common/controllers";
 import {
   ToolDefinitionDto,
   ToolDefinitionsResponseDto,
@@ -6,6 +5,7 @@ import {
   UpdateToolRequest,
   ToggleToolStatusRequest,
 } from "@discura/common";
+import { ToolController as CommonToolController } from "@discura/common/controllers";
 import { Request } from "express";
 
 import { ToolAdapter } from "../models/adapters/tool.adapter";

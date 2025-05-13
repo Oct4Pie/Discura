@@ -1902,6 +1902,36 @@ export function RegisterRoutes(app: Router) {
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsBotController_validateToken: Record<string, TsoaRoute.ParameterSchema> = {
+                requestBody: {"in":"body","name":"requestBody","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"token":{"dataType":"string","required":true}}},
+        };
+        app.post('/bots/validate-token',
+            ...(fetchMiddlewares<RequestHandler>(BotController)),
+            ...(fetchMiddlewares<RequestHandler>(BotController.prototype.validateToken)),
+
+            async function BotController_validateToken(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsBotController_validateToken, request, response });
+
+                const controller = new BotController();
+
+              await templateService.apiHandler({
+                methodName: 'validateToken',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsConstantsController_getConstants: Record<string, TsoaRoute.ParameterSchema> = {
         };
         app.get('/constants',

@@ -1,4 +1,4 @@
-import { ImageGenerationConfig } from "@discura/common/types"; // Updated import path
+import { ImageGenerationConfig } from "@discura/common"
 import axios from "axios";
 
 import { logger } from "../utils/logger";

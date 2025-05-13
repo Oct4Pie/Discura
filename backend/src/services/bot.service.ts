@@ -1,9 +1,10 @@
+import { LLMProvider, BotStatus } from "@discura/common";
 import { Client, GatewayIntentBits, Events } from "discord.js";
-import { BotAdapter } from "../models/adapters/bot.adapter";
+
 import { setupMessageHandlers } from "./message.service";
-import { logger } from "../utils/logger";
-import { LLMProvider } from "@discura/common";
+import { BotAdapter } from "../models/adapters/bot.adapter";
 import { verifyBotConfig } from "../utils/config-validator";
+import { logger } from "../utils/logger";
 
 // Map to store active bot clients
 const botClients = new Map<string, Client>();
@@ -417,8 +418,6 @@ export async function initializeAllBots() {
   try {
     logger.info("Initializing all bots that should be online");
 
-    // Find all bots that were previously online
-    const BotStatus = (await import("@discura/common/types")).BotStatus;
     const onlineBots = await BotAdapter.find({ status: BotStatus.ONLINE });
 
     logger.info(`Found ${onlineBots.length} bots that were previously online`);

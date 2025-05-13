@@ -58,12 +58,20 @@ const BotCreate = () => {
 
       try {
         const result = await validateToken(discordToken);
-
+        
         if (result.valid) {
-          setTokenValidated(true);
-          setApplicationId(result.botId || "");
-          setValidationMessage("Token is valid!");
-          setActiveStep(1);
+          if (result.messageContentEnabled) {
+            // Only proceed if both token is valid AND message content intent is enabled
+            setTokenValidated(true);
+            setApplicationId(result.botId || "");
+            setValidationMessage("Token is valid and Message Content Intent is enabled!");
+            setActiveStep(1);
+          } else {
+            // Token is valid but message content intent is not enabled
+            setTokenValidated(false);
+            setError("Message Content Intent is not enabled for this bot. Please enable it in the Discord Developer Portal and try again.");
+            setValidationMessage(null);
+          }
         } else {
           setTokenValidated(false);
           setError(

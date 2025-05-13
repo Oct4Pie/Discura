@@ -311,25 +311,50 @@ const BotList = () => {
                 }}
                 onClick={() => navigate(`/bots/${bot.id}`)}
               >
-                <CardMedia
-                  component="img"
-                  height="140"
-                  image={`https://source.unsplash.com/random/300x140?${bot.name
-                    .replace(/\s+/g, "-")
-                    .toLowerCase()}`}
-                  alt={bot.name}
+                <Box 
                   sx={{
-                    borderTopLeftRadius: 2, // Match card border radius
-                    borderTopRightRadius: 2, // Match card border radius
+                    height: 140,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                    borderTopLeftRadius: 2,
+                    borderTopRightRadius: 2,
+                    overflow: 'hidden',
+                    position: 'relative'
                   }}
-                />
+                >
+                  <BotIcon 
+                    sx={{ 
+                      fontSize: 64, 
+                      color: alpha(theme.palette.primary.main, 0.7),
+                      opacity: 0.9
+                    }} 
+                  />
+                  <Typography 
+                    variant="h2" 
+                    component="div" 
+                    sx={{ 
+                      position: 'absolute',
+                      bottom: 12,
+                      right: 12,
+                      fontSize: '2.5rem',
+                      fontWeight: 800,
+                      color: alpha(theme.palette.primary.main, 0.15),
+                      opacity: 0.6
+                    }}
+                  >
+                    {bot.name.charAt(0).toUpperCase()}
+                  </Typography>
+                </Box>
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Box
                     sx={{
                       display: "flex",
-                      justifyContent: "space-between",
+                      justifyContent: "space-between", 
                       alignItems: "flex-start",
-                      mb: 1,
+                      mb: 1.5,
+                      flexWrap: "nowrap",
                     }}
                   >
                     <Typography
@@ -337,12 +362,19 @@ const BotList = () => {
                       component="h2"
                       sx={{
                         fontWeight: 600,
-                        fontSize: { xs: '1rem', sm: '1.25rem' }
+                        fontSize: { xs: '1rem', sm: '1.25rem' },
+                        mr: 1.5,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        flexGrow: 1
                       }}
                     >
                       {bot.name}
                     </Typography>
-                    <BotStatusBadge status={bot.status} />
+                    <Box sx={{ flexShrink: 0 }}>
+                      <BotStatusBadge status={bot.status} />
+                    </Box>
                   </Box>
                   <Typography
                     variant="body2"

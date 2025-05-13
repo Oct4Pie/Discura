@@ -1,4 +1,4 @@
-import { BotStatus } from "@discura/common/types";
+import { BotStatus } from "@discura/common";
 import { v4 as uuidv4 } from "uuid";
 
 import { BaseRepository } from "./base.repository";

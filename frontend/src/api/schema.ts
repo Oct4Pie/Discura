@@ -559,6 +559,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bots/validate-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Validate Discord bot token
+         *
+         *     Validates a Discord bot token and checks if message content intent is enabled.
+         *     This endpoint doesn't require authentication as it's used during bot creation. */
+        post: operations["ValidateToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/constants": {
         parameters: {
             query?: never;
@@ -2152,6 +2172,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GenerateBotInviteLinkResponseDto"];
+                };
+            };
+        };
+    };
+    ValidateToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenValidationResult"];
                 };
             };
         };

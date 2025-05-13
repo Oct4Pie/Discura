@@ -1,11 +1,16 @@
 /**
  * Bot configuration validation utilities
- * 
+ *
  * This file contains functions for validating bot configuration objects
  * before they are saved to the database or used to initialize a bot.
  */
 
-import { BotConfiguration, LLMProvider, ImageProvider } from "@discura/common/types";
+import {
+  BotConfiguration,
+  LLMProvider,
+  ImageProvider,
+} from "@discura/common";
+
 import { logger } from "./logger";
 
 /**
@@ -23,12 +28,12 @@ interface ValidationResult {
  */
 export function verifyBotConfig(config: any): ValidationResult {
   const errors: string[] = [];
-  
+
   // Check if configuration is provided
   if (!config) {
     return { valid: false, errors: ["Configuration is required"] };
   }
-  
+
   // Validate LLM configuration
   if (config.llmProvider) {
     // Verify provider is a valid enum value
@@ -36,12 +41,12 @@ export function verifyBotConfig(config: any): ValidationResult {
     if (!validProviders.includes(config.llmProvider)) {
       errors.push(`Invalid LLM provider: ${config.llmProvider}`);
     }
-    
+
     // Check if model is specified
     if (!config.llmModel) {
       errors.push("LLM model must be specified");
     }
-    
+
     // Check if API key is present for non-custom providers
     if (config.llmProvider !== LLMProvider.CUSTOM && !config.apiKey) {
       errors.push(`API key is required for ${config.llmProvider} provider`);
@@ -49,31 +54,40 @@ export function verifyBotConfig(config: any): ValidationResult {
   } else {
     errors.push("LLM provider is required");
   }
-  
+
   // Validate image generation configuration if enabled
   if (config.imageGeneration?.enabled) {
     const validImageProviders = Object.values(ImageProvider);
-    
+
     if (!config.imageGeneration.provider) {
-      errors.push("Image provider must be specified when image generation is enabled");
+      errors.push(
+        "Image provider must be specified when image generation is enabled",
+      );
     } else if (!validImageProviders.includes(config.imageGeneration.provider)) {
       errors.push(`Invalid image provider: ${config.imageGeneration.provider}`);
     }
-    
+
     // Check for API key if provider is not the same as LLM provider
-    if (config.imageGeneration.provider !== config.llmProvider && !config.imageGeneration.apiKey) {
-      errors.push(`API key is required for image provider ${config.imageGeneration.provider}`);
+    if (
+      config.imageGeneration.provider !== config.llmProvider &&
+      !config.imageGeneration.apiKey
+    ) {
+      errors.push(
+        `API key is required for image provider ${config.imageGeneration.provider}`,
+      );
     }
   }
-  
+
   // Validate system prompt length if provided
   if (config.systemPrompt) {
     const maxSystemPromptLength = 4000; // Arbitrary limit to prevent abuse
     if (config.systemPrompt.length > maxSystemPromptLength) {
-      errors.push(`System prompt exceeds maximum length of ${maxSystemPromptLength} characters`);
+      errors.push(
+        `System prompt exceeds maximum length of ${maxSystemPromptLength} characters`,
+      );
     }
   }
-  
+
   // Validate tool configuration if tools are enabled
   if (config.toolsEnabled) {
     if (!Array.isArray(config.tools)) {
@@ -83,30 +97,38 @@ export function verifyBotConfig(config: any): ValidationResult {
       config.tools.forEach((tool: any, index: number) => {
         if (!tool.id) errors.push(`Tool at index ${index} is missing an ID`);
         if (!tool.name) errors.push(`Tool at index ${index} is missing a name`);
-        if (!tool.description) errors.push(`Tool at index ${index} is missing a description`);
-        
+        if (!tool.description)
+          errors.push(`Tool at index ${index} is missing a description`);
+
         // Validate parameters
         if (!Array.isArray(tool.parameters)) {
-          errors.push(`Tool "${tool.name || index}" is missing parameters array`);
+          errors.push(
+            `Tool "${tool.name || index}" is missing parameters array`,
+          );
         }
-        
+
         // Validate implementation
         if (!tool.implementation) {
           errors.push(`Tool "${tool.name || index}" is missing implementation`);
-        } else if (typeof tool.implementation !== 'string') {
-          errors.push(`Tool "${tool.name || index}" implementation must be a string`);
+        } else if (typeof tool.implementation !== "string") {
+          errors.push(
+            `Tool "${tool.name || index}" implementation must be a string`,
+          );
         }
       });
     }
   }
-  
+
   // Log validation results
   if (errors.length > 0) {
-    logger.warn(`Bot configuration validation failed with ${errors.length} errors:`, errors);
+    logger.warn(
+      `Bot configuration validation failed with ${errors.length} errors:`,
+      errors,
+    );
   } else {
     logger.debug("Bot configuration validation passed");
   }
-  
+
   return {
     valid: errors.length === 0,
     errors,
