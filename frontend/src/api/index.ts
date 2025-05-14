@@ -50,6 +50,14 @@ OpenAPI.TOKEN = async () => {
         // Get detailed error message
         let detailedMessage = errorData.message;
         
+        // Log the complete error details for debugging
+        console.log('[API Error Details]', {
+          message: errorData.message,
+          code: errorData.code,
+          field: errorData.field,
+          validationErrors: errorData.validationErrors
+        });
+        
         // Add field information if available
         if (errorData.field) {
           detailedMessage += ` (Field: ${errorData.field})`;
@@ -60,6 +68,17 @@ OpenAPI.TOKEN = async () => {
           const validationMessages = errorData.validationErrors.join('\n• ');
           detailedMessage += `\n\nValidation errors:\n• ${validationMessages}`;
         }
+        
+        // Always show a toast notification for immediate feedback
+        // This ensures the user is aware of the error even if the ValidationErrorDisplay isn't visible
+        toast.error(detailedMessage.split('\n')[0], {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
         
         // Return structured error data for component handling
         return Promise.reject({
@@ -73,6 +92,7 @@ OpenAPI.TOKEN = async () => {
       }
     }
   } catch (parsingError) {
+    console.error('[API Error Parsing Failed]', parsingError);
     // If parsing fails, continue with generic error handling
   }
 
@@ -98,6 +118,16 @@ OpenAPI.TOKEN = async () => {
     message = 'Server error. Please try again later.';
   }
 
+  // Always display a toast notification for non-structured errors
+  toast.error(message, {
+    position: "top-right",
+    autoClose: 5000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+  });
+  
   return Promise.reject({
     message,
     code: 'API_ERROR',
@@ -129,7 +159,8 @@ export const handleApiError = (error: {
   const errorMessage = error.message || 'An unexpected error occurred';
   
   // Display a toast notification with the error message
-  toast.error(errorMessage, {
+  // (Only the first line of the error message to keep it concise)
+  toast.error(errorMessage.split('\n')[0], {
     position: "top-right",
     autoClose: 5000,
     hideProgressBar: false,

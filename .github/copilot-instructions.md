@@ -133,8 +133,9 @@ Discura integrates with various LLM providers through a unified backend system:
 ### Implementation Rules
 
 1. **Frontend Components**:
-   - Use only the API client: `import { api } from 'src/api'`
+   - Use only the API client: `import { LlmService } from 'src/api'`
    - Never implement provider-specific logic
+   - Use the full model ID format directly from the API (`provider/model-name`)
    
 2. **Backend Services**:
    - Implement provider integrations and caching
@@ -143,6 +144,93 @@ Discura integrates with various LLM providers through a unified backend system:
 3. **Provider Configuration**:
    - API keys stored only in backend environment variables
    - Provider enablement status in `provider-config.json`
+
+### Model Selection and Provider Handling
+
+1. **Frontend Model Handling**:
+   
+   - **NEVER manually parse model IDs**:
+   
+     ```typescript
+     // INCORRECT - Manual parsing
+     const parts = selectedModel.split('/');
+     const provider = parts[0];
+     const model = parts.slice(1).join('/');
+     ```
+   
+   - **DO use the complete model ID directly from the API**:
+   
+     ```typescript
+     // CORRECT - Use model IDs directly from the API
+     const modelId = "openai/gpt-4o"; // From ModelSelector component
+     
+     // When updating configuration:
+     const updatedConfig = {
+       ...currentConfig,
+       llmModel: modelId
+     };
+     ```
+   
+   - **ALWAYS query the API for model data** instead of hard-coding provider mappings:
+   
+     ```typescript
+     // CORRECT - Get model data from the API
+     const modelResponse = await LlmService.getAllProviderModels();
+     const providerData = modelResponse.providers.find(
+       p => p.models.some(m => m.id === selectedModel)
+     );
+     ```
+
+2. **Model Selection Components**:
+
+   - Use the `ModelSelector` component for consistent UI
+   - The component should receive model IDs directly from the API
+   - Pass the complete model ID to parent components via callback
+   
+   ```typescript
+   <ModelSelector
+     onModelSelect={(modelId) => setSelectedModel(modelId)}
+     defaultModel={currentBot?.configuration?.llmModel}
+   />
+   ```
+
+3. **Provider-Model Association**:
+
+   - Backend returns model data with full provider context:
+   
+     ```json
+     {
+       "id": "anthropic/claude-3.5-sonnet",
+       "provider_model_id": "claude-3-5-sonnet",
+       "display_name": "Claude 3.5 Sonnet",
+       "provider_display_name": "Anthropic"
+     }
+     ```
+     
+   - Frontend should use these fields directly without transformation
+
+### Best Practices
+
+1. **API Data Transformation**:
+   - Minimize data transformation in frontend components
+   - Use backend-provided data structures directly
+   - Never create custom identifiers for provider/model relationships
+
+2. **Configuration Updates**:
+   - Pass complete model information when updating configurations
+   - Let the backend handle provider-specific logic
+   - Use typed DTOs for all configuration updates
+
+## Using Context 7
+Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source
+
+resolve-library-id: Resolves a general library name into a Context7-compatible library ID.
+libraryName (required)
+get-library-docs: Fetches documentation for a library using a Context7-compatible library ID.
+context7CompatibleLibraryID (required)
+topic (optional): Focus the docs on a specific topic (e.g., "routing", "hooks")
+tokens (optional, default 10000): Max number of tokens to return. Values less than the configured DEFAULT_MINIMUM_TOKENS value or the default value of 10000 are automatically increased to that value.
+
 
 ## Common TypeScript Errors and Solutions
 

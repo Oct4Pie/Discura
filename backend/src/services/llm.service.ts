@@ -245,7 +245,7 @@ export const createChatCompletionWithVercelAi = async (
       `Creating chat completion with Vercel AI SDK. Model: ${modelId}, Provider: ${effectiveProvider}`
     );
 
-    const registry = await getAiProviderRegistry();
+    const registry = await getAiProviderRegistry(); // This is the ProviderRegistry instance
 
     const messages: CoreMessage[] = request.messages.map((msg) => ({
       role:
@@ -261,27 +261,42 @@ export const createChatCompletionWithVercelAi = async (
     }));
 
     const startTime = Date.now();
-    let result: GenerateTextResult<any, any>;
 
-    // Create a standard response identifier format
-    const responseModelIdentifier = `${effectiveProvider}/${modelId}`;
+    // Construct the full model ID for Vercel AI SDK, e.g., "chutes:qwen/qwen3-235b-a22b"
+    // Provider IDs in the Vercel registry are typically lowercase.
+    const vercelAiProviderId = effectiveProvider.toLowerCase();
+    const vercelAiModelId = `${vercelAiProviderId}:${modelId}`;
 
-    // Check if the provider exists in the registry
-    if (!registry[effectiveProvider]) {
+    logger.info(`Attempting to get model from Vercel AI SDK registry with ID: ${vercelAiModelId}`);
+
+    let modelInstance;
+    try {
+      // Using languageModel method from the Vercel AI SDK ProviderRegistry
+      modelInstance = registry.languageModel(vercelAiModelId);
+    } catch (error) {
+      logger.error(`Failed to get language model from registry: ${error instanceof Error ? error.message : String(error)}`);
+      // If we can't get the model directly, try to inspect available providers
+      const availableProviders = registry.providers ? Object.keys(registry.providers) : [];
+      logger.debug(`Available providers in registry: ${availableProviders.join(', ')}`);
+      
+      throw new Error(
+        `Model ${vercelAiModelId} not configured or available in the Vercel AI SDK registry.`
+      );
+    }
+    
+    if (!modelInstance) {
       logger.error(
-        `Provider ${effectiveProvider} not found in registry. Ensure API key is set with ${effectiveProvider.toUpperCase()}_KEY`
+        `Model ${vercelAiModelId} not found in Vercel AI SDK registry. ` +
+        `Effective provider from request: ${effectiveProvider}, Raw modelId from request: ${modelId}. ` +
+        `Ensure provider '${vercelAiProviderId}' is correctly registered and model '${modelId}' is available for it.`
       );
       throw new Error(
-        `Provider ${effectiveProvider} not configured in the Vercel AI SDK registry.`
+        `Model ${vercelAiModelId} not configured or available in the Vercel AI SDK registry.`
       );
     }
 
-    // Use the provider's chat method directly with the model ID
-    // This works consistently for all providers including OpenRouter
-    const model = registry[effectiveProvider].chat(modelId);
-
-    result = await generateText({
-      model,
+    const result = await generateText({
+      model: modelInstance,
       messages,
       temperature: request.temperature,
       topP: request.top_p,
@@ -297,8 +312,11 @@ export const createChatCompletionWithVercelAi = async (
     );
     const completionTokens = calculateTokenCount(result.text);
 
+    // Use the originally requested provider and modelId for the response model identifier
+    const responseModelIdentifier = `${effectiveProvider}/${modelId}`;
+
     logger.info(
-      `Completion generated with Vercel AI SDK in ${endTime - startTime}ms. Provider: ${effectiveProvider}, Model: ${modelId}`
+      `Completion generated with Vercel AI SDK in ${endTime - startTime}ms. Provider used: ${vercelAiProviderId}, Model: ${modelId}`
     );
 
     return {
@@ -367,10 +385,16 @@ export const callLLM = async (request: {
   provider?: LLMProvider;
 }): Promise<LLMResponse> => {
   try {
+    // Enhanced logging for debugging
+    logger.info(`[LLM Service] Starting LLM request for bot ${request.botId}`);
+    logger.info(`[LLM Service] User: ${request.username} (${request.userId})`);
+    logger.info(`[LLM Service] Prompt: "${request.prompt.substring(0, 100)}${request.prompt.length > 100 ? '...' : ''}"`);
+    
     // Get bot configuration from database
+    logger.info(`[LLM Service] Fetching bot configuration from database for bot ${request.botId}`);
     const bot = await BotAdapter.findById(request.botId);
     if (!bot || !bot.configuration) {
-      logger.error(`Bot not found or missing configuration: ${request.botId}`);
+      logger.error(`[LLM Service] Bot not found or missing configuration: ${request.botId}`);
       return {
         text: "Sorry, I encountered an error with my configuration. Please try again later.",
       };
@@ -378,6 +402,15 @@ export const callLLM = async (request: {
 
     // Use provided parameters if available, otherwise use bot configuration
     const llmModel = request.model || bot.configuration.llmModel;
+    const llmProvider = request.provider || bot.configuration.llmProvider;
+    
+    logger.info(`[LLM Service] Using model: ${llmModel}`);
+    logger.info(`[LLM Service] Using provider: ${llmProvider}`);
+    
+    // Check API key
+    if (!bot.configuration.apiKey) {
+      logger.warn(`[LLM Service] No API key configured for bot ${request.botId}`);
+    }
 
     // Prepare messages array for Vercel AI SDK
     const messages = [];
@@ -388,11 +421,13 @@ export const callLLM = async (request: {
         role: "system",
         content: request.systemPrompt,
       });
+      logger.debug(`[LLM Service] Added system prompt (${request.systemPrompt.length} chars)`);
     }
 
     // Add history if available
     if (request.history && request.history.length > 0) {
       messages.push(...request.history);
+      logger.debug(`[LLM Service] Added conversation history (${request.history.length} messages)`);
     } else {
       // If no history, just add the user's prompt
       messages.push({
@@ -400,11 +435,13 @@ export const callLLM = async (request: {
         content: request.prompt,
         name: request.username || undefined,
       });
+      logger.debug(`[LLM Service] No history available, added single user prompt`);
     }
 
     // Use Vercel AI SDK via createChatCompletion
     const completionRequest: LLMCompletionRequestDto = {
       model: llmModel,
+      provider: llmProvider, // Explicitly pass the provider from bot configuration
       messages,
       temperature: 0.7,
       max_tokens: 1000,
@@ -415,16 +452,26 @@ export const callLLM = async (request: {
 
     // Call the Vercel AI SDK integration
     try {
+      logger.info(`[LLM Service] Calling LLM API with ${messages.length} messages`);
+      const startTime = Date.now();
+      
       const completion = await createChatCompletion(
         completionRequest,
         request.userId
       );
+      
+      const endTime = Date.now();
+      logger.info(`[LLM Service] LLM API response received in ${endTime - startTime}ms`);
 
       // Extract the assistant's message
       const assistantMessage = completion.choices[0]?.message;
       if (!assistantMessage || !assistantMessage.content) {
+        logger.error(`[LLM Service] No valid response content received from LLM API`);
+        logger.debug(`[LLM Service] Raw completion: ${JSON.stringify(completion)}`);
         throw new Error("No valid response received from LLM");
       }
+
+      logger.info(`[LLM Service] LLM response: "${assistantMessage.content.substring(0, 100)}${assistantMessage.content.length > 100 ? '...' : ''}"`);
 
       // Check if the response indicates image generation is needed
       // This is a simple heuristic - in a production system, you would
@@ -446,6 +493,7 @@ export const callLLM = async (request: {
           // Fall back to using the user's prompt for image generation
           imagePrompt = request.prompt;
         }
+        logger.info(`[LLM Service] Image generation requested with prompt: "${imagePrompt}"`);
       }
 
       return {
@@ -454,13 +502,38 @@ export const callLLM = async (request: {
         imagePrompt: imagePrompt || undefined,
       };
     } catch (error) {
-      logger.error(`Error generating completion with Vercel AI SDK: ${error}`);
+      logger.error(`[LLM Service] Error generating completion with Vercel AI SDK:`, error);
+      logger.error(`[LLM Service] Model: ${llmModel}, Provider: ${llmProvider}`);
+      logger.error(`[LLM Service] Request details: Bot ID: ${request.botId}, User ID: ${request.userId}`);
+      
+      // Check for specific error types
+      if (error instanceof Error) {
+        // Check for common API errors
+        const errorMsg = error.message.toLowerCase();
+        if (errorMsg.includes("rate limit") || errorMsg.includes("429")) {
+          logger.warn(`[LLM Service] Rate limit hit with provider ${llmProvider}`);
+          return {
+            text: "Sorry, I'm receiving too many requests right now. Please try again in a moment.",
+          };
+        } else if (errorMsg.includes("authentication") || errorMsg.includes("api key") || errorMsg.includes("401")) {
+          logger.warn(`[LLM Service] Authentication error with provider ${llmProvider}`);
+          return {
+            text: "Sorry, I'm having trouble connecting to my AI service due to an authentication issue. Please contact the bot administrator.",
+          };
+        } else if (errorMsg.includes("timeout") || errorMsg.includes("timed out")) {
+          logger.warn(`[LLM Service] Request timeout with provider ${llmProvider}`);
+          return {
+            text: "Sorry, my AI service is taking too long to respond. Please try again later.",
+          };
+        }
+      }
+      
       return {
         text: "Sorry, I encountered an error connecting to my AI service. Please try again later.",
       };
     }
   } catch (error) {
-    logger.error(`Error calling LLM for bot ${request.botId}:`, error);
+    logger.error(`[LLM Service] Error calling LLM for bot ${request.botId}:`, error);
     return {
       text: "Sorry, I encountered an error connecting to my AI service. Please try again later.",
     };
@@ -518,10 +591,12 @@ export const configureCustomProvider = async (
         config.providers[LLMProvider.CUSTOM].custom_providers = [];
       }
 
-      // Find existing provider with the same name and update or add
+      // Find existing provider with the same name and update or add (case-insensitive)
       const existingIndex = config.providers[
         LLMProvider.CUSTOM
-      ].custom_providers!.findIndex((p) => p.name === customProvider.name);
+      ].custom_providers!.findIndex(
+        (p) => p.name.toLowerCase() === customProvider.name.toLowerCase()
+      );
 
       if (existingIndex >= 0) {
         config.providers[LLMProvider.CUSTOM].custom_providers![existingIndex] =
@@ -568,7 +643,7 @@ export const removeCustomProvider = async (
 
     config.providers[LLMProvider.CUSTOM].custom_providers = config.providers[
       LLMProvider.CUSTOM
-    ].custom_providers!.filter((p) => p.name !== providerName);
+    ].custom_providers!.filter((p) => p.name.toLowerCase() !== providerName.toLowerCase());
 
     const removed =
       config.providers[LLMProvider.CUSTOM].custom_providers!.length <

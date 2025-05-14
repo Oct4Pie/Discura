@@ -9,6 +9,7 @@ import { AuthenticationService, BotsService,
   CreateBotRequestDto,
   TokenValidationResult,
   UpdateBotRequestDto,
+  handleApiError,
 } from "../api";
 import { OpenAPI } from "../api/generated/core/OpenAPI";
 import { request } from "../api/generated/core/request";
@@ -17,7 +18,7 @@ interface BotsState {
   bots: FrontendBot[];
   currentBot: FrontendBot | null;
   isLoading: boolean;
-  error: string | null;
+  error: any; // Changed from string to any to store structured error objects
 
   fetchBots: () => Promise<void>;
   fetchBot: (id: string) => Promise<void>;
@@ -34,6 +35,7 @@ interface BotsState {
     config: Partial<BotConfiguration>
   ) => Promise<FrontendBot>;
   validateToken: (token: string) => Promise<TokenValidationResult>;
+  clearError: () => void; // Added method to clear errors
 }
 
 export const useBotStore = create<BotsState>((set, get) => ({
@@ -41,6 +43,10 @@ export const useBotStore = create<BotsState>((set, get) => ({
   currentBot: null,
   isLoading: false,
   error: null,
+
+  clearError: () => {
+    set({ error: null });
+  },
 
   fetchBots: async () => {
     set({ isLoading: true, error: null });
@@ -57,7 +63,8 @@ export const useBotStore = create<BotsState>((set, get) => ({
       }
     } catch (error) {
       console.error("Error fetching bots:", error);
-      set({ error: "Failed to fetch bots", isLoading: false });
+      // Store the structured error object
+      set({ error, isLoading: false });
     }
   },
 
@@ -75,7 +82,8 @@ export const useBotStore = create<BotsState>((set, get) => ({
       }
     } catch (error) {
       console.error(`Error fetching bot ${id}:`, error);
-      set({ error: "Failed to fetch bot details", isLoading: false });
+      // Store the structured error object
+      set({ error, isLoading: false });
     }
   },
 
@@ -97,7 +105,8 @@ export const useBotStore = create<BotsState>((set, get) => ({
       return bot;
     } catch (error) {
       console.error("Error creating bot:", error);
-      set({ error: "Failed to create bot", isLoading: false });
+      // Store the structured error object
+      set({ error, isLoading: false });
       throw error;
     }
   },
@@ -122,7 +131,8 @@ export const useBotStore = create<BotsState>((set, get) => ({
       return bot;
     } catch (error) {
       console.error(`Error updating bot ${id}:`, error);
-      set({ error: "Failed to update bot", isLoading: false });
+      // Store the structured error object
+      set({ error, isLoading: false });
       throw error;
     }
   },
@@ -141,7 +151,8 @@ export const useBotStore = create<BotsState>((set, get) => ({
       }));
     } catch (error) {
       console.error(`Error deleting bot ${id}:`, error);
-      set({ error: "Failed to delete bot", isLoading: false });
+      // Store the structured error object
+      set({ error, isLoading: false });
       throw error;
     }
   },
@@ -163,7 +174,8 @@ export const useBotStore = create<BotsState>((set, get) => ({
       return bot;
     } catch (error) {
       console.error(`Error starting bot ${id}:`, error);
-      set({ error: "Failed to start bot", isLoading: false });
+      // Store the structured error object
+      set({ error, isLoading: false });
       throw error;
     }
   },
@@ -185,7 +197,8 @@ export const useBotStore = create<BotsState>((set, get) => ({
       return bot;
     } catch (error) {
       console.error(`Error stopping bot ${id}:`, error);
-      set({ error: "Failed to stop bot", isLoading: false });
+      // Store the structured error object
+      set({ error, isLoading: false });
       throw error;
     }
   },
@@ -224,7 +237,8 @@ export const useBotStore = create<BotsState>((set, get) => ({
       return bot;
     } catch (error) {
       console.error(`Error updating bot configuration ${id}:`, error);
-      set({ error: "Failed to update bot configuration", isLoading: false });
+      // Store the structured error object
+      set({ error, isLoading: false });
       throw error;
     }
   },
@@ -245,16 +259,16 @@ export const useBotStore = create<BotsState>((set, get) => ({
       return response;
     } catch (error) {
       console.error("Error validating Discord token:", error);
-      set({ error: "Failed to validate token", isLoading: false });
+      // Store the structured error object
+      set({ error, isLoading: false });
 
       // Return a failed validation result when the API call fails
       return {
         valid: false,
         messageContentEnabled: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unknown error validating token",
+        error: error instanceof Error
+          ? error.message
+          : "Unknown error validating token",
       };
     }
   },

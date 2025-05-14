@@ -381,12 +381,12 @@ const BotDetail = () => {
       // Set validation error for display in the UI
       setValidationError(error);
       
-      const errorMessage =
-        error?.response?.data?.message ||
+      // Extract the error message from the structured error object
+      // The OpenAPI error middleware returns error objects with a message property
+      const errorMessage = error?.message || 
         `Failed to ${currentBot.status === BotStatus.ONLINE ? "stop" : "start"} bot`;
       
-      // Still keep toast for immediate feedback
-      toast.error(errorMessage);
+      // Update the snackbar with the error message
       setSnackbarMessage(`Error: ${errorMessage}`);
       console.error("Toggle bot status error:", error);
     } finally {

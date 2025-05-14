@@ -49,8 +49,22 @@ export const setupMessageHandlers = async (client: Client, botId: string) => {
       throw new Error(`Bot configuration not found for bot ID: ${botId}`);
     }
 
+    logger.info(`Setting up message handlers for bot ${botId} with username ${client.user?.username || "unknown"}`);
+
     // Set up message event handler
     client.on(Events.MessageCreate, async (message) => {
+      logger.info(`[Bot ${botId}] Received message: "${message.content?.substring(0, 50)}${message.content?.length > 50 ? '...' : ''}" from ${message.author.username} (${message.author.id}) in channel ${message.channel.id} (DM: ${message.channel.type === ChannelType.DM})`);
+      
+      if (message.author.bot) {
+        logger.info(`[Bot ${botId}] Ignoring message from another bot: ${message.author.username}`);
+        return;
+      }
+
+      const mentioned = message.mentions.has(client.user!.id);
+      const isDirectMessage = message.channel.type === ChannelType.DM;
+      
+      logger.info(`[Bot ${botId}] Message context - mentioned: ${mentioned}, isDirectMessage: ${isDirectMessage}`);
+      
       await handleMessage(client, message, bot);
     });
 
@@ -192,30 +206,46 @@ export const handleMessage = async (
   bot: Bot,
 ) => {
   // Ignore messages from bots or without content
-  if (message.author.bot || !message.content) return;
+  if (message.author.bot || !message.content) {
+    logger.debug(`[Bot ${bot.id}] Ignoring message: ${!message.content ? "empty content" : "from a bot"}`);
+    return;
+  }
 
   // Check if the message mentions the bot or is in a DM
   const mentioned = message.mentions.has(client.user!.id);
   const isDirectMessage = message.channel.type === ChannelType.DM;
 
-  if (!mentioned && !isDirectMessage) return;
+  if (!mentioned && !isDirectMessage) {
+    logger.debug(`[Bot ${bot.id}] Ignoring message: not a mention or DM`);
+    return;
+  }
 
   // Extract message content (remove mention if present)
   let content = message.content;
   if (mentioned) {
-    content = content.replace(new RegExp(`<@!?${client.user!.id}>`), "").trim();
+    const mentionRegex = new RegExp(`<@!?${client.user!.id}>`);
+    content = content.replace(mentionRegex, "").trim();
+    logger.info(`[Bot ${bot.id}] Mention detected, extracted content: "${content}"`);
   }
 
   // Skip empty messages after removing the mention
-  if (!content) return;
+  if (!content) {
+    logger.info(`[Bot ${bot.id}] Ignoring message: content is empty after removing mention`);
+    return;
+  }
 
   const channel = message.channel;
+  logger.info(`[Bot ${bot.id}] Processing message in channel type: ${channel.type}`);
 
   // Ensure the channel is text-based before proceeding
-  if (!channel.isTextBased()) return;
+  if (!channel.isTextBased()) {
+    logger.warn(`[Bot ${bot.id}] Channel ${channel} is not text-based, cannot process message`);
+    return;
+  }
 
   try {
     // Start typing indicator to show the bot is "thinking"
+    logger.info(`[Bot ${bot.id}] Starting typing indicator in channel ${channel.id}`);
     await startTypingIndicator(
       channel as TextChannel | DMChannel | ThreadChannel,
     );
@@ -231,6 +261,7 @@ export const handleMessage = async (
 
     // Get conversation history
     const history = getConversationHistory(channel.id, message.author.id);
+    logger.debug(`[Bot ${bot.id}] Conversation history length: ${history.length}`);
 
     // Generate system prompt from bot configuration
     const systemPrompt = generateSystemPrompt(
@@ -252,77 +283,97 @@ export const handleMessage = async (
       },
     );
 
+    logger.info(`[Bot ${bot.id}] Calling LLM with model: ${bot.configuration?.llmModel}, provider: ${bot.configuration?.llmProvider}`);
+
     // Call the LLM with the conversation history and system prompt
-    const response = await callLLM({
-      botId: bot.id,
-      prompt: content,
-      systemPrompt: systemPrompt,
-      history: history,
-      userId: message.author.id,
-      username: message.author.username,
-      model: bot.configuration?.llmModel,
-      provider: bot.configuration?.llmProvider,
-    });
+    try {
+      const response = await callLLM({
+        botId: bot.id,
+        prompt: content,
+        systemPrompt: systemPrompt,
+        history: history,
+        userId: message.author.id,
+        username: message.author.username,
+        model: bot.configuration?.llmModel,
+        provider: bot.configuration?.llmProvider,
+      });
 
-    // Add the bot's response to history
-    if (response && response.text) {
-      addToConversationHistory(
-        channel.id,
-        message.author.id,
-        "assistant",
-        response.text,
-      );
-    }
+      logger.info(`[Bot ${bot.id}] LLM response received: "${response?.text?.substring(0, 50)}${response?.text?.length > 50 ? '...' : ''}"`);
 
-    // Handle potential image generation
-    let sentMessage;
-    if (
-      response?.generateImage &&
-      bot.configuration?.imageGeneration?.enabled
-    ) {
-      try {
-        // Generate an image based on the prompt
-        const imageUrl = await generateImage(response.imagePrompt || content, {
-          provider: bot.configuration?.imageGeneration?.provider || "openai",
-          apiKey: bot.configuration?.apiKey || "",
-          model: bot.configuration?.imageGeneration?.model,
-          enabled: true,
-        });
+      // Add the bot's response to history
+      if (response && response.text) {
+        addToConversationHistory(
+          channel.id,
+          message.author.id,
+          "assistant",
+          response.text,
+        );
+      } else {
+        logger.warn(`[Bot ${bot.id}] LLM returned empty or null response`);
+      }
 
-        // Use type guard to ensure channel is text-based before sending
-        if (channel.isTextBased() && "send" in channel) {
-          // Send the response with the image
-          sentMessage = await channel.send({
-            content: response.text,
-            files: imageUrl
-              ? [{ attachment: imageUrl, name: "generated-image.png" }]
-              : [],
+      // Handle potential image generation
+      let sentMessage;
+      if (
+        response?.generateImage &&
+        bot.configuration?.imageGeneration?.enabled
+      ) {
+        try {
+          // Generate an image based on the prompt
+          logger.info(`[Bot ${bot.id}] Generating image with prompt: "${response.imagePrompt || content}"`);
+          const imageUrl = await generateImage(response.imagePrompt || content, {
+            provider: bot.configuration?.imageGeneration?.provider || "openai",
+            apiKey: bot.configuration?.apiKey || "",
+            model: bot.configuration?.imageGeneration?.model,
+            enabled: true,
           });
+
+          // Use type guard to ensure channel is text-based before sending
+          if (channel.isTextBased() && "send" in channel) {
+            // Send the response with the image
+            logger.info(`[Bot ${bot.id}] Sending message with image to channel ${channel.id}`);
+            sentMessage = await channel.send({
+              content: response.text,
+              files: imageUrl
+                ? [{ attachment: imageUrl, name: "generated-image.png" }]
+                : [],
+            });
+          }
+        } catch (imageError) {
+          logger.error(`[Bot ${bot.id}] Image generation error:`, imageError);
+
+          // If image generation fails, just send the text response
+          if (channel.isTextBased() && "send" in channel) {
+            sentMessage = await channel.send({
+              content: `${response.text}\n\n*(Failed to generate image: Something went wrong with image generation)*`,
+            });
+          }
         }
-      } catch (imageError) {
-        logger.error(`Image generation error for bot ${bot.id}:`, imageError);
-
-        // If image generation fails, just send the text response
+      } else {
+        // Send regular text response
         if (channel.isTextBased() && "send" in channel) {
-          sentMessage = await channel.send({
-            content: `${response.text}\n\n*(Failed to generate image: Something went wrong with image generation)*`,
-          });
+          logger.info(`[Bot ${bot.id}] Sending text response to channel ${channel.id}`);
+          sentMessage = await channel.send(
+            response?.text ||
+              "I'm sorry, I'm having trouble processing that request.",
+          );
+        } else {
+          logger.warn(`[Bot ${bot.id}] Could not send response - channel is not text-based or doesn't support send()`);
         }
       }
-    } else {
-      // Send regular text response
+
+      logger.info(`[Bot ${bot.id}] Successfully responded to message in channel ${channel.id}`);
+      return sentMessage;
+    } catch (llmError) {
+      logger.error(`[Bot ${bot.id}] LLM service error:`, llmError);
       if (channel.isTextBased() && "send" in channel) {
-        sentMessage = await channel.send(
-          response?.text ||
-            "I'm sorry, I'm having trouble processing that request.",
+        await channel.send(
+          "I'm sorry, I encountered an error while connecting to my AI service. Please try again later."
         );
       }
     }
-
-    logger.info(`Bot ${bot.id} responded to message in channel ${channel.id}`);
-    return sentMessage;
   } catch (error) {
-    logger.error(`Error handling message for bot ${bot.id}:`, error);
+    logger.error(`[Bot ${bot.id}] Error handling message:`, error);
 
     try {
       // Send error message to channel
@@ -333,12 +384,13 @@ export const handleMessage = async (
       }
     } catch (sendError) {
       logger.error(
-        `Failed to send error message for bot ${bot.id}:`,
+        `[Bot ${bot.id}] Failed to send error message:`,
         sendError,
       );
     }
   } finally {
     // Always stop the typing indicator
+    logger.info(`[Bot ${bot.id}] Stopping typing indicator for channel ${channel.id}`);
     stopTypingIndicator(channel.id);
   }
 };

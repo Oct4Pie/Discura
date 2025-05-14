@@ -66,7 +66,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
           
           // Look through all providers to find the one containing our model
           for (const provider of availableProviders) {
-            const modelInProvider = provider.models.find(model => model.id === defaultModel);
+            const modelInProvider = provider.models.find(model => model.provider_model_id === defaultModel);
             if (modelInProvider) {
               setSelectedProvider(provider.provider);
               setSelectedModel(defaultModel);
@@ -83,8 +83,8 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
               
               if (firstProvider.models.length > 0) {
                 const firstModel = firstProvider.models[0];
-                if (firstModel && firstModel.id) {
-                  const firstModelId = firstModel.id;
+                if (firstModel && firstModel.provider_model_id) {
+                  const firstModelId = firstModel.provider_model_id;
                   setSelectedModel(firstModelId);
                   onModelSelect(firstModelId); // Notify parent of the model change
                 }
@@ -107,15 +107,17 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
     const newProvider = event.target.value;
     setSelectedProvider(newProvider);
 
-    // Find the provider data
-    const providerData = providers.find(p => p.provider === newProvider);
+    // Find the provider data using case-insensitive comparison
+    const providerData = providers.find(p => 
+      p.provider.toLowerCase() === newProvider.toLowerCase()
+    );
     
     // When provider changes, select the first model from that provider
     if (providerData && providerData.models.length > 0) {
       // Safely access the first model
       const firstModelObj = providerData.models[0];
       if (firstModelObj) {
-        const firstModelId = firstModelObj.id;
+        const firstModelId = firstModelObj.provider_model_id;
         setSelectedModel(firstModelId);
         
         // Notify parent of the model change
@@ -191,10 +193,10 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
           }}
         >
           {providers
-            .find((p) => p.provider === selectedProvider)
+            .find((p) => p.provider.toLowerCase() === selectedProvider.toLowerCase())
             ?.models.map((model: LLMModelData) => (
-              <MenuItem key={model.id} value={model.id}>
-                {model.display_name || model.id}
+              <MenuItem key={model.provider_model_id} value={model.provider_model_id}>
+                {model.display_name || model.provider_model_id}
               </MenuItem>
             ))}
         </Select>

@@ -85,7 +85,7 @@ const CUSTOM_PROVIDER_CONFIGS: Record<
   },
   chutes: {
     useOpenAICompatible: true,
-    baseURL: "https://api.chutes.ai/v1",
+    baseURL: "https://llm.chutes.ai/v1/",
     requiresApiKey: true,
   },
   microsoft: {
@@ -209,8 +209,23 @@ export async function saveProviderConfig(
  * Get API key from environment variables for a provider
  */
 export function getApiKey(provider: LLMProvider): string | undefined {
+  // Normalize provider name to uppercase for environment variable convention
   const envVarName = `${provider.toUpperCase()}_KEY`;
-  return process.env[envVarName];
+  const apiKey = process.env[envVarName];
+
+  // Debug log for API key access attempts
+  if (provider === LLMProvider.CHUTES) {
+    logger.debug(
+      `Accessing ${envVarName} environment variable: ${apiKey ? "Found" : "Not found"}`
+    );
+    logger.debug(
+      `Environment variables available: ${Object.keys(process.env)
+        .filter((k) => k.includes("KEY"))
+        .join(", ")}`
+    );
+  }
+
+  return apiKey;
 }
 
 /**

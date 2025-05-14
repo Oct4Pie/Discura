@@ -25,19 +25,21 @@ import {
   MoreVert as MoreIcon,
   Delete as DeleteIcon,
   SmartToy as BotIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import { useBotStore } from "../stores/botStore";
 import GridItem from "../components/GridItem";
 import BotStatusBadge from "../components/BotStatusBadge";
 import ConfirmDialog from "../components/ConfirmDialog";
+import ValidationErrorDisplay from "../components/ValidationErrorDisplay"; // Import validation error display
 import { FrontendBot } from "../types";
 import { BotStatus } from "../api";
 
 const BotList = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { bots, isLoading, error, fetchBots, startBot, stopBot, deleteBot } = useBotStore();
+  const { bots, isLoading, error, fetchBots, startBot, stopBot, deleteBot, clearError } = useBotStore();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [currentBotId, setCurrentBotId] = useState<string | null>(null);
@@ -70,7 +72,7 @@ const BotList = () => {
       toast.success("Bot started successfully");
     } catch (error) {
       console.error("Error starting bot:", error);
-      toast.error("Failed to start bot");
+      // No need to toast here - error handling is centralized
     }
   };
 
@@ -85,7 +87,7 @@ const BotList = () => {
       toast.success("Bot stopped successfully");
     } catch (error) {
       console.error("Error stopping bot:", error);
-      toast.error("Failed to stop bot");
+      // No need to toast here - error handling is centralized
     }
   };
 
@@ -108,7 +110,8 @@ const BotList = () => {
       setBotToDelete(null);
     } catch (error) {
       console.error("Error deleting bot:", error);
-      toast.error("Failed to delete bot");
+      // No need to toast here - error handling is centralized
+      setDeleteConfirmOpen(false);
     }
   };
 
@@ -163,6 +166,14 @@ const BotList = () => {
         </Button>
       </Box>
 
+      {/* Display validation errors using ValidationErrorDisplay component */}
+      {error && (
+        <ValidationErrorDisplay 
+          error={error}
+          onClose={() => clearError()}
+        />
+      )}
+
       <Grid
         container
         spacing={{ xs: 2, md: 3 }}
@@ -197,35 +208,6 @@ const BotList = () => {
               </Card>
             </GridItem>
           ))
-        ) : error ? (
-          <GridItem xs={12} item>
-            <Card 
-              sx={{ 
-                p: 4,
-                textAlign: 'center',
-                borderStyle: 'dashed',
-                borderWidth: 2,
-                borderColor: alpha(theme.palette.error.main, 0.2),
-                backgroundColor: alpha(theme.palette.error.main, 0.02),
-                boxShadow: 'none',
-                borderRadius: 2, // Custom border radius for error card
-              }}
-            >
-              <Typography color="error" gutterBottom>
-                {error}
-              </Typography>
-              <Button 
-                variant="contained" 
-                onClick={() => fetchBots()} 
-                sx={{ 
-                  mt: 2,
-                  borderRadius: 1, // Custom border radius for button
-                }}
-              >
-                Try Again
-              </Button>
-            </Card>
-          </GridItem>
         ) : bots.length === 0 ? (
           <GridItem xs={12} item>
             <Card 
