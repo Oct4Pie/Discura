@@ -46,11 +46,9 @@ export function verifyBotConfig(config: any): ValidationResult {
     if (!config.llmModel) {
       errors.push("LLM model must be specified");
     }
-
-    // Check if API key is present for non-custom providers
-    if (config.llmProvider !== LLMProvider.CUSTOM && !config.apiKey) {
-      errors.push(`API key is required for ${config.llmProvider} provider`);
-    }
+    
+    // Note: API keys are managed through environment variables in the format ${PROVIDER}_KEY
+    // and should not be included in the bot configuration
   } else {
     errors.push("LLM provider is required");
   }
@@ -67,15 +65,8 @@ export function verifyBotConfig(config: any): ValidationResult {
       errors.push(`Invalid image provider: ${config.imageGeneration.provider}`);
     }
 
-    // Check for API key if provider is not the same as LLM provider
-    if (
-      config.imageGeneration.provider !== config.llmProvider &&
-      !config.imageGeneration.apiKey
-    ) {
-      errors.push(
-        `API key is required for image provider ${config.imageGeneration.provider}`,
-      );
-    }
+    // Note: Image provider API keys are also managed through environment variables
+    // and should not be included in the bot configuration
   }
 
   // Validate system prompt length if provided

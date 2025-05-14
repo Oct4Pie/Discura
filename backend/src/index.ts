@@ -144,10 +144,37 @@ function startServer() {
 
   // Error handling middleware
   app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-    logger.error(err.stack);
-    res.status(500).json({
-      message: "An unexpected error occurred",
-      error: config.nodeEnv === "development" ? err.message : undefined,
+    // Log the error server-side for debugging
+    logger.error(`API Error: ${err.message}`);
+    if (err.stack) {
+      logger.debug(err.stack);
+    }
+    
+    // Extract any additional error properties
+    const validationErrors = (err as any).validationErrors;
+    const errorCode = (err as any).code;
+    const errorField = (err as any).field;
+    
+    // Determine the appropriate status code
+    let statusCode = 500;
+    if (errorCode === 'CONFIG_VALIDATION_ERROR') {
+      statusCode = 400; // Bad request for validation errors
+    } else if (err.message.includes('not authenticated')) {
+      statusCode = 401; // Unauthorized
+    } else if (err.message.includes('permission')) {
+      statusCode = 403; // Forbidden
+    } else if (err.message.includes('not found')) {
+      statusCode = 404; // Not found
+    }
+    
+    // Send a structured error response
+    res.status(statusCode).json({
+      message: err.message,
+      code: errorCode,
+      field: errorField,
+      validationErrors: validationErrors,
+      // Only include stack in development for debugging
+      stack: config.nodeEnv === 'development' ? err.stack : undefined,
     });
   });
 

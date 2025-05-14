@@ -60,6 +60,7 @@ export const LLM_PROVIDER: LlmProviderConstants = {
   LMNT: "lmnt",
   HUME: "hume",
   OPENROUTER: "openrouter",
+  CHUTES: "chutes",
   CUSTOM: "custom",
 
   // Display labels
@@ -89,6 +90,7 @@ export const LLM_PROVIDER: LlmProviderConstants = {
     lmnt: "LMNT",
     hume: "Hume",
     openrouter: "OpenRouter",
+    chutes: "Chutes AI",
     custom: "Custom API",
   },
 };

@@ -179,10 +179,16 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "LLMProvider": {
+        "dataType": "refEnum",
+        "enums": ["openai","anthropic","google","groq","cohere","deepseek","mistral","amazon","azure","fireworks","togetherai","perplexity","deepinfra","xai","ollama","huggingface","cerebras","elevenlabs","gladia","assemblyai","revai","deepgram","lmnt","hume","openrouter","chutes","custom"],
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "LLMCompletionRequestDto": {
         "dataType": "refObject",
         "properties": {
             "model": {"dataType":"string","required":true},
+            "provider": {"ref":"LLMProvider"},
             "messages": {"dataType":"array","array":{"dataType":"refObject","ref":"LLMCompletionMessage"},"required":true},
             "temperature": {"dataType":"double"},
             "top_p": {"dataType":"double"},
@@ -195,11 +201,6 @@ const models: TsoaRoute.Models = {
             "user": {"dataType":"string"},
         },
         "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "LLMProvider": {
-        "dataType": "refEnum",
-        "enums": ["openai","anthropic","google","groq","cohere","deepseek","mistral","amazon","azure","fireworks","togetherai","perplexity","deepinfra","xai","ollama","huggingface","cerebras","elevenlabs","gladia","assemblyai","revai","deepgram","lmnt","hume","openrouter","custom"],
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ProviderModelsResponseDto": {
@@ -261,7 +262,7 @@ const models: TsoaRoute.Models = {
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "Record_LLMProvider.ProviderConfiguration_": {
         "dataType": "refAlias",
-        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"openai":{"ref":"ProviderConfiguration","required":true},"anthropic":{"ref":"ProviderConfiguration","required":true},"google":{"ref":"ProviderConfiguration","required":true},"groq":{"ref":"ProviderConfiguration","required":true},"cohere":{"ref":"ProviderConfiguration","required":true},"deepseek":{"ref":"ProviderConfiguration","required":true},"mistral":{"ref":"ProviderConfiguration","required":true},"amazon":{"ref":"ProviderConfiguration","required":true},"azure":{"ref":"ProviderConfiguration","required":true},"fireworks":{"ref":"ProviderConfiguration","required":true},"togetherai":{"ref":"ProviderConfiguration","required":true},"perplexity":{"ref":"ProviderConfiguration","required":true},"deepinfra":{"ref":"ProviderConfiguration","required":true},"xai":{"ref":"ProviderConfiguration","required":true},"ollama":{"ref":"ProviderConfiguration","required":true},"huggingface":{"ref":"ProviderConfiguration","required":true},"cerebras":{"ref":"ProviderConfiguration","required":true},"elevenlabs":{"ref":"ProviderConfiguration","required":true},"gladia":{"ref":"ProviderConfiguration","required":true},"assemblyai":{"ref":"ProviderConfiguration","required":true},"revai":{"ref":"ProviderConfiguration","required":true},"deepgram":{"ref":"ProviderConfiguration","required":true},"lmnt":{"ref":"ProviderConfiguration","required":true},"hume":{"ref":"ProviderConfiguration","required":true},"openrouter":{"ref":"ProviderConfiguration","required":true},"custom":{"ref":"ProviderConfiguration","required":true}},"validators":{}},
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"openai":{"ref":"ProviderConfiguration","required":true},"anthropic":{"ref":"ProviderConfiguration","required":true},"google":{"ref":"ProviderConfiguration","required":true},"groq":{"ref":"ProviderConfiguration","required":true},"cohere":{"ref":"ProviderConfiguration","required":true},"deepseek":{"ref":"ProviderConfiguration","required":true},"mistral":{"ref":"ProviderConfiguration","required":true},"amazon":{"ref":"ProviderConfiguration","required":true},"azure":{"ref":"ProviderConfiguration","required":true},"fireworks":{"ref":"ProviderConfiguration","required":true},"togetherai":{"ref":"ProviderConfiguration","required":true},"perplexity":{"ref":"ProviderConfiguration","required":true},"deepinfra":{"ref":"ProviderConfiguration","required":true},"xai":{"ref":"ProviderConfiguration","required":true},"ollama":{"ref":"ProviderConfiguration","required":true},"huggingface":{"ref":"ProviderConfiguration","required":true},"cerebras":{"ref":"ProviderConfiguration","required":true},"elevenlabs":{"ref":"ProviderConfiguration","required":true},"gladia":{"ref":"ProviderConfiguration","required":true},"assemblyai":{"ref":"ProviderConfiguration","required":true},"revai":{"ref":"ProviderConfiguration","required":true},"deepgram":{"ref":"ProviderConfiguration","required":true},"lmnt":{"ref":"ProviderConfiguration","required":true},"hume":{"ref":"ProviderConfiguration","required":true},"openrouter":{"ref":"ProviderConfiguration","required":true},"chutes":{"ref":"ProviderConfiguration","required":true},"custom":{"ref":"ProviderConfiguration","required":true}},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ProviderRegistryConfiguration": {
@@ -402,7 +403,7 @@ const models: TsoaRoute.Models = {
             "backstory": {"dataType":"string","required":true},
             "llmProvider": {"ref":"LLMProvider","required":true},
             "llmModel": {"dataType":"string","required":true},
-            "apiKey": {"dataType":"string","required":true},
+            "apiKey": {"dataType":"string"},
             "knowledge": {"dataType":"array","array":{"dataType":"refObject","ref":"KnowledgeBase"},"required":true},
             "imageGeneration": {"ref":"ImageGenerationConfig","required":true},
             "toolsEnabled": {"dataType":"boolean","required":true},
@@ -620,8 +621,9 @@ const models: TsoaRoute.Models = {
             "LMNT": {"dataType":"string","required":true},
             "HUME": {"dataType":"string","required":true},
             "OPENROUTER": {"dataType":"string","required":true},
+            "CHUTES": {"dataType":"string","required":true},
             "CUSTOM": {"dataType":"string","required":true},
-            "LABELS": {"dataType":"nestedObjectLiteral","nestedProperties":{"custom":{"dataType":"string","required":true},"openrouter":{"dataType":"string","required":true},"hume":{"dataType":"string","required":true},"lmnt":{"dataType":"string","required":true},"deepgram":{"dataType":"string","required":true},"revai":{"dataType":"string","required":true},"assemblyai":{"dataType":"string","required":true},"gladia":{"dataType":"string","required":true},"elevenlabs":{"dataType":"string","required":true},"cerebras":{"dataType":"string","required":true},"huggingface":{"dataType":"string","required":true},"ollama":{"dataType":"string","required":true},"xai":{"dataType":"string","required":true},"deepinfra":{"dataType":"string","required":true},"perplexity":{"dataType":"string","required":true},"togetherai":{"dataType":"string","required":true},"fireworks":{"dataType":"string","required":true},"azure":{"dataType":"string","required":true},"amazon":{"dataType":"string","required":true},"mistral":{"dataType":"string","required":true},"deepseek":{"dataType":"string","required":true},"cohere":{"dataType":"string","required":true},"groq":{"dataType":"string","required":true},"google":{"dataType":"string","required":true},"anthropic":{"dataType":"string","required":true},"openai":{"dataType":"string","required":true}},"required":true},
+            "LABELS": {"dataType":"nestedObjectLiteral","nestedProperties":{"custom":{"dataType":"string","required":true},"chutes":{"dataType":"string","required":true},"openrouter":{"dataType":"string","required":true},"hume":{"dataType":"string","required":true},"lmnt":{"dataType":"string","required":true},"deepgram":{"dataType":"string","required":true},"revai":{"dataType":"string","required":true},"assemblyai":{"dataType":"string","required":true},"gladia":{"dataType":"string","required":true},"elevenlabs":{"dataType":"string","required":true},"cerebras":{"dataType":"string","required":true},"huggingface":{"dataType":"string","required":true},"ollama":{"dataType":"string","required":true},"xai":{"dataType":"string","required":true},"deepinfra":{"dataType":"string","required":true},"perplexity":{"dataType":"string","required":true},"togetherai":{"dataType":"string","required":true},"fireworks":{"dataType":"string","required":true},"azure":{"dataType":"string","required":true},"amazon":{"dataType":"string","required":true},"mistral":{"dataType":"string","required":true},"deepseek":{"dataType":"string","required":true},"cohere":{"dataType":"string","required":true},"groq":{"dataType":"string","required":true},"google":{"dataType":"string","required":true},"anthropic":{"dataType":"string","required":true},"openai":{"dataType":"string","required":true}},"required":true},
         },
         "additionalProperties": false,
     },

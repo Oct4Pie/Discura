@@ -6,6 +6,7 @@ import { useAuthStore } from './stores/authStore';
 import theme from './theme';
 import { useEffect } from 'react';
 import { configureAuthHeaders } from './api'; // Updated import
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout';
@@ -72,50 +73,52 @@ function App() {
   }, [token]);
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Router>
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-          limit={3}
-        />
-        <Routes>
-          {/* Auth routes */}
-          <Route path="/auth/callback" element={<AuthCallback />} />
-          
-          {/* Public routes */}
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<Login />} />
-          </Route>
-          
-          {/* Protected routes */}
-          <Route element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/bots" element={<BotList />} />
-            <Route path="/bots/create" element={<BotCreate />} />
-            <Route path="/bots/:id" element={<BotDetail />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-          
-          {/* Catch-all route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+            limit={3}
+          />
+          <Routes>
+            {/* Auth routes */}
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            
+            {/* Public routes */}
+            <Route element={<AuthLayout />}>
+              <Route path="/login" element={<Login />} />
+            </Route>
+            
+            {/* Protected routes */}
+            <Route element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/bots" element={<BotList />} />
+              <Route path="/bots/create" element={<BotCreate />} />
+              <Route path="/bots/:id" element={<BotDetail />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
+            
+            {/* Catch-all route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Router>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
 

@@ -64,7 +64,7 @@ export interface BotConfiguration {
   backstory: string;
   llmProvider: LLMProvider;
   llmModel: string;
-  apiKey: string; // Assuming this is the LLM API Key
+  apiKey?: string; 
   knowledge: KnowledgeBase[];
   imageGeneration: ImageGenerationConfig;
   toolsEnabled: boolean;

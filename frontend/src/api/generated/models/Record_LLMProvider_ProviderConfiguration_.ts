@@ -32,6 +32,7 @@ export type Record_LLMProvider_ProviderConfiguration_ = {
     lmnt: ProviderConfiguration;
     hume: ProviderConfiguration;
     openrouter: ProviderConfiguration;
+    chutes: ProviderConfiguration;
     custom: ProviderConfiguration;
 };
 

@@ -708,9 +708,15 @@ export interface components {
             choices: components["schemas"]["LLMCompletionResponseChoice"][];
             usage: components["schemas"]["LLMCompletionResponseUsage"];
         };
+        /**
+         * @description LLM Provider Enum - Supported providers
+         * @enum {string}
+         */
+        LLMProvider: "openai" | "anthropic" | "google" | "groq" | "cohere" | "deepseek" | "mistral" | "amazon" | "azure" | "fireworks" | "togetherai" | "perplexity" | "deepinfra" | "xai" | "ollama" | "huggingface" | "cerebras" | "elevenlabs" | "gladia" | "assemblyai" | "revai" | "deepgram" | "lmnt" | "hume" | "openrouter" | "chutes" | "custom";
         /** @description LLM Completion Request */
         LLMCompletionRequestDto: {
             model: string;
+            provider?: components["schemas"]["LLMProvider"];
             messages: components["schemas"]["LLMCompletionMessage"][];
             /** Format: double */
             temperature?: number;
@@ -728,11 +734,6 @@ export interface components {
             frequency_penalty?: number;
             user?: string;
         };
-        /**
-         * @description LLM Provider Enum - Supported providers
-         * @enum {string}
-         */
-        LLMProvider: "openai" | "anthropic" | "google" | "groq" | "cohere" | "deepseek" | "mistral" | "amazon" | "azure" | "fireworks" | "togetherai" | "perplexity" | "deepinfra" | "xai" | "ollama" | "huggingface" | "cerebras" | "elevenlabs" | "gladia" | "assemblyai" | "revai" | "deepgram" | "lmnt" | "hume" | "openrouter" | "custom";
         /** @description Provider Models Response - Contains models available for a specific
          *     provider */
         ProviderModelsResponseDto: {
@@ -799,6 +800,7 @@ export interface components {
             lmnt: components["schemas"]["ProviderConfiguration"];
             hume: components["schemas"]["ProviderConfiguration"];
             openrouter: components["schemas"]["ProviderConfiguration"];
+            chutes: components["schemas"]["ProviderConfiguration"];
             custom: components["schemas"]["ProviderConfiguration"];
         };
         /** @description Provider Registry Configuration - Contains configuration for all
@@ -898,7 +900,7 @@ export interface components {
             backstory: string;
             llmProvider: components["schemas"]["LLMProvider"];
             llmModel: string;
-            apiKey: string;
+            apiKey?: string;
             knowledge: components["schemas"]["KnowledgeBase"][];
             imageGeneration: components["schemas"]["ImageGenerationConfig"];
             toolsEnabled: boolean;
@@ -1064,9 +1066,11 @@ export interface components {
             LMNT: string;
             HUME: string;
             OPENROUTER: string;
+            CHUTES: string;
             CUSTOM: string;
             LABELS: {
                 custom: string;
+                chutes: string;
                 openrouter: string;
                 hume: string;
                 lmnt: string;

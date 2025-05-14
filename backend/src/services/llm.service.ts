@@ -16,9 +16,7 @@ import {
 } from "@discura/common";
 
 // Import specific types from Vercel AI SDK
-import { generateText, type CoreMessage } from "ai";
 import axios from "axios";
-import { Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 
 import {
@@ -27,6 +25,7 @@ import {
   groupModelsByProvider,
   mapOpenRouterProviderToLLMProvider,
   convertOpenRouterModelToEnhancedModel,
+  getModelVariantSlug,
 } from "./openrouter.service";
 import {
   getAiProviderRegistry,
@@ -37,6 +36,12 @@ import {
 } from "./vercel-ai-sdk.service";
 import { BotAdapter } from "../models/adapters/bot.adapter";
 import { logger } from "../utils/logger";
+import {
+  CoreMessage,
+  LanguageModelV1,
+  GenerateTextResult,
+  generateText,
+} from "ai"; // Changed from '@ai-sdk/core'
 
 // Cache settings - make these configurable via environment variables
 const DEFAULT_CACHE_TTL = parseInt(
@@ -88,6 +93,7 @@ const PROVIDER_CACHE_TTL: Record<LLMProvider, number> = {
   [LLMProvider.LMNT]: DEFAULT_CACHE_TTL,
   [LLMProvider.HUME]: DEFAULT_CACHE_TTL,
   [LLMProvider.OPENROUTER]: OPENROUTER_CACHE_TTL, // Use OpenRouter-specific TTL
+  [LLMProvider.CHUTES]: DEFAULT_CACHE_TTL, // Add Chutes provider
   [LLMProvider.CUSTOM]: DEFAULT_CACHE_TTL,
 };
 
@@ -118,6 +124,7 @@ const PROVIDER_DISPLAY_NAMES: Record<LLMProvider, string> = {
   [LLMProvider.LMNT]: "LMNT",
   [LLMProvider.HUME]: "Hume",
   [LLMProvider.OPENROUTER]: "OpenRouter",
+  [LLMProvider.CHUTES]: "Chutes AI", // Add Chutes display name
   [LLMProvider.CUSTOM]: "Custom API",
 };
 
@@ -520,6 +527,22 @@ const DEFAULT_PROVIDER_MODELS: Record<LLMProvider, LLMModelData[]> = {
       },
     },
   ],
+  [LLMProvider.CHUTES]: [
+    {
+      id: "chutes/nexus-7b-v1",
+      object: "model",
+      created: Math.floor(Date.now() / 1000) - 86400 * 2,
+      owned_by: "chutes",
+      display_name: "Nexus 7B v1",
+      provider_model_id: "nexus-7b-v1",
+      context_length: 32768,
+      capabilities: {
+        input_modalities: ["text"],
+        output_modalities: ["text"],
+        supports_streaming: true,
+      },
+    },
+  ],
   [LLMProvider.CUSTOM]: [],
 };
 
@@ -598,6 +621,581 @@ async function loadProviderConfig(): Promise<ProviderRegistryConfiguration> {
     };
   }
 }
+
+/**
+ * Calculate token count for a variety of content formats
+ * Used by the Vercel AI SDK integration
+ */
+function calculateTokenCount(
+  content: string | any[] | Record<string, any> | undefined | null
+): number {
+  // If content is undefined or null
+  if (content === undefined || content === null) {
+    return 0;
+  }
+
+  // If content is a string
+  if (typeof content === "string") {
+    // Rough approximation, assumes ~4 chars per token on average
+    return Math.ceil(content.length / 4);
+  }
+
+  // If content is an array (multimodal content)
+  if (Array.isArray(content)) {
+    return content.reduce((acc, part) => {
+      // Handle text parts
+      if (typeof part === "object" && part !== null) {
+        if (part.type === "text" && typeof part.text === "string") {
+          return acc + Math.ceil(part.text.length / 4);
+        }
+        // Handle image parts - estimate based on image size/complexity
+        else if (part.type === "image") {
+          return acc + 150; // Rough estimate for image description
+        }
+        // Handle reasoning parts
+        else if (
+          part.type === "reasoning" &&
+          typeof part.reasoning === "string"
+        ) {
+          return acc + Math.ceil(part.reasoning.length / 4);
+        }
+        // Handle tool call parts
+        else if (part.type === "tool_call" && part.tool_call) {
+          const nameTokens =
+            typeof part.tool_call.name === "string"
+              ? Math.ceil(part.tool_call.name.length / 4)
+              : 0;
+          const argsTokens =
+            typeof part.tool_call.arguments === "string"
+              ? Math.ceil(part.tool_call.arguments.length / 4)
+              : 0;
+          return acc + nameTokens + argsTokens;
+        }
+      }
+      return acc + 10; // Default token count for unknown parts
+    }, 0);
+  }
+
+  // For tool content or other object structures
+  if (typeof content === "object") {
+    // Type guard to check for tool result objects
+    const isToolResult = (obj: any): obj is { type: string; content: any } =>
+      obj &&
+      typeof obj === "object" &&
+      typeof obj.type === "string" &&
+      obj.type === "tool_result" &&
+      "content" in obj;
+
+    // Check if it's a tool result with content property
+    if (isToolResult(content)) {
+      const toolContent = content.content;
+      if (typeof toolContent === "string") {
+        return Math.ceil(toolContent.length / 4);
+      } else if (toolContent && typeof toolContent === "object") {
+        // If content is an object, estimate based on JSON string length
+        return Math.ceil(JSON.stringify(toolContent).length / 4);
+      }
+    }
+
+    // Try to estimate based on JSON stringification for any other object
+    return Math.ceil(JSON.stringify(content).length / 4);
+  }
+
+  return 10; // Default return for unknown types
+}
+
+/**
+ * Create a chat completion using Vercel AI SDK
+ * This offers more flexibility and better integration with various providers
+ */
+export const createChatCompletionWithVercelAi = async (
+  request: LLMCompletionRequestDto,
+  userId: string
+): Promise<LLMCompletionResponseDto> => {
+  try {
+    const { model: modelId, provider } = request;
+    logger.info(
+      `Creating chat completion with Vercel AI SDK. Model: ${modelId}, Provider: ${provider || "default (OpenRouter)"}`
+    );
+
+    const registry = await getAiProviderRegistry();
+
+    const messages: CoreMessage[] = request.messages.map((msg) => ({
+      role:
+        msg.role === "user"
+          ? "user"
+          : msg.role === "assistant"
+            ? "assistant"
+            : msg.role === "system"
+              ? "system"
+              : "user", // Default to user if role is unexpected
+      content: msg.content,
+      name: msg.name,
+    }));
+
+    const startTime = Date.now();
+    let result: GenerateTextResult<any, any>; // Using <any, any> for diagnostics
+    let responseModelIdentifier = modelId; // What we report back in the response
+
+    // Path 1: Explicit provider specified (and not OpenRouter)
+    if (provider && provider !== LLMProvider.OPENROUTER) {
+      logger.info(
+        `Attempting direct Vercel AI provider call: ${provider} > ${modelId}`
+      );
+
+      if (!registry[provider]) {
+        logger.error(
+          `Provider ${provider} not found in registry or not configured properly`
+        );
+        throw new Error(
+          `Provider ${provider} not configured. Check if the API key is set (e.g., ${provider.toUpperCase()}_KEY)`
+        );
+      }
+
+      const vercelModel = registry.languageModel(`${provider} > ${modelId}`);
+      responseModelIdentifier = `${provider}/${modelId}`;
+
+      result = await generateText({
+        model: vercelModel,
+        messages,
+        temperature: request.temperature,
+        topP: request.top_p,
+        maxTokens: request.max_tokens,
+        presencePenalty: request.presence_penalty,
+        frequencyPenalty: request.frequency_penalty,
+      });
+    } else {
+      // Path 2: OpenRouter (either explicitly specified or as default)
+      let slugForOpenRouter = modelId;
+      if (modelId.startsWith("openrouter/")) {
+        slugForOpenRouter = modelId.substring(11); // Remove "openrouter/"
+      }
+      // If provider is explicitly OpenRouter, we ensure the model string reflects that for clarity
+      if (
+        provider === LLMProvider.OPENROUTER &&
+        !modelId.startsWith("openrouter/")
+      ) {
+        responseModelIdentifier = `openrouter/${modelId}`;
+      } else {
+        responseModelIdentifier = modelId; // Use the original slug or openrouter/slug
+      }
+
+      logger.info(`Attempting OpenRouter call with slug: ${slugForOpenRouter}`);
+
+      if (!registry.openrouter) {
+        logger.error(
+          "OpenRouter provider not found in registry. Ensure OPENROUTER_KEY is set."
+        );
+        throw new Error(
+          "OpenRouter provider not configured in the Vercel AI SDK registry."
+        );
+      }
+
+      const openRouterModel = registry.openrouter.chat(slugForOpenRouter);
+
+      result = await generateText({
+        model: openRouterModel,
+        messages,
+        temperature: request.temperature,
+        topP: request.top_p,
+        maxTokens: request.max_tokens,
+        presencePenalty: request.presence_penalty,
+        frequencyPenalty: request.frequency_penalty,
+      });
+    }
+
+    const endTime = Date.now();
+    const promptTokens = messages.reduce(
+      (acc, msg) => acc + calculateTokenCount(msg.content),
+      0
+    );
+    const completionTokens = calculateTokenCount(result.text);
+
+    logger.info(
+      `Completion generated with Vercel AI SDK in ${endTime - startTime}ms. Provider: ${provider || "OpenRouter"}, Model: ${modelId}`
+    );
+
+    return {
+      id: `${provider || "openrouter"}-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`,
+      object: "chat.completion",
+      created: Math.floor(Date.now() / 1000),
+      model: responseModelIdentifier, // Use the potentially modified identifier
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: "assistant",
+            content: result.text,
+          },
+          finish_reason: "stop",
+        },
+      ],
+      usage: {
+        prompt_tokens: promptTokens,
+        completion_tokens: completionTokens,
+        total_tokens: promptTokens + completionTokens,
+      },
+    };
+  } catch (error) {
+    logger.error("Error in createChatCompletionWithVercelAi:", error);
+    throw new Error(
+      `Failed to generate completion: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  }
+};
+
+/**
+ * Create a chat completion using the selected model
+ * This is the main entry point for generating completions
+ */
+export const createChatCompletion = async (
+  request: LLMCompletionRequestDto,
+  userId: string
+): Promise<LLMCompletionResponseDto> => {
+  try {
+    // Use Vercel AI SDK for all completions
+    return await createChatCompletionWithVercelAi(request, userId);
+  } catch (error) {
+    logger.error("Error in createChatCompletion:", error);
+
+    // If we get here, the Vercel AI SDK failed completely
+    // Re-throw the error rather than using a simulated response
+    throw new Error(
+      `Failed to generate completion: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  }
+};
+
+/**
+ * Call the LLM based on the specified provider
+ * This function is used by bot services to generate responses
+ */
+export const callLLM = async (request: {
+  botId: string;
+  prompt: string;
+  systemPrompt?: string;
+  history?: Array<{ role: string; content: string }>;
+  userId: string;
+  username: string;
+  model?: string;
+  provider?: LLMProvider;
+}): Promise<LLMResponse> => {
+  try {
+    // Get bot configuration from database
+    const bot = await BotAdapter.findById(request.botId);
+    if (!bot || !bot.configuration) {
+      logger.error(`Bot not found or missing configuration: ${request.botId}`);
+      return {
+        text: "Sorry, I encountered an error with my configuration. Please try again later.",
+      };
+    }
+
+    // Use provided parameters if available, otherwise use bot configuration
+    const llmModel = request.model || bot.configuration.llmModel;
+
+    // Prepare messages array for Vercel AI SDK
+    const messages = [];
+
+    // Add system message if available
+    if (request.systemPrompt) {
+      messages.push({
+        role: "system",
+        content: request.systemPrompt,
+      });
+    }
+
+    // Add history if available
+    if (request.history && request.history.length > 0) {
+      messages.push(...request.history);
+    } else {
+      // If no history, just add the user's prompt
+      messages.push({
+        role: "user",
+        content: request.prompt,
+        name: request.username || undefined,
+      });
+    }
+
+    // Use Vercel AI SDK via createChatCompletion
+    const completionRequest: LLMCompletionRequestDto = {
+      model: llmModel,
+      messages,
+      temperature: 0.7,
+      max_tokens: 1000,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+    };
+
+    // Call the Vercel AI SDK integration
+    try {
+      const completion = await createChatCompletion(
+        completionRequest,
+        request.userId
+      );
+
+      // Extract the assistant's message
+      const assistantMessage = completion.choices[0]?.message;
+      if (!assistantMessage || !assistantMessage.content) {
+        throw new Error("No valid response received from LLM");
+      }
+
+      // Check if the response indicates image generation is needed
+      // This is a simple heuristic - in a production system, you would
+      // use proper function/tool calling
+      const shouldGenerateImage =
+        assistantMessage.content.includes("![") || // Markdown image syntax
+        assistantMessage.content.toLowerCase().includes("generate an image") ||
+        assistantMessage.content.toLowerCase().includes("create an image");
+
+      let imagePrompt = null;
+      if (shouldGenerateImage) {
+        // Simple extraction of image description
+        const pattern =
+          /!\[.*?\]\((.+?)\)|generate an image of (.+?)(?:\.|$)|create an image of (.+?)(?:\.|$)/i;
+        const match = assistantMessage.content.match(pattern);
+        if (match) {
+          imagePrompt = match[1] || match[2] || match[3];
+        } else {
+          // Fall back to using the user's prompt for image generation
+          imagePrompt = request.prompt;
+        }
+      }
+
+      return {
+        text: assistantMessage.content,
+        generateImage: shouldGenerateImage,
+        imagePrompt: imagePrompt || undefined,
+      };
+    } catch (error) {
+      logger.error(`Error generating completion with Vercel AI SDK: ${error}`);
+      return {
+        text: "Sorry, I encountered an error connecting to my AI service. Please try again later.",
+      };
+    }
+  } catch (error) {
+    logger.error(`Error calling LLM for bot ${request.botId}:`, error);
+    return {
+      text: "Sorry, I encountered an error connecting to my AI service. Please try again later.",
+    };
+  }
+};
+
+/**
+ * Enable or disable a specific provider
+ */
+export const updateProviderStatus = async (
+  provider: LLMProvider,
+  enabled: boolean
+): Promise<void> => {
+  try {
+    const config = await loadProviderConfig();
+
+    if (!config.providers[provider]) {
+      config.providers[provider] = { enabled };
+    } else {
+      config.providers[provider].enabled = enabled;
+    }
+
+    await saveProviderConfig(config);
+
+    // Refresh the provider registry
+    await refreshAiProviderRegistry();
+
+    logger.info(`Provider ${provider} ${enabled ? "enabled" : "disabled"}`);
+  } catch (error) {
+    logger.error(`Error updating provider status for ${provider}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Add or update a custom provider
+ */
+export const configureCustomProvider = async (
+  customProvider: ApiCustomProviderConfig
+): Promise<void> => {
+  try {
+    const config = await loadProviderConfig();
+
+    if (!config.providers[LLMProvider.CUSTOM]) {
+      config.providers[LLMProvider.CUSTOM] = {
+        enabled: true,
+        custom_providers: [customProvider],
+      };
+    } else {
+      // Enable the custom provider category
+      config.providers[LLMProvider.CUSTOM].enabled = true;
+
+      // Initialize custom_providers array if it doesn't exist
+      if (!config.providers[LLMProvider.CUSTOM].custom_providers) {
+        config.providers[LLMProvider.CUSTOM].custom_providers = [];
+      }
+
+      // Find existing provider with the same name and update or add
+      const existingIndex = config.providers[
+        LLMProvider.CUSTOM
+      ].custom_providers!.findIndex((p) => p.name === customProvider.name);
+
+      if (existingIndex >= 0) {
+        config.providers[LLMProvider.CUSTOM].custom_providers![existingIndex] =
+          customProvider;
+      } else {
+        config.providers[LLMProvider.CUSTOM].custom_providers!.push(
+          customProvider
+        );
+      }
+    }
+
+    await saveProviderConfig(config);
+
+    // Refresh the provider registry
+    await refreshAiProviderRegistry();
+
+    logger.info(
+      `Custom provider ${customProvider.name} configured successfully`
+    );
+  } catch (error) {
+    logger.error(
+      `Error configuring custom provider ${customProvider.name}:`,
+      error
+    );
+    throw error;
+  }
+};
+
+/**
+ * Remove a custom provider
+ */
+export const removeCustomProvider = async (
+  providerName: string
+): Promise<boolean> => {
+  try {
+    const config = await loadProviderConfig();
+
+    if (!config.providers[LLMProvider.CUSTOM]?.custom_providers) {
+      return false;
+    }
+
+    const initialLength =
+      config.providers[LLMProvider.CUSTOM].custom_providers!.length;
+
+    config.providers[LLMProvider.CUSTOM].custom_providers = config.providers[
+      LLMProvider.CUSTOM
+    ].custom_providers!.filter((p) => p.name !== providerName);
+
+    const removed =
+      config.providers[LLMProvider.CUSTOM].custom_providers!.length <
+      initialLength;
+
+    if (removed) {
+      await saveProviderConfig(config);
+
+      // Refresh the provider registry
+      await refreshAiProviderRegistry();
+
+      logger.info(`Custom provider ${providerName} removed successfully`);
+    }
+
+    return removed;
+  } catch (error) {
+    logger.error(`Error removing custom provider ${providerName}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Initialize the model cache on startup
+ */
+async function initializeModelCache(): Promise<void> {
+  try {
+    await loadModelCache(); // Sets modelCache to null if issues with the file or missing 'providers'
+
+    let cacheNeedsSaving = false;
+
+    if (!modelCache) {
+      logger.info(
+        "No existing cache or invalid cache structure loaded. Initializing a new model cache."
+      );
+      modelCache = {
+        timestamp: Date.now(),
+        openRouterLastFetch: 0,
+        providers: {} as Record<LLMProvider, ProviderModelsResponseDto>,
+      };
+      // A new cache might need saving if providers are added, handled below.
+    } else {
+      // Cache was loaded, but ensure 'providers' object and 'openRouterLastFetch' exist and are correct type.
+      // This handles cases where the cache file might be from an old version, an external script,
+      // or a previous save that didn't include the full structure.
+      if (
+        typeof modelCache.providers !== "object" ||
+        modelCache.providers === null
+      ) {
+        logger.warn(
+          "Loaded model cache is missing 'providers' object or it's not an object. Initializing 'providers' field."
+        );
+        modelCache.providers = {} as Record<
+          LLMProvider,
+          ProviderModelsResponseDto
+        >;
+        cacheNeedsSaving = true; // Cache structure was modified
+      }
+      if (typeof modelCache.openRouterLastFetch !== "number") {
+        logger.warn(
+          "Loaded model cache is missing 'openRouterLastFetch' or it's not a number. Initializing 'openRouterLastFetch'."
+        );
+        modelCache.openRouterLastFetch = 0;
+        cacheNeedsSaving = true; // Cache structure was modified
+      }
+    }
+
+    // At this point, modelCache is guaranteed to be non-null,
+    // and modelCache.providers is guaranteed to be an object.
+    const config = await loadProviderConfig();
+
+    Object.values(LLMProvider).forEach((provider) => {
+      if (config.providers[provider]?.enabled) {
+        if (!modelCache!.providers[provider]) {
+          logger.info(`Initializing entry for provider ${provider} in cache.`);
+          modelCache!.providers[provider] = {
+            provider,
+            provider_display_name: PROVIDER_DISPLAY_NAMES[provider],
+            models: DEFAULT_PROVIDER_MODELS[provider] || [],
+            last_updated: 0, // Force immediate fetch
+          };
+          cacheNeedsSaving = true;
+        }
+      }
+    });
+
+    if (cacheNeedsSaving) {
+      logger.info("Saving updated model cache after initialization.");
+      await saveModelCache();
+    }
+  } catch (error) {
+    logger.error("Error initializing model cache:", error);
+    // Fallback: ensure modelCache is at least minimally valid to prevent cascading errors
+    if (
+      !modelCache ||
+      typeof modelCache.providers !== "object" ||
+      modelCache.providers === null
+    ) {
+      modelCache = {
+        timestamp: Date.now(),
+        openRouterLastFetch: 0,
+        providers: {} as Record<LLMProvider, ProviderModelsResponseDto>,
+      };
+      logger.info(
+        "Fallback: Re-initialized modelCache due to critical error during initialization."
+      );
+    }
+  }
+}
+
+// Initialize cache on module load
+initializeModelCache().catch((error) => {
+  logger.error("Failed to initialize model cache:", error);
+});
 
 /**
  * Load models from cache file if it exists
@@ -705,99 +1303,6 @@ async function saveModelCache(): Promise<void> {
     logger.error("Error saving model cache:", error);
   }
 }
-
-/**
- * Initialize the model cache on startup
- */
-async function initializeModelCache(): Promise<void> {
-  try {
-    await loadModelCache(); // Sets modelCache to null if issues with the file or missing 'providers'
-
-    let cacheNeedsSaving = false;
-
-    if (!modelCache) {
-      logger.info(
-        "No existing cache or invalid cache structure loaded. Initializing a new model cache."
-      );
-      modelCache = {
-        timestamp: Date.now(),
-        openRouterLastFetch: 0,
-        providers: {} as Record<LLMProvider, ProviderModelsResponseDto>,
-      };
-      // A new cache might need saving if providers are added, handled below.
-    } else {
-      // Cache was loaded, but ensure 'providers' object and 'openRouterLastFetch' exist and are correct type.
-      // This handles cases where the cache file might be from an old version, an external script,
-      // or a previous save that didn't include the full structure.
-      if (
-        typeof modelCache.providers !== "object" ||
-        modelCache.providers === null
-      ) {
-        logger.warn(
-          "Loaded model cache is missing 'providers' object or it's not an object. Initializing 'providers' field."
-        );
-        modelCache.providers = {} as Record<
-          LLMProvider,
-          ProviderModelsResponseDto
-        >;
-        cacheNeedsSaving = true; // Cache structure was modified
-      }
-      if (typeof modelCache.openRouterLastFetch !== "number") {
-        logger.warn(
-          "Loaded model cache is missing 'openRouterLastFetch' or it's not a number. Initializing 'openRouterLastFetch'."
-        );
-        modelCache.openRouterLastFetch = 0;
-        cacheNeedsSaving = true; // Cache structure was modified
-      }
-    }
-
-    // At this point, modelCache is guaranteed to be non-null,
-    // and modelCache.providers is guaranteed to be an object.
-    const config = await loadProviderConfig();
-
-    Object.values(LLMProvider).forEach((provider) => {
-      if (config.providers[provider]?.enabled) {
-        if (!modelCache!.providers[provider]) {
-          logger.info(`Initializing entry for provider ${provider} in cache.`);
-          modelCache!.providers[provider] = {
-            provider,
-            provider_display_name: PROVIDER_DISPLAY_NAMES[provider],
-            models: DEFAULT_PROVIDER_MODELS[provider] || [],
-            last_updated: 0, // Force immediate fetch
-          };
-          cacheNeedsSaving = true;
-        }
-      }
-    });
-
-    if (cacheNeedsSaving) {
-      logger.info("Saving updated model cache after initialization.");
-      await saveModelCache();
-    }
-  } catch (error) {
-    logger.error("Error initializing model cache:", error);
-    // Fallback: ensure modelCache is at least minimally valid to prevent cascading errors
-    if (
-      !modelCache ||
-      typeof modelCache.providers !== "object" ||
-      modelCache.providers === null
-    ) {
-      modelCache = {
-        timestamp: Date.now(),
-        openRouterLastFetch: 0,
-        providers: {} as Record<LLMProvider, ProviderModelsResponseDto>,
-      };
-      logger.info(
-        "Fallback: Re-initialized modelCache due to critical error during initialization."
-      );
-    }
-  }
-}
-
-// Initialize cache on module load
-initializeModelCache().catch((error) => {
-  logger.error("Failed to initialize model cache:", error);
-});
 
 /**
  * Check if the cache for a provider is expired
@@ -1317,1047 +1822,75 @@ export const refreshProviderModels = async (
 };
 
 /**
- * Create a chat completion using Vercel AI SDK
- * This offers more flexibility and better integration with various providers
+ * Fetch models and populate the cache
+ * This function is called periodically to refresh the cache
  */
-export const createChatCompletionWithVercelAi = async (
-  request: LLMCompletionRequestDto,
-  userId: string
-): Promise<LLMCompletionResponseDto> => {
-  try {
-    logger.info(
-      `Creating chat completion with Vercel AI SDK using model: ${request.model}`
+async function fetchModelsAndPopulateCache(forceRefresh = false): Promise<void> {
+  if (!modelCache) {
+    logger.warn(
+      "fetchModelsAndPopulateCache called with no modelCache initialized. Attempting to load."
     );
-
-    // Get the provider registry
-    const registry = await getAiProviderRegistry();
-
-    // Parse the request model to get provider and model ID
-    let providerName: string;
-    let modelId: string;
-
-    // If the model ID contains our separator, it's already in Vercel AI format
-    if (request.model.includes(" > ")) {
-      const parsed = parseVercelAiModelId(request.model);
-      providerName = parsed.provider;
-      modelId = parsed.modelId;
-    }
-    // Special handling for OpenRouter models with model_variant_slug
-    else if (
-      request.model.includes("/") &&
-      !request.model.startsWith("gpt-") &&
-      !request.model.startsWith("claude-") &&
-      !request.model.startsWith("gemini-")
-    ) {
-      // This looks like an OpenRouter model slug
-      try {
-        // Try to get the model_variant_slug from OpenRouter
-        const variantSlug = await getModelVariantSlug(request.model);
-        if (variantSlug) {
-          providerName = "openrouter";
-          modelId = variantSlug;
-          logger.info(`Mapped to OpenRouter variant slug: ${variantSlug}`);
-        } else {
-          // Fall back to using the model as is with OpenRouter
-          providerName = "openrouter";
-          modelId = request.model;
-          logger.info(
-            `No variant slug found, using model ID directly with OpenRouter: ${request.model}`
-          );
-        }
-      } catch (error) {
-        // If there's an error getting the variant slug, use the default mapping
-        logger.warn(
-          `Error getting OpenRouter variant slug: ${error}. Using default mapping.`
-        );
-        const parts = request.model.split("/");
-        providerName = parts[0].toLowerCase();
-        modelId = parts.slice(1).join("/");
-      }
-    } else {
-      // Try to determine provider from model ID based on naming conventions
-      if (
-        request.model.startsWith("gpt-") ||
-        request.model.includes("dall-e")
-      ) {
-        providerName = "openai";
-        modelId = request.model;
-      } else if (request.model.startsWith("claude-")) {
-        providerName = "anthropic";
-        modelId = request.model;
-      } else if (
-        request.model.startsWith("gemini-") ||
-        request.model.startsWith("models/gemini-")
-      ) {
-        providerName = "google";
-        modelId = request.model;
-      } else {
-        // For other providers, use the model as is and let the registry route it
-        const [provider, ...modelParts] = request.model.split("/");
-        providerName = provider.toLowerCase();
-        modelId = modelParts.join("/") || request.model;
-      }
-    }
-
-    logger.info(`Mapped to provider: ${providerName}, model: ${modelId}`);
-
-    // For OpenRouter, use different selection methods based on special routing endpoints
-    if (
-      providerName === "openrouter" &&
-      ["auto", "best", "fastest", "cheapest"].includes(modelId)
-    ) {
-      // These are special OpenRouter routing endpoints, use them directly
-      logger.info(`Using OpenRouter routing endpoint: ${modelId}`);
-      // Use chat() for all models since OpenRouter supports it widely
-      const model = registry.openrouter.chat(modelId);
-
-      // Prepare messages for Vercel AI SDK - convert to CoreMessage format
-      const messages: CoreMessage[] = request.messages.map((msg) => ({
-        role:
-          msg.role === "user"
-            ? "user"
-            : msg.role === "assistant"
-              ? "assistant"
-              : msg.role === "system"
-                ? "system"
-                : "user",
-        content: msg.content,
-        name: msg.name,
-      }));
-
-      const startTime = Date.now();
-
-      // Generate text using Vercel AI SDK
-      const result = await generateText({
-        model,
-        messages,
-        temperature: request.temperature,
-        topP: request.top_p,
-        maxTokens: request.max_tokens,
-        presencePenalty: request.presence_penalty,
-        frequencyPenalty: request.frequency_penalty,
-      });
-
-      const endTime = Date.now();
-
-      // Calculate token usage (rough estimate)
-      const promptTokens = messages.reduce(
-        (acc, msg) => acc + calculateTokenCount(msg.content),
-        0
+    await loadModelCache(); // Ensure cache is loaded
+    if (!modelCache) {
+      logger.error(
+        "Failed to load or initialize modelCache in fetchModelsAndPopulateCache. Aborting fetch."
       );
-      const completionTokens = calculateTokenCount(result.text);
-
-      // Return in OpenAI-compatible format
-      return {
-        id: `openrouter-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`,
-        object: "chat.completion",
-        created: Math.floor(Date.now() / 1000),
-        model: request.model,
-        choices: [
-          {
-            index: 0,
-            message: {
-              role: "assistant",
-              content: result.text,
-            },
-            finish_reason: "stop", // Assuming normal completion
-          },
-        ],
-        usage: {
-          prompt_tokens: promptTokens,
-          completion_tokens: completionTokens,
-          total_tokens: promptTokens + completionTokens,
-        },
+      // Initialize to a minimal valid state to prevent further errors down the line
+      modelCache = {
+        timestamp: Date.now(),
+        openRouterLastFetch: 0,
+        providers: {} as Record<LLMProvider, ProviderModelsResponseDto>,
       };
+      await saveModelCache(); // Save the initialized empty cache
+      return;
     }
-    // For standard models that use the provider registry
-    else {
-      // Prepare the model reference for Vercel AI
-      const model = registry.languageModel(`${providerName} > ${modelId}`);
-
-      // Map our request format to Vercel AI SDK format
-      const messages: CoreMessage[] = request.messages.map((msg) => ({
-        role:
-          msg.role === "user"
-            ? "user"
-            : msg.role === "assistant"
-              ? "assistant"
-              : msg.role === "system"
-                ? "system"
-                : "user",
-        content: msg.content,
-        name: msg.name,
-      }));
-
-      const startTime = Date.now();
-
-      // Generate text using Vercel AI SDK
-      const result = await generateText({
-        model,
-        messages,
-        temperature: request.temperature,
-        topP: request.top_p,
-        maxTokens: request.max_tokens,
-        presencePenalty: request.presence_penalty,
-        frequencyPenalty: request.frequency_penalty,
-      });
-
-      const endTime = Date.now();
-
-      // Rough estimation of token counts
-      // In a production app, you would use a proper tokenizer
-      const promptTokens = messages.reduce(
-        (acc, msg) => acc + calculateTokenCount(msg.content),
-        0
-      );
-      const completionTokens = calculateTokenCount(result.text);
-
-      // Map Vercel AI response to our API format
-      const response: LLMCompletionResponseDto = {
-        id: `discura-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`,
-        object: "chat.completion",
-        created: Math.floor(Date.now() / 1000),
-        model: request.model,
-        choices: [
-          {
-            index: 0,
-            message: {
-              role: "assistant",
-              content: result.text,
-            },
-            finish_reason: "stop", // Assuming normal completion
-          },
-        ],
-        usage: {
-          prompt_tokens: promptTokens,
-          completion_tokens: completionTokens,
-          total_tokens: promptTokens + completionTokens,
-        },
-      };
-
-      logger.info(
-        `Completion generated with Vercel AI SDK in ${endTime - startTime}ms`
-      );
-
-      return response;
-    }
-  } catch (error) {
-    logger.error("Error in createChatCompletionWithVercelAi:", error);
-
-    // Re-throw as a structured error for the API
-    throw new Error(
-      `Failed to generate completion: ${error instanceof Error ? error.message : "Unknown error"}`
-    );
   }
-};
 
-/**
- * Create a chat completion using the selected model
- */
-export const createChatCompletion = async (
-  request: LLMCompletionRequestDto,
-  userId: string
-): Promise<LLMCompletionResponseDto> => {
-  try {
-    // First, try to use Vercel AI SDK if available
+  // Fetch from OpenRouter if not rate-limited and its cache is stale or refresh is forced.
+  // OpenRouter is always considered for model discovery.
+  if (
+    !shouldThrottleOpenRouter() &&
+    (forceRefresh ||
+      !modelCache.openRouterLastFetch || // First fetch attempt
+      Date.now() - modelCache.openRouterLastFetch > OPENROUTER_CACHE_TTL) // Cache expired
+  ) {
     try {
-      return await createChatCompletionWithVercelAi(request, userId);
-    } catch (vercelError) {
-      logger.warn(
-        `Vercel AI SDK completion failed, falling back to direct API: ${vercelError instanceof Error ? vercelError.message : "Unknown error"}`
-      );
-
-      // Fall back to existing implementation
-      // Get API key based on user or bot configuration
-      const apiKey = await getApiKeyForUser(userId, request.model);
-
-      if (apiKey) {
-        // Determine provider from model and use appropriate API
-        if (request.model.startsWith("gpt-")) {
-          return callOpenAIDirectly(request, apiKey);
-        } else if (request.model.startsWith("claude-")) {
-          return callAnthropicDirectly(request, apiKey);
-        } else if (request.model.startsWith("gemini-")) {
-          return callGoogleDirectly(request, apiKey);
-        } else {
-          // For other providers, fallback to generic handling
-          return callGenericProviderDirectly(request, apiKey);
+      const openRouterModels = await fetchModelsFromOpenRouter();
+      Object.entries(openRouterModels).forEach(([provider, models]) => {
+        const providerEnum = provider as LLMProvider;
+        if (modelCache!.providers[providerEnum]) {
+          modelCache!.providers[providerEnum].models = models;
+          modelCache!.providers[providerEnum].last_updated = Date.now();
         }
-      }
-    }
-
-    // If we can't get an API key or the provider is unknown, simulate a response
-    logger.info("Using simulated response for demonstration");
-    const completionText = generateSimulatedResponse(request.messages);
-
-    return {
-      id: `chatcmpl-${uuidv4().substring(0, 8)}`,
-      object: "chat.completion",
-      created: Math.floor(Date.now() / 1000),
-      model: request.model,
-      choices: [
-        {
-          index: 0,
-          message: {
-            role: "assistant",
-            content: completionText,
-          },
-          finish_reason: "stop",
-        },
-      ],
-      usage: {
-        prompt_tokens: request.messages.reduce(
-          (total, msg) => total + calculateTokenCount(msg.content),
-          0
-        ),
-        completion_tokens: calculateTokenCount(completionText),
-        total_tokens:
-          request.messages.reduce(
-            (total, msg) => total + calculateTokenCount(msg.content),
-            0
-          ) + calculateTokenCount(completionText),
-      },
-    };
-  } catch (error) {
-    logger.error("Error in createChatCompletion:", error);
-    throw error;
-  }
-};
-
-/**
- * Create a streaming chat completion
- */
-export const createStreamingChatCompletion = (
-  request: LLMCompletionRequestDto,
-  userId: string,
-  res: Response
-): void => {
-  try {
-    const responseText = generateSimulatedResponse(request.messages);
-    const words = responseText.split(" ");
-
-    // Set up SSE stream
-    res.write(
-      "data: " +
-        JSON.stringify({
-          id: `chatcmpl-${uuidv4().substring(0, 8)}`,
-          object: "chat.completion.chunk",
-          created: Math.floor(Date.now() / 1000),
-          model: request.model,
-          choices: [
-            {
-              index: 0,
-              delta: {
-                role: "assistant",
-              },
-              finish_reason: null,
-            },
-          ],
-        }) +
-        "\n\n"
-    );
-
-    // Stream the response word by word
-    let wordIndex = 0;
-
-    const interval = setInterval(() => {
-      if (wordIndex < words.length) {
-        const word = words[wordIndex];
-        res.write(
-          "data: " +
-            JSON.stringify({
-              id: `chatcmpl-${uuidv4().substring(0, 8)}`,
-              object: "chat.completion.chunk",
-              created: Math.floor(Date.now() / 1000),
-              model: request.model,
-              choices: [
-                {
-                  index: 0,
-                  delta: {
-                    content: word + " ",
-                  },
-                  finish_reason: null,
-                },
-              ],
-            }) +
-            "\n\n"
-        );
-
-        wordIndex++;
-      } else {
-        // Send the final chunk with finish_reason
-        res.write(
-          "data: " +
-            JSON.stringify({
-              id: `chatcmpl-${uuidv4().substring(0, 8)}`,
-              object: "chat.completion.chunk",
-              created: Math.floor(Date.now() / 1000),
-              model: request.model,
-              choices: [
-                {
-                  index: 0,
-                  delta: {},
-                  finish_reason: "stop",
-                },
-              ],
-            }) +
-            "\n\n"
-        );
-
-        // End the stream
-        res.write("data: [DONE]\n\n");
-        clearInterval(interval);
-        res.end();
-      }
-    }, 50); // Stream a new word every 50ms
-
-    // Handle client disconnect
-    res.on("close", () => {
-      clearInterval(interval);
-    });
-  } catch (error) {
-    logger.error("Error creating streaming chat completion:", error);
-    res.write(
-      "data: " +
-        JSON.stringify({
-          error: {
-            message: "Error creating streaming response",
-            type: "server_error",
-          },
-        }) +
-        "\n\n"
-    );
-    res.end();
-  }
-};
-
-/**
- * Get the appropriate API key for the user and model
- */
-async function getApiKeyForUser(
-  userId: string,
-  model: string
-): Promise<string | null> {
-  try {
-    // Find all bots for this user
-    const userBots = await BotAdapter.findByUserId(userId);
-
-    // Look for a bot with the appropriate configuration
-    for (const bot of userBots) {
-      if (bot.configuration?.apiKey && bot.configuration?.llmModel === model) {
-        return bot.configuration.apiKey;
-      }
-    }
-
-    // If no exact model match, return the first API key found
-    for (const bot of userBots) {
-      if (bot.configuration?.apiKey) {
-        return bot.configuration.apiKey;
-      }
-    }
-
-    // In a production app, you might have a fallback system-wide API key
-    return null;
-  } catch (error) {
-    logger.error("Error getting API key:", error);
-    return null;
-  }
-}
-
-/**
- * Calculate token count for a variety of content formats
- */
-function calculateTokenCount(
-  content: string | any[] | Record<string, any> | undefined | null
-): number {
-  // If content is undefined or null
-  if (content === undefined || content === null) {
-    return 0;
-  }
-
-  // If content is a string
-  if (typeof content === "string") {
-    // Rough approximation, assumes ~4 chars per token on average
-    return Math.ceil(content.length / 4);
-  }
-
-  // If content is an array (multimodal content)
-  if (Array.isArray(content)) {
-    return content.reduce((acc, part) => {
-      // Handle text parts
-      if (typeof part === "object" && part !== null) {
-        if (part.type === "text" && typeof part.text === "string") {
-          return acc + Math.ceil(part.text.length / 4);
-        }
-        // Handle image parts - estimate based on image size/complexity
-        else if (part.type === "image") {
-          return acc + 150; // Rough estimate for image description
-        }
-        // Handle reasoning parts
-        else if (
-          part.type === "reasoning" &&
-          typeof part.reasoning === "string"
-        ) {
-          return acc + Math.ceil(part.reasoning.length / 4);
-        }
-        // Handle tool call parts
-        else if (part.type === "tool_call" && part.tool_call) {
-          const nameTokens =
-            typeof part.tool_call.name === "string"
-              ? Math.ceil(part.tool_call.name.length / 4)
-              : 0;
-          const argsTokens =
-            typeof part.tool_call.arguments === "string"
-              ? Math.ceil(part.tool_call.arguments.length / 4)
-              : 0;
-          return acc + nameTokens + argsTokens;
-        }
-      }
-      return acc + 10; // Default token count for unknown parts
-    }, 0);
-  }
-
-  // For tool content or other object structures
-  if (typeof content === "object") {
-    // Type guard to check for tool result objects
-    const isToolResult = (obj: any): obj is { type: string; content: any } =>
-      obj &&
-      typeof obj === "object" &&
-      typeof obj.type === "string" &&
-      obj.type === "tool_result" &&
-      "content" in obj;
-
-    // Check if it's a tool result with content property
-    if (isToolResult(content)) {
-      const toolContent = content.content;
-      if (typeof toolContent === "string") {
-        return Math.ceil(toolContent.length / 4);
-      } else if (toolContent && typeof toolContent === "object") {
-        // If content is an object, estimate based on JSON string length
-        return Math.ceil(JSON.stringify(toolContent).length / 4);
-      }
-    }
-
-    // Try to estimate based on JSON stringification for any other object
-    return Math.ceil(JSON.stringify(content).length / 4);
-  }
-
-  return 10; // Default return for unknown types
-}
-
-/**
- * Generate a simulated response for demo purposes
- */
-function generateSimulatedResponse(
-  messages: Array<{ role: string; content: string }>
-): string {
-  // For demo purposes, just echo back something based on the last message
-  const lastMessage = messages[messages.length - 1];
-
-  // Simple response generation
-  if (!lastMessage || !lastMessage.content) {
-    return "I'm sorry, I don't understand your request.";
-  }
-
-  const content = lastMessage.content.toLowerCase();
-
-  if (content.includes("hello") || content.includes("hi ")) {
-    return "Hello there! How can I help you today?";
-  } else if (content.includes("weather")) {
-    return "I don't have real-time weather data, but I can tell you it's always sunny in the world of APIs!";
-  } else if (content.includes("help")) {
-    return "I'm here to help! You can ask me anything, and I'll do my best to assist you.";
-  } else if (content.includes("model")) {
-    return "I'm simulating different AI models. In a real implementation, I would use the model you selected to generate responses.";
-  } else {
-    return "Thank you for your message. This is a simulated response. In a production environment, the actual LLM model would process your request and generate a meaningful response based on your input.";
-  }
-}
-
-// Call the LLM based on the specified provider
-export const callLLM = async (request: {
-  botId: string;
-  prompt: string;
-  systemPrompt?: string;
-  history?: Array<{ role: string; content: string }>;
-  userId: string;
-  username: string;
-  model?: string;
-  provider?: LLMProvider;
-}): Promise<LLMResponse> => {
-  try {
-    // Get bot configuration from database
-    const bot = await BotAdapter.findById(request.botId);
-    if (!bot || !bot.configuration) {
-      logger.error(`Bot not found or missing configuration: ${request.botId}`);
-      return {
-        text: "Sorry, I encountered an error with my configuration. Please try again later.",
-      };
-    }
-
-    // Use provided parameters if available, otherwise use bot configuration
-    const llmProvider = request.provider || bot.configuration.llmProvider;
-    const llmModel = request.model || bot.configuration.llmModel;
-
-    // Prepare messages array for Vercel AI SDK
-    const messages = [];
-
-    // Add system message if available
-    if (request.systemPrompt) {
-      messages.push({
-        role: "system",
-        content: request.systemPrompt,
       });
-    }
-
-    // Add history if available
-    if (request.history && request.history.length > 0) {
-      messages.push(...request.history);
-    } else {
-      // If no history, just add the user's prompt
-      messages.push({
-        role: "user",
-        content: request.prompt,
-        name: request.username || undefined,
-      });
-    }
-
-    // Use Vercel AI SDK via createChatCompletion
-    const completionRequest: LLMCompletionRequestDto = {
-      model: llmModel,
-      messages,
-      temperature: 0.7,
-      max_tokens: 1000,
-      top_p: 1,
-      frequency_penalty: 0,
-      presence_penalty: 0,
-    };
-
-    // Call the Vercel AI SDK integration
-    try {
-      const completion = await createChatCompletion(
-        completionRequest,
-        request.userId
-      );
-
-      // Extract the assistant's message
-      const assistantMessage = completion.choices[0]?.message;
-      if (!assistantMessage || !assistantMessage.content) {
-        throw new Error("No valid response received from LLM");
-      }
-
-      // Check if the response indicates image generation is needed
-      // This is a simple heuristic - in a production system, you would
-      // use proper function/tool calling
-      const shouldGenerateImage =
-        assistantMessage.content.includes("![") || // Markdown image syntax
-        assistantMessage.content.toLowerCase().includes("generate an image") ||
-        assistantMessage.content.toLowerCase().includes("create an image");
-
-      let imagePrompt = null;
-      if (shouldGenerateImage) {
-        // Simple extraction of image description
-        const pattern =
-          /!\[.*?\]\((.+?)\)|generate an image of (.+?)(?:\.|$)|create an image of (.+?)(?:\.|$)/i;
-        const match = assistantMessage.content.match(pattern);
-        if (match) {
-          imagePrompt = match[1] || match[2] || match[3];
-        } else {
-          // Fall back to using the user's prompt for image generation
-          imagePrompt = request.prompt;
-        }
-      }
-
-      return {
-        text: assistantMessage.content,
-        generateImage: shouldGenerateImage,
-        imagePrompt: imagePrompt || undefined,
-      };
+      modelCache!.openRouterLastFetch = Date.now();
+      await saveModelCache();
+      logger.info("Fetched and cached models from OpenRouter");
     } catch (error) {
-      logger.error(`Error generating completion with Vercel AI SDK: ${error}`);
-
-      // Fall back to legacy direct API calls if Vercel AI SDK fails
-      logger.info(
-        `Falling back to direct API call for provider ${llmProvider}`
-      );
-
-      // Legacy direct API integration
-      const { apiKey } = bot.configuration;
-      switch (llmProvider) {
-        case "openai":
-          return await callOpenAI(request.prompt, llmModel, apiKey);
-        case "anthropic":
-          return await callAnthropic(request.prompt, llmModel, apiKey);
-        case "google":
-          return await callGoogle(request.prompt, llmModel, apiKey);
-        case "custom":
-          return await callCustomLLM(request.prompt, llmModel, apiKey);
-        default:
-          // Default to OpenAI if provider is not recognized
-          return await callOpenAI(request.prompt, "gpt-3.5-turbo", apiKey);
-      }
+      logger.error("Error fetching models from OpenRouter:", error);
     }
-  } catch (error) {
-    logger.error(`Error calling LLM for bot ${request.botId}:`, error);
-    return {
-      text: "Sorry, I encountered an error connecting to my AI service. Please try again later.",
-    };
-  }
-};
-
-// Call OpenAI API
-const callOpenAI = async (
-  prompt: string,
-  model: string,
-  apiKey: string
-): Promise<LLMResponse> => {
-  const response = await axios.post(
-    "https://api.openai.com/v1/chat/completions",
-    {
-      model: model || "gpt-3.5-turbo",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      tool_choice: "auto",
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "generate_image",
-            description: "Generate an image based on a description",
-            parameters: {
-              type: "object",
-              properties: {
-                prompt: {
-                  type: "string",
-                  description: "The description of the image to generate",
-                },
-              },
-              required: ["prompt"],
-            },
-          },
-        },
-      ],
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
-
-  const responseMessage = response.data.choices[0].message;
-
-  // Check for tool calls
-  if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
-    return {
-      text:
-        responseMessage.content ||
-        "I need to generate an image based on your request.",
-      toolCalls: responseMessage.tool_calls.map((tool: any) => ({
-        name: tool.function.name,
-        arguments: JSON.parse(tool.function.arguments),
-      })),
-    };
   }
 
-  return {
-    text: responseMessage.content,
-  };
-};
+  // Fetch models for each provider if their cache is stale or refresh is forced
+  const config = await loadProviderConfig();
+  const enabledProviders = Object.entries(config.providers)
+    .filter(([_, config]) => config.enabled)
+    .map(([provider]) => provider as LLMProvider);
 
-// Call Anthropic API
-const callAnthropic = async (
-  prompt: string,
-  model: string,
-  apiKey: string
-): Promise<LLMResponse> => {
-  const response = await axios.post(
-    "https://api.anthropic.com/v1/messages",
-    {
-      model: model || "claude-3-sonnet-20240229",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 1000,
-    },
-    {
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-      },
-    }
-  );
-
-  return {
-    text: response.data.content[0].text,
-  };
-};
-
-// Call Google API (Gemini)
-const callGoogle = async (
-  prompt: string,
-  model: string,
-  apiKey: string
-): Promise<LLMResponse> => {
-  const response = await axios.post(
-    `https://generativelanguage.googleapis.com/v1/models/${model || "gemini-pro"}:generateContent`,
-    {
-      contents: [{ parts: [{ text: prompt }] }],
-      generation_config: {
-        temperature: 0.7,
-        max_output_tokens: 1000,
-      },
-    },
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      params: {
-        key: apiKey,
-      },
-    }
-  );
-
-  return {
-    text: response.data.candidates[0].content.parts[0].text,
-  };
-};
-
-// Call custom LLM API
-const callCustomLLM = async (
-  prompt: string,
-  endpoint: string,
-  apiKey: string
-): Promise<LLMResponse> => {
-  const response = await axios.post(
-    endpoint,
-    {
-      prompt,
-      apiKey,
-    },
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-    }
-  );
-
-  return {
-    text: response.data.response || response.data.text,
-  };
-};
-
-async function callOpenAIDirectly(
-  request: LLMCompletionRequestDto,
-  apiKey: string
-): Promise<LLMCompletionResponseDto> {
-  // Implement direct OpenAI API call
-  throw new Error("Direct OpenAI API call not implemented");
-}
-
-async function callAnthropicDirectly(
-  request: LLMCompletionRequestDto,
-  apiKey: string
-): Promise<LLMCompletionResponseDto> {
-  // Implement direct Anthropic API call
-  throw new Error("Direct Anthropic API call not implemented");
-}
-
-async function callGoogleDirectly(
-  request: LLMCompletionRequestDto,
-  apiKey: string
-): Promise<LLMCompletionResponseDto> {
-  // Implement direct Google API call
-  throw new Error("Direct Google API call not implemented");
-}
-
-async function callGenericProviderDirectly(
-  request: LLMCompletionRequestDto,
-  apiKey: string
-): Promise<LLMCompletionResponseDto> {
-  // Implement generic provider API call
-  throw new Error("Direct generic provider API call not implemented");
-}
-
-/**
- * Enable or disable a specific provider
- */
-export const updateProviderStatus = async (
-  provider: LLMProvider,
-  enabled: boolean
-): Promise<void> => {
-  try {
-    const config = await loadProviderConfig();
-
-    if (!config.providers[provider]) {
-      config.providers[provider] = { enabled };
-    } else {
-      config.providers[provider].enabled = enabled;
-    }
-
-    await saveProviderConfig(config);
-
-    // Refresh the provider registry
-    await refreshAiProviderRegistry();
-
-    logger.info(`Provider ${provider} ${enabled ? "enabled" : "disabled"}`);
-  } catch (error) {
-    logger.error(`Error updating provider status for ${provider}:`, error);
-    throw error;
-  }
-};
-
-/**
- * Add or update a custom provider
- */
-export const configureCustomProvider = async (
-  customProvider: ApiCustomProviderConfig
-): Promise<void> => {
-  try {
-    const config = await loadProviderConfig();
-
-    if (!config.providers[LLMProvider.CUSTOM]) {
-      config.providers[LLMProvider.CUSTOM] = {
-        enabled: true,
-        custom_providers: [customProvider],
-      };
-    } else {
-      // Enable the custom provider category
-      config.providers[LLMProvider.CUSTOM].enabled = true;
-
-      // Initialize custom_providers array if it doesn't exist
-      if (!config.providers[LLMProvider.CUSTOM].custom_providers) {
-        config.providers[LLMProvider.CUSTOM].custom_providers = [];
-      }
-
-      // Find existing provider with the same name and update or add
-      const existingIndex = config.providers[
-        LLMProvider.CUSTOM
-      ].custom_providers!.findIndex((p) => p.name === customProvider.name);
-
-      if (existingIndex >= 0) {
-        config.providers[LLMProvider.CUSTOM].custom_providers![existingIndex] =
-          customProvider;
-      } else {
-        config.providers[LLMProvider.CUSTOM].custom_providers!.push(
-          customProvider
-        );
-      }
-    }
-
-    await saveProviderConfig(config);
-
-    // Refresh the provider registry
-    await refreshAiProviderRegistry();
-
-    logger.info(
-      `Custom provider ${customProvider.name} configured successfully`
-    );
-  } catch (error) {
-    logger.error(
-      `Error configuring custom provider ${customProvider.name}:`,
-      error
-    );
-    throw error;
-  }
-};
-
-/**
- * Remove a custom provider
- */
-export const removeCustomProvider = async (
-  providerName: string
-): Promise<boolean> => {
-  try {
-    const config = await loadProviderConfig();
-
-    if (!config.providers[LLMProvider.CUSTOM]?.custom_providers) {
-      return false;
-    }
-
-    const initialLength =
-      config.providers[LLMProvider.CUSTOM].custom_providers!.length;
-
-    config.providers[LLMProvider.CUSTOM].custom_providers = config.providers[
-      LLMProvider.CUSTOM
-    ].custom_providers!.filter((p) => p.name !== providerName);
-
-    const removed =
-      config.providers[LLMProvider.CUSTOM].custom_providers!.length <
-      initialLength;
-
-    if (removed) {
-      await saveProviderConfig(config);
-
-      // Refresh the provider registry
-      await refreshAiProviderRegistry();
-
-      logger.info(`Custom provider ${providerName} removed successfully`);
-    }
-
-    return removed;
-  } catch (error) {
-    logger.error(`Error removing custom provider ${providerName}:`, error);
-    throw error;
-  }
-};
-
-/**
- * Get the OpenRouter model variant slug for a given model ID
- * This maps standard model IDs to OpenRouter's model_variant_slug format
- */
-async function getModelVariantSlug(modelId: string): Promise<string | null> {
-  try {
-    // For OpenRouter's special routing endpoints, use them directly
+  for (const provider of enabledProviders) {
     if (
-      modelId === "openrouter/auto" ||
-      modelId === "openrouter/best" ||
-      modelId === "openrouter/fastest" ||
-      modelId === "openrouter/cheapest"
+      forceRefresh ||
+      !modelCache.providers[provider] ||
+      isCacheExpired(provider)
     ) {
-      return modelId.split("/")[1];
-    }
-
-    // For regular model IDs like 'anthropic/claude-3-5-sonnet'
-    if (modelId.includes("/")) {
-      // Get model mappings from OpenRouter API
-      const openRouterModels = await fetchOpenRouterModels();
-
-      // Look for an exact match
-      const exactMatch = openRouterModels.find(
-        (model) =>
-          model.id === modelId || `${model.owned_by}/${model.id}` === modelId
-      );
-
-      if (exactMatch && exactMatch.model_variant_slug) {
-        logger.info(
-          `Found exact model variant slug match: ${exactMatch.model_variant_slug}`
-        );
-        return exactMatch.model_variant_slug;
-      }
-
-      // Try fuzzy matching
-      const [provider, name] = modelId.split("/");
-      const fuzzyMatch = openRouterModels.find(
-        (model) =>
-          model.owned_by.toLowerCase() === provider.toLowerCase() &&
-          model.id.includes(name)
-      );
-
-      if (fuzzyMatch && fuzzyMatch.model_variant_slug) {
-        logger.info(
-          `Found fuzzy model variant slug match: ${fuzzyMatch.model_variant_slug}`
-        );
-        return fuzzyMatch.model_variant_slug;
+      try {
+        const providerModels = await fetchProviderModels(provider);
+        modelCache.providers[provider] = providerModels;
+        await saveModelCache();
+        logger.info(`Fetched and cached models for provider ${provider}`);
+      } catch (error) {
+        logger.error(`Error fetching models for provider ${provider}:`, error);
       }
     }
-
-    // For OpenAI/Anthropic/Google models without a provider prefix
-    // These don't use model_variant_slug in OpenRouter
-    return null;
-  } catch (error) {
-    logger.error("Error getting model variant slug:", error);
-    return null;
   }
 }

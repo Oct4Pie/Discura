@@ -3,11 +3,13 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { LLMCompletionMessage } from './LLMCompletionMessage';
+import type { LLMProvider } from './LLMProvider';
 /**
  * LLM Completion Request
  */
 export type LLMCompletionRequestDto = {
     model: string;
+    provider?: LLMProvider;
     messages: Array<LLMCompletionMessage>;
     temperature?: number;
     top_p?: number;

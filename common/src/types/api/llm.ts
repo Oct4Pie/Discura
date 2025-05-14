@@ -35,6 +35,7 @@ export enum LLMProvider {
   LMNT = "lmnt",
   HUME = "hume",
   OPENROUTER = "openrouter",
+  CHUTES = "chutes",
   CUSTOM = "custom",
 }
 
@@ -149,7 +150,9 @@ export interface LLMCompletionMessage {
  * @tsoaModel
  */
 export interface LLMCompletionRequestDto {
-  model: string;
+  model: string; // If provider is specified, this is the model_id.
+                // If provider is OPENROUTER or null/undefined, this is treated as a slug for OpenRouter.
+  provider?: LLMProvider; // Optional: The specific LLMProvider to use
   messages: LLMCompletionMessage[];
   temperature?: number;
   top_p?: number;

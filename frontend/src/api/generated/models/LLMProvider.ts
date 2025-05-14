@@ -31,5 +31,6 @@ export enum LLMProvider {
     LMNT = 'lmnt',
     HUME = 'hume',
     OPENROUTER = 'openrouter',
+    CHUTES = 'chutes',
     CUSTOM = 'custom',
 }

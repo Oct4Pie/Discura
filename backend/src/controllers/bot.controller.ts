@@ -40,7 +40,7 @@ export class BotController extends CommonBotController {
    */
   public async createBot(
     requestBody: CreateBotRequestDto,
-    request: Request,
+    request: Request
   ): Promise<CreateBotResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -102,7 +102,7 @@ export class BotController extends CommonBotController {
    */
   public async getBotById(
     id: string,
-    request: Request,
+    request: Request
   ): Promise<GetBotResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -142,7 +142,7 @@ export class BotController extends CommonBotController {
    */
   public async startBotById(
     id: string,
-    request: Request,
+    request: Request
   ): Promise<StartBotResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -211,7 +211,7 @@ export class BotController extends CommonBotController {
    */
   public async stopBotById(
     id: string,
-    request: Request,
+    request: Request
   ): Promise<StopBotResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -264,7 +264,7 @@ export class BotController extends CommonBotController {
   public async updateBot(
     id: string,
     requestBody: UpdateBotRequestDto,
-    request: Request,
+    request: Request
   ): Promise<UpdateBotResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -311,7 +311,7 @@ export class BotController extends CommonBotController {
   public async updateBotConfiguration(
     id: string,
     requestBody: UpdateBotConfigurationRequestDto,
-    request: Request,
+    request: Request
   ): Promise<UpdateBotConfigurationResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -331,7 +331,7 @@ export class BotController extends CommonBotController {
       // Check if bot belongs to user - use bot.user instead of bot.userId
       if (bot.user !== userId) {
         throw new Error(
-          "You do not have permission to update this bot's configuration",
+          "You do not have permission to update this bot's configuration"
         );
       }
 
@@ -341,7 +341,7 @@ export class BotController extends CommonBotController {
       // Make sure we have a bot returned
       if (!updatedBot) {
         throw new Error(
-          "Failed to update bot configuration: Bot not found after update",
+          "Failed to update bot configuration: Bot not found after update"
         );
       }
 
@@ -373,17 +373,59 @@ export class BotController extends CommonBotController {
         message: messageText,
       };
     } catch (error: any) {
+      // Log the error for server-side debugging
       logger.error(`Update bot ${id} configuration failed:`, error);
 
-      // Provide user-friendly error message
-      let errorMessage = `Failed to update bot configuration: ${error.message}`;
+      // Extract meaningful error information for the client
+      let errorMessage = error.message || "An unknown error occurred";
+      let errorDetails = [];
 
-      if (error.message.includes("system prompt exceeds maximum")) {
-        errorMessage =
-          "System prompt is too long. Please shorten it and try again.";
+      // Check for validation errors from verifyBotConfig
+      if (errorMessage.includes("Invalid bot configuration:")) {
+        // Parse out the specific validation errors
+        const validationMatch = errorMessage.match(
+          /Invalid bot configuration: (.+)/
+        );
+        if (validationMatch && validationMatch[1]) {
+          errorDetails = validationMatch[1]
+            .split(", ")
+            .map((err: any) => err.trim());
+        }
       }
 
-      throw new Error(errorMessage);
+      // Handle specific error cases with user-friendly messages
+      if (errorMessage.includes("system prompt exceeds maximum")) {
+        errorMessage =
+          "System prompt is too long. Please shorten it and try again.";
+      } else if (errorMessage.includes("LLM provider is required")) {
+        errorMessage =
+          "LLM provider is required. Please select a valid provider.";
+      } else if (errorMessage.includes("LLM model must be specified")) {
+        errorMessage = "Please select a valid LLM model.";
+      } else if (errorMessage.includes("API key is required")) {
+        errorMessage =
+          "API key is required for the selected provider. Please provide a valid API key.";
+      } else if (errorMessage.includes("Invalid LLM provider")) {
+        errorMessage =
+          "The selected LLM provider is invalid. Please choose a valid provider.";
+      }
+
+      // Create a structured error response with detailed information
+      const structuredError = new Error(errorMessage);
+      // Add properties to the error object that can be serialized in the response
+      (structuredError as any).validationErrors =
+        errorDetails.length > 0 ? errorDetails : undefined;
+      (structuredError as any).code = "CONFIG_VALIDATION_ERROR";
+      (structuredError as any).field = errorMessage.includes("LLM provider")
+        ? "llmProvider"
+        : errorMessage.includes("LLM model")
+          ? "llmModel"
+          : errorMessage.includes("system prompt")
+            ? "systemPrompt"
+            : undefined;
+
+      // Throw the enhanced error to be caught by TSOA/Express error handler
+      throw structuredError;
     }
   }
 
@@ -395,7 +437,7 @@ export class BotController extends CommonBotController {
    */
   public async deleteBot(
     id: string,
-    request: Request,
+    request: Request
   ): Promise<DeleteBotResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -449,7 +491,7 @@ export class BotController extends CommonBotController {
    */
   public async generateInviteLink(
     id: string,
-    request: Request,
+    request: Request
   ): Promise<GenerateBotInviteLinkResponseDto> {
     try {
       // Get user ID from authenticated user
@@ -469,7 +511,7 @@ export class BotController extends CommonBotController {
       // Check if bot belongs to user - use bot.user instead of bot.userId
       if (bot.user !== userId) {
         throw new Error(
-          "You do not have permission to generate an invite link for this bot",
+          "You do not have permission to generate an invite link for this bot"
         );
       }
 
@@ -518,7 +560,7 @@ export class BotController extends CommonBotController {
 
       if (validationResult.valid) {
         logger.info(
-          `Token validation successful for bot ${validationResult.botId}`,
+          `Token validation successful for bot ${validationResult.botId}`
         );
       } else {
         logger.warn(`Token validation failed: ${validationResult.error}`);

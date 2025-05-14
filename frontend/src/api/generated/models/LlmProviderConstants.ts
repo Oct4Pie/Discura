@@ -31,9 +31,11 @@ export type LlmProviderConstants = {
     LMNT: string;
     HUME: string;
     OPENROUTER: string;
+    CHUTES: string;
     CUSTOM: string;
     LABELS: {
         custom: string;
+        chutes: string;
         openrouter: string;
         hume: string;
         lmnt: string;

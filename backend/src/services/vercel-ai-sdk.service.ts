@@ -55,7 +55,7 @@ import { getModelVariantSlug } from "./openrouter.service";
 const PROVIDER_CONFIG_PATH = path.join(
   process.cwd(),
   "..",
-  "provider-config.json",
+  "provider-config.json"
 );
 
 // Model ID separator for registry
@@ -158,7 +158,7 @@ export async function loadProviderConfig(): Promise<ProviderRegistryConfiguratio
             };
             return acc;
           },
-          {} as Record<LLMProvider, ProviderConfiguration>,
+          {} as Record<LLMProvider, ProviderConfiguration>
         ),
       };
 
@@ -169,7 +169,7 @@ export async function loadProviderConfig(): Promise<ProviderRegistryConfiguratio
       await fs.writeFile(
         PROVIDER_CONFIG_PATH,
         JSON.stringify(defaultConfig, null, 2),
-        "utf-8",
+        "utf-8"
       );
 
       return defaultConfig;
@@ -184,7 +184,7 @@ export async function loadProviderConfig(): Promise<ProviderRegistryConfiguratio
           acc[provider] = { enabled: provider !== LLMProvider.CUSTOM };
           return acc;
         },
-        {} as Record<LLMProvider, ProviderConfiguration>,
+        {} as Record<LLMProvider, ProviderConfiguration>
       ),
     };
   }
@@ -194,13 +194,13 @@ export async function loadProviderConfig(): Promise<ProviderRegistryConfiguratio
  * Save the provider configuration to file
  */
 export async function saveProviderConfig(
-  config: ProviderRegistryConfiguration,
+  config: ProviderRegistryConfiguration
 ): Promise<void> {
   try {
     await fs.writeFile(
       PROVIDER_CONFIG_PATH,
       JSON.stringify(config, null, 2),
-      "utf-8",
+      "utf-8"
     );
     logger.info("Provider configuration saved successfully");
   } catch (error) {
@@ -253,7 +253,7 @@ export async function createAiProviderRegistry() {
 
   // Add all built-in providers that are enabled and have API keys
   for (const [providerName, providerCreator] of Object.entries(
-    builtInProviders,
+    builtInProviders
   )) {
     // Get corresponding LLMProvider enum value
     const enumKey = providerName.toUpperCase() as keyof typeof LLMProvider;
@@ -284,7 +284,7 @@ export async function createAiProviderRegistry() {
   // Special handling for OpenRouter
   if (config.providers[LLMProvider.OPENROUTER]?.enabled) {
     const apiKey = getApiKey(LLMProvider.OPENROUTER);
-    
+
     try {
       // If API key is available, register the full provider with completion capabilities
       if (apiKey) {
@@ -301,7 +301,9 @@ export async function createAiProviderRegistry() {
       } else {
         // Don't register OpenRouter in the registry without an API key
         // We'll still be able to fetch models from the public API for display
-        logger.info("OpenRouter provider enabled without API key - will support model listing only");
+        logger.info(
+          "OpenRouter provider enabled without API key - will support model listing only"
+        );
       }
 
       // Update the custom provider config to avoid duplicate registration
@@ -313,7 +315,7 @@ export async function createAiProviderRegistry() {
 
   // Add custom OpenAI-compatible providers that are enabled in our configuration
   for (const [providerName, providerConfig] of Object.entries(
-    CUSTOM_PROVIDER_CONFIGS,
+    CUSTOM_PROVIDER_CONFIGS
   )) {
     // Skip if provider is already added as a built-in provider
     if (providerName in builtInProviders) {
@@ -458,7 +460,7 @@ export async function refreshAiProviderRegistry() {
  * Used by the Vercel AI SDK integration
  */
 function calculateTokenCount(
-  content: string | any[] | Record<string, any> | undefined | null,
+  content: string | any[] | Record<string, any> | undefined | null
 ): number {
   // If content is undefined or null
   if (content === undefined || content === null) {
@@ -496,253 +498,3 @@ function calculateTokenCount(
 
   return 10; // Default return for unknown types
 }
-
-/**
- * Create a chat completion using Vercel AI SDK
- * This offers more flexibility and better integration with various providers
- */
-export const createChatCompletionWithVercelAi = async (
-  request: LLMCompletionRequestDto,
-  userId: string,
-): Promise<LLMCompletionResponseDto> => {
-  try {
-    logger.info(
-      `Creating chat completion with Vercel AI SDK using model: ${request.model}`,
-    );
-
-    // Get the provider registry
-    const registry = await getAiProviderRegistry();
-
-    // Parse the request model to get provider and model ID
-    let providerName: string;
-    let modelId: string;
-
-    // If the model ID contains our separator, it's already in Vercel AI format
-    if (request.model.includes(" > ")) {
-      const parsed = parseVercelAiModelId(request.model);
-      providerName = parsed.provider;
-      modelId = parsed.modelId;
-    }
-    // Special handling for OpenRouter models with model_variant_slug
-    else if (
-      request.model.includes("/") &&
-      !request.model.startsWith("gpt-") &&
-      !request.model.startsWith("claude-") &&
-      !request.model.startsWith("gemini-")
-    ) {
-      // This looks like an OpenRouter model slug
-      try {
-        // Try to get the model_variant_slug from OpenRouter
-        const variantSlug = await getModelVariantSlug(request.model);
-        if (variantSlug) {
-          providerName = "openrouter";
-          modelId = variantSlug;
-          logger.info(`Mapped to OpenRouter variant slug: ${variantSlug}`);
-        } else {
-          // Fall back to using the model as is with OpenRouter
-          providerName = "openrouter";
-          modelId = request.model;
-          logger.info(
-            `No variant slug found, using model ID directly with OpenRouter: ${request.model}`,
-          );
-        }
-      } catch (error) {
-        // If there's an error getting the variant slug, use the default mapping
-        logger.warn(
-          `Error getting OpenRouter variant slug: ${error}. Using default mapping.`,
-        );
-        const parts = request.model.split("/");
-        providerName = parts[0].toLowerCase();
-        modelId = parts.slice(1).join("/");
-      }
-    } else {
-      // Try to determine provider from model ID based on naming conventions
-      if (
-        request.model.startsWith("gpt-") ||
-        request.model.includes("dall-e")
-      ) {
-        providerName = "openai";
-        modelId = request.model;
-      } else if (request.model.startsWith("claude-")) {
-        providerName = "anthropic";
-        modelId = request.model;
-      } else if (
-        request.model.startsWith("gemini-") ||
-        request.model.startsWith("models/gemini-")
-      ) {
-        providerName = "google";
-        modelId = request.model;
-      } else {
-        // For other providers, use the model as is and let the registry route it
-        const [provider, ...modelParts] = request.model.split("/");
-        providerName = provider.toLowerCase();
-        modelId = modelParts.join("/") || request.model;
-      }
-    }
-
-    logger.info(`Mapped to provider: ${providerName}, model: ${modelId}`);
-
-    // Check if the provider exists in the registry
-    if (providerName === "openrouter" && registry.openrouter) {
-      // For OpenRouter, use different selection methods based on special routing endpoints
-      if (["auto", "best", "fastest", "cheapest"].includes(modelId)) {
-        // These are special OpenRouter routing endpoints, use them directly
-        logger.info(`Using OpenRouter routing endpoint: ${modelId}`);
-        // Use chat() for all models since OpenRouter supports it widely
-        try {
-          const model = registry.openrouter.chat(modelId);
-
-          // Prepare messages for Vercel AI SDK - convert to CoreMessage format
-          const messages: CoreMessage[] = request.messages.map((msg) => ({
-            role:
-              msg.role === "user"
-                ? "user"
-                : msg.role === "assistant"
-                  ? "assistant"
-                  : msg.role === "system"
-                    ? "system"
-                    : "user",
-            content: msg.content,
-            name: msg.name,
-          }));
-
-          const startTime = Date.now();
-
-          // Generate text using Vercel AI SDK
-          const result = await generateText({
-            model,
-            messages,
-            temperature: request.temperature,
-            topP: request.top_p,
-            maxTokens: request.max_tokens,
-            presencePenalty: request.presence_penalty,
-            frequencyPenalty: request.frequency_penalty,
-          });
-
-          const endTime = Date.now();
-
-          // Calculate token usage (rough estimate)
-          const promptTokens = messages.reduce(
-            (acc, msg) => acc + calculateTokenCount(msg.content),
-            0,
-          );
-          const completionTokens = calculateTokenCount(result.text);
-
-          // Return in OpenAI-compatible format
-          return {
-            id: `openrouter-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`,
-            object: "chat.completion",
-            created: Math.floor(Date.now() / 1000),
-            model: request.model,
-            choices: [
-              {
-                index: 0,
-                message: {
-                  role: "assistant",
-                  content: result.text,
-                },
-                finish_reason: "stop", // Assuming normal completion
-              },
-            ],
-            usage: {
-              prompt_tokens: promptTokens,
-              completion_tokens: completionTokens,
-              total_tokens: promptTokens + completionTokens,
-            },
-          };
-        } catch (error) {
-          logger.error(`Error using OpenRouter with endpoint ${modelId}:`, error);
-          throw new Error(`Provider ${providerName} error: ${error instanceof Error ? error.message : "Unknown error"}`);
-        }
-      }
-    }
-
-    // For standard models that use the provider registry
-    try {
-      // Check if the provider exists in the registry before using it
-      if (!registry[providerName]) {
-        logger.error(`Provider ${providerName} not found in registry or not configured properly`);
-        throw new Error(`Provider ${providerName} not configured. Check if the API key is set in the environment variables (${providerName.toUpperCase()}_KEY)`);
-      }
-
-      // Prepare the model reference for Vercel AI
-      const model = registry.languageModel(`${providerName} > ${modelId}`);
-
-      // Map our request format to Vercel AI SDK format
-      const messages: CoreMessage[] = request.messages.map((msg) => ({
-        role:
-          msg.role === "user"
-            ? "user"
-            : msg.role === "assistant"
-              ? "assistant"
-              : msg.role === "system"
-                ? "system"
-                : "user",
-        content: msg.content,
-        name: msg.name,
-      }));
-
-      const startTime = Date.now();
-
-      // Generate text using Vercel AI SDK
-      const result = await generateText({
-        model,
-        messages,
-        temperature: request.temperature,
-        topP: request.top_p,
-        maxTokens: request.max_tokens,
-        presencePenalty: request.presence_penalty,
-        frequencyPenalty: request.frequency_penalty,
-      });
-
-      const endTime = Date.now();
-
-      // Rough estimation of token counts
-      // In a production app, you would use a proper tokenizer
-      const promptTokens = messages.reduce(
-        (acc, msg) => acc + calculateTokenCount(msg.content),
-        0,
-      );
-      const completionTokens = calculateTokenCount(result.text);
-
-      // Map Vercel AI response to our API format
-      const response: LLMCompletionResponseDto = {
-        id: `discura-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`,
-        object: "chat.completion",
-        created: Math.floor(Date.now() / 1000),
-        model: request.model,
-        choices: [
-          {
-            index: 0,
-            message: {
-              role: "assistant",
-              content: result.text,
-            },
-            finish_reason: "stop", // Assuming normal completion
-          },
-        ],
-        usage: {
-          prompt_tokens: promptTokens,
-          completion_tokens: completionTokens,
-          total_tokens: promptTokens + completionTokens,
-        },
-      };
-
-      logger.info(
-        `Completion generated with Vercel AI SDK in ${endTime - startTime}ms`,
-      );
-
-      return response;
-    } catch (error) {
-      logger.error(`Error using provider ${providerName} with model ${modelId}:`, error);
-      throw new Error(`Provider ${providerName} error: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  } catch (error) {
-    logger.error("Error in createChatCompletionWithVercelAi:", error);
-
-    // Re-throw as a structured error for the API
-    throw new Error(
-      `Failed to generate completion: ${error instanceof Error ? error.message : "Unknown error"}`,
-    );
-  }
-};

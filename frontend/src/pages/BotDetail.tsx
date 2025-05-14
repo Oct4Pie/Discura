@@ -12,7 +12,7 @@ import {
   Build as BuildIcon,
   Refresh as RefreshIcon,
   Link as LinkIcon,
-  Launch as LaunchIcon
+  Launch as LaunchIcon,
 } from "@mui/icons-material";
 import {
   Alert,
@@ -42,17 +42,19 @@ import {
   Tooltip,
   Typography,
   alpha,
-  useTheme
+  useTheme,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { BotStatus, ImageProvider } from "../types";
 import { LLMProvider, BotsService } from "../api/";
+import { handleApiError } from "../api"; // Import error handler
 import BotStatusBadge from "../components/BotStatusBadge";
 import ConfirmDialog from "../components/ConfirmDialog";
 import GridItem from "../components/GridItem";
 import TabPanel from "../components/TabPanel";
+import ValidationErrorDisplay from "../components/ValidationErrorDisplay"; // Import validation error display
 import { useBotStore } from "../stores/botStore";
 import PersonalityPreview from "../components/PersonalityPreview";
 import ModelSelector from "../components/ModelSelector";
@@ -68,7 +70,10 @@ const BotDetail = () => {
   const [saving, setSaving] = useState(false);
   const [botActionInProgress, setBotActionInProgress] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  
+
+  // Add state for validation errors
+  const [validationError, setValidationError] = useState<any>(null);
+
   const {
     currentBot,
     fetchBot,
@@ -87,19 +92,26 @@ const BotDetail = () => {
   const [traits, setTraits] = useState<string[]>([]);
   const [newTrait, setNewTrait] = useState("");
   const [backstory, setBackstory] = useState("");
-  
+
   // Combined model ID in format "provider/model"
-  const [selectedModel, setSelectedModel] = useState<string>("openai/gpt-3.5-turbo");
-  
+  const [selectedModel, setSelectedModel] =
+    useState<string>("openai/gpt-4o-mini");
+
   // Derived values for backward compatibility
-  const llmProvider = selectedModel.split('/')[0] as LLMProvider;
-  const llmModel = selectedModel.split('/').slice(1).join('/');
-  
-  const [apiKey, setApiKey] = useState("");
+  const llmProvider = selectedModel.split("/")[0] as LLMProvider;
+  const llmModel = selectedModel.split("/").slice(1).join("/");
+
   const [imageGenEnabled, setImageGenEnabled] = useState(false);
-  const [imageProvider, setImageProvider] = useState<ImageProvider>(ImageProvider.OPENAI);
+  const [imageProvider, setImageProvider] = useState<ImageProvider>(
+    ImageProvider.OPENAI
+  );
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+
+  // Clear validation error when changing tabs
+  useEffect(() => {
+    setValidationError(null);
+  }, [tabValue]);
 
   // Load bot data
   useEffect(() => {
@@ -116,13 +128,19 @@ const BotDetail = () => {
       setPersonality(currentBot.configuration?.personality || "");
       setTraits(currentBot.configuration?.traits || []);
       setBackstory(currentBot.configuration?.backstory || "");
-      
+
       const provider = currentBot.configuration?.llmProvider || "openai";
-      setSelectedModel(`${provider}/${currentBot.configuration?.llmModel || "gpt-3.5-turbo"}`);
-      setApiKey(currentBot.configuration?.apiKey || "");
-      
-      setImageGenEnabled(currentBot.configuration?.imageGeneration?.enabled || false);
-      setImageProvider(currentBot.configuration?.imageGeneration?.provider as ImageProvider || ImageProvider.OPENAI);
+      setSelectedModel(
+        `${provider}/${currentBot.configuration?.llmModel || "gpt-3.5-turbo"}`
+      );
+
+      setImageGenEnabled(
+        currentBot.configuration?.imageGeneration?.enabled || false
+      );
+      setImageProvider(
+        (currentBot.configuration?.imageGeneration
+          ?.provider as ImageProvider) || ImageProvider.OPENAI
+      );
     }
   }, [currentBot]);
 
@@ -145,12 +163,15 @@ const BotDetail = () => {
     if (!currentBot || !id) return;
 
     setSaving(true);
+    setValidationError(null); // Clear previous errors
+    
     try {
       await updateBot(id, { name });
       toast.success("Bot information updated");
     } catch (error) {
-      toast.error("Failed to update bot information");
-      console.error("Update bot error:", error);
+      // Use the structured error handling
+      setValidationError(error);
+      // Don't show toast since we're displaying the error in the UI
     } finally {
       setSaving(false);
     }
@@ -160,17 +181,31 @@ const BotDetail = () => {
     if (!currentBot || !id) return;
 
     setSaving(true);
+    setValidationError(null); // Clear previous errors
+    
     try {
       await updateBotConfiguration(id, {
         systemPrompt,
         personality,
         traits,
         backstory,
+        // Maintain other properties from current config
+        llmProvider: currentBot.configuration?.llmProvider || LLMProvider.OPENAI,
+        llmModel: currentBot.configuration?.llmModel || "gpt-3.5-turbo",
+        apiKey: currentBot.configuration?.apiKey || "",
+        knowledge: currentBot.configuration?.knowledge || [],
+        imageGeneration: currentBot.configuration?.imageGeneration || {
+          enabled: false,
+          provider: ImageProvider.OPENAI
+        },
+        toolsEnabled: currentBot.configuration?.toolsEnabled || false,
+        tools: currentBot.configuration?.tools || []
       });
       toast.success("Bot personality updated");
     } catch (error) {
-      toast.error("Failed to update bot personality");
-      console.error("Update personality error:", error);
+      // Use the structured error handling
+      setValidationError(error);
+      // Don't show toast since we're displaying the error in the UI
     } finally {
       setSaving(false);
     }
@@ -180,16 +215,30 @@ const BotDetail = () => {
     if (!currentBot || !id) return;
 
     setSaving(true);
+    setValidationError(null); // Clear previous errors
+    
     try {
       await updateBotConfiguration(id, {
+        systemPrompt: currentBot.configuration?.systemPrompt || "",
+        personality: currentBot.configuration?.personality || "",
+        traits: currentBot.configuration?.traits || [],
+        backstory: currentBot.configuration?.backstory || "",
         llmProvider,
         llmModel,
-        apiKey,
+        apiKey: currentBot.configuration?.apiKey || "",
+        knowledge: currentBot.configuration?.knowledge || [],
+        imageGeneration: currentBot.configuration?.imageGeneration || {
+          enabled: false,
+          provider: ImageProvider.OPENAI
+        },
+        toolsEnabled: currentBot.configuration?.toolsEnabled || false,
+        tools: currentBot.configuration?.tools || [],
       });
       toast.success("LLM settings updated");
     } catch (error) {
-      toast.error("Failed to update LLM settings");
-      console.error("Update LLM error:", error);
+      // Use the structured error handling
+      setValidationError(error);
+      // Don't show toast since we're displaying the error in the UI
     } finally {
       setSaving(false);
     }
@@ -199,17 +248,30 @@ const BotDetail = () => {
     if (!currentBot || !id) return;
 
     setSaving(true);
+    setValidationError(null); // Clear previous errors
+    
     try {
       await updateBotConfiguration(id, {
+        systemPrompt: currentBot.configuration?.systemPrompt || "",
+        personality: currentBot.configuration?.personality || "",
+        traits: currentBot.configuration?.traits || [],
+        backstory: currentBot.configuration?.backstory || "",
+        llmProvider: currentBot.configuration?.llmProvider || LLMProvider.OPENAI,
+        llmModel: currentBot.configuration?.llmModel || "gpt-3.5-turbo",
+        apiKey: currentBot.configuration?.apiKey || "",
+        knowledge: currentBot.configuration?.knowledge || [],
         imageGeneration: {
           enabled: imageGenEnabled,
           provider: imageProvider,
-        }
+        },
+        toolsEnabled: currentBot.configuration?.toolsEnabled || false,
+        tools: currentBot.configuration?.tools || [],
       });
       toast.success("Image generation settings updated");
     } catch (error) {
-      toast.error("Failed to update image generation settings");
-      console.error("Update image settings error:", error);
+      // Use the structured error handling
+      setValidationError(error);
+      // Don't show toast since we're displaying the error in the UI
     } finally {
       setSaving(false);
     }
@@ -223,6 +285,10 @@ const BotDetail = () => {
       toast.success("Bot deleted successfully");
       navigate("/bots");
     } catch (error) {
+      // Set validation error for display in the UI
+      setValidationError(error);
+      
+      // Also show toast for immediate feedback
       toast.error("Failed to delete bot");
       console.error("Delete bot error:", error);
     } finally {
@@ -232,7 +298,10 @@ const BotDetail = () => {
 
   const handleGenerateInviteLink = async () => {
     if (!id) return;
-    
+
+    // Clear any previous errors and show loading state if needed
+    setValidationError(null);
+
     try {
       // Call the API to generate the invite link using the correct method name
       const response = await BotsService.generateInviteLink(id);
@@ -241,6 +310,10 @@ const BotDetail = () => {
         setInviteDialogOpen(true);
       }
     } catch (error) {
+      // Set validation error for display in the UI
+      setValidationError(error);
+      
+      // Also show toast for immediate feedback
       toast.error("Failed to generate invite link");
       console.error("Generate invite link error:", error);
     }
@@ -254,6 +327,8 @@ const BotDetail = () => {
       `${currentBot.status === BotStatus.ONLINE ? "Stopping" : "Starting"} bot...`
     );
     setSnackbarOpen(true);
+    // Clear any existing validation error
+    setValidationError(null);
 
     try {
       if (currentBot.status === BotStatus.ONLINE) {
@@ -263,16 +338,25 @@ const BotDetail = () => {
       } else {
         await startBot(id);
         toast.success("Bot started successfully");
-        setSnackbarMessage("Bot started successfully! It is now online and ready to chat.");
+        setSnackbarMessage(
+          "Bot started successfully! It is now online and ready to chat."
+        );
       }
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || `Failed to ${currentBot.status === BotStatus.ONLINE ? "stop" : "start"} bot`;
+      // Set validation error for display in the UI
+      setValidationError(error);
+      
+      const errorMessage =
+        error?.response?.data?.message ||
+        `Failed to ${currentBot.status === BotStatus.ONLINE ? "stop" : "start"} bot`;
+      
+      // Still keep toast for immediate feedback
       toast.error(errorMessage);
       setSnackbarMessage(`Error: ${errorMessage}`);
       console.error("Toggle bot status error:", error);
     } finally {
       setBotActionInProgress(false);
-      
+
       // Leave snackbar open to show final status
       setTimeout(() => {
         setSnackbarOpen(false);
@@ -287,7 +371,14 @@ const BotDetail = () => {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: 400,
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -295,7 +386,7 @@ const BotDetail = () => {
 
   if (!currentBot) {
     return (
-      <Alert 
+      <Alert
         severity="error"
         sx={{
           borderRadius: 1, // Custom border radius for alert
@@ -308,7 +399,7 @@ const BotDetail = () => {
   }
 
   return (
-    <Box sx={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+    <Box sx={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}>
       {/* Header */}
       <Box
         sx={{
@@ -317,76 +408,99 @@ const BotDetail = () => {
           alignItems: "center",
           mb: 4,
           gap: 2,
-          flexWrap: { xs: 'wrap', sm: 'nowrap' },
-          width: '100%',
+          flexWrap: { xs: "wrap", sm: "nowrap" },
+          width: "100%",
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+        <Box
+          sx={{ display: "flex", alignItems: "center", gap: 2, flexGrow: 1 }}
+        >
           <IconButton
-            onClick={() => navigate('/bots')}
+            onClick={() => navigate("/bots")}
             sx={{
               backgroundColor: alpha(theme.palette.primary.main, 0.1),
-              borderRadius: '8px', // Custom border radius for icon button
-              '&:hover': {
+              borderRadius: "8px", // Custom border radius for icon button
+              "&:hover": {
                 backgroundColor: alpha(theme.palette.primary.main, 0.2),
-              }
+              },
             }}
           >
             <ArrowBackIcon />
           </IconButton>
-          
+
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
               <Typography variant="h4" component="h1" fontWeight={600}>
                 {currentBot.name}
               </Typography>
               <BotStatusBadge status={currentBot.status as BotStatus} />
             </Box>
-            
+
             <Typography variant="body2" color="text.secondary">
-              {currentBot.configuration?.personality || "No personality defined"}
+              {currentBot.configuration?.personality ||
+                "No personality defined"}
             </Typography>
           </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2, mt: { xs: 2, sm: 0 }, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
-          <Button 
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            mt: { xs: 2, sm: 0 },
+            flexWrap: { xs: "wrap", sm: "nowrap" },
+          }}
+        >
+          <Button
             variant="outlined"
             startIcon={<LinkIcon />}
             onClick={handleGenerateInviteLink}
             sx={{
               borderWidth: 1.5,
               borderRadius: 1, // Custom border radius for button
-              '&:hover': {
+              "&:hover": {
                 borderWidth: 1.5,
-              }
+              },
             }}
           >
             Invite Bot
           </Button>
-          
+
           <Button
             variant="contained"
             color={currentBot.status === BotStatus.ONLINE ? "error" : "success"}
-            startIcon={botActionInProgress ? <CircularProgress size={20} color="inherit" /> : 
-              currentBot.status === BotStatus.ONLINE ? <StopIcon /> : <StartIcon />}
+            startIcon={
+              botActionInProgress ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : currentBot.status === BotStatus.ONLINE ? (
+                <StopIcon />
+              ) : (
+                <StartIcon />
+              )
+            }
             onClick={handleToggleBotStatus}
-            disabled={botActionInProgress || currentBot.status === BotStatus.ERROR}
+            disabled={
+              botActionInProgress || currentBot.status === BotStatus.ERROR
+            }
             sx={{
               px: 3,
               py: 1,
               borderRadius: 1, // Custom border radius for button
               boxShadow: `0 4px 12px ${alpha(
-                currentBot.status === BotStatus.ONLINE 
-                  ? theme.palette.error.main 
-                  : theme.palette.success.main, 
+                currentBot.status === BotStatus.ONLINE
+                  ? theme.palette.error.main
+                  : theme.palette.success.main,
                 0.2
               )}`,
             }}
           >
-            {botActionInProgress 
-              ? (currentBot.status === BotStatus.ONLINE ? "Stopping..." : "Starting...") 
-              : (currentBot.status === BotStatus.ONLINE ? "Stop Bot" : "Start Bot")}
+            {botActionInProgress
+              ? currentBot.status === BotStatus.ONLINE
+                ? "Stopping..."
+                : "Starting..."
+              : currentBot.status === BotStatus.ONLINE
+                ? "Stop Bot"
+                : "Start Bot"}
           </Button>
 
           <Button
@@ -397,9 +511,9 @@ const BotDetail = () => {
             sx={{
               borderWidth: 1.5,
               borderRadius: 1, // Custom border radius for button
-              '&:hover': {
+              "&:hover": {
                 borderWidth: 1.5,
-              }
+              },
             }}
           >
             Delete Bot
@@ -409,23 +523,32 @@ const BotDetail = () => {
 
       {/* Status alert when bot is in error state */}
       {currentBot.status === BotStatus.ERROR && (
-        <Alert 
-          severity="error" 
-          sx={{ 
-            mb: 4, 
+        <Alert
+          severity="error"
+          sx={{
+            mb: 4,
             borderRadius: 1,
-            border: `1px solid ${alpha(theme.palette.error.main, 0.1)}`, 
+            border: `1px solid ${alpha(theme.palette.error.main, 0.1)}`,
           }}
         >
-          This bot encountered an error. The token may be invalid or the Message Content Intent may not be enabled.
-          Please check your configuration and try starting the bot again.
+          This bot encountered an error. The token may be invalid or the Message
+          Content Intent may not be enabled. Please check your configuration and
+          try starting the bot again.
         </Alert>
       )}
 
+      {/* Validation error display */}
+      {validationError && (
+        <ValidationErrorDisplay 
+          error={validationError} 
+          onClose={() => setValidationError(null)}
+        />
+      )}
+
       {/* Tabs */}
-      <Paper 
+      <Paper
         elevation={0}
-        sx={{ 
+        sx={{
           mb: 3,
           borderRadius: 2, // Custom border radius for paper
           border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
@@ -437,19 +560,45 @@ const BotDetail = () => {
           aria-label="bot configuration tabs"
           sx={{
             borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            '& .MuiTab-root': {
+            "& .MuiTab-root": {
               py: 2,
               px: 3,
-              minHeight: 'unset',
-            }
+              minHeight: "unset",
+            },
           }}
         >
-          <Tab icon={<SettingsIcon sx={{ mb: 0.5 }} />} label="Basic Info" iconPosition="top" />
-          <Tab icon={<PersonIcon sx={{ mb: 0.5 }} />} label="Personality" iconPosition="top" />
-          <Tab icon={<CodeIcon sx={{ mb: 0.5 }} />} label="LLM Settings" iconPosition="top" />
-          <Tab icon={<ImageIcon sx={{ mb: 0.5 }} />} label="Image Generation" iconPosition="top" />
-          <Tab icon={<BookIcon sx={{ mb: 0.5 }} />} label="Knowledge" iconPosition="top" disabled />
-          <Tab icon={<BuildIcon sx={{ mb: 0.5 }} />} label="Tools" iconPosition="top" disabled />
+          <Tab
+            icon={<SettingsIcon sx={{ mb: 0.5 }} />}
+            label="Basic Info"
+            iconPosition="top"
+          />
+          <Tab
+            icon={<PersonIcon sx={{ mb: 0.5 }} />}
+            label="Personality"
+            iconPosition="top"
+          />
+          <Tab
+            icon={<CodeIcon sx={{ mb: 0.5 }} />}
+            label="LLM Settings"
+            iconPosition="top"
+          />
+          <Tab
+            icon={<ImageIcon sx={{ mb: 0.5 }} />}
+            label="Image Generation"
+            iconPosition="top"
+          />
+          <Tab
+            icon={<BookIcon sx={{ mb: 0.5 }} />}
+            label="Knowledge"
+            iconPosition="top"
+            disabled
+          />
+          <Tab
+            icon={<BuildIcon sx={{ mb: 0.5 }} />}
+            label="Tools"
+            iconPosition="top"
+            disabled
+          />
         </Tabs>
 
         {/* Basic Info Tab */}
@@ -465,10 +614,10 @@ const BotDetail = () => {
                   InputLabelProps={{ shrink: true }}
                   placeholder="Enter a descriptive name for your bot"
                   sx={{
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
                       borderRadius: 1.5, // Custom border radius for text field
-                    }
+                    },
                   }}
                 />
               </GridItem>
@@ -478,19 +627,19 @@ const BotDetail = () => {
                   fullWidth
                   label="Application ID"
                   value={currentBot.applicationId}
-                  InputProps={{ 
+                  InputProps={{
                     readOnly: true,
                     sx: {
                       backgroundColor: alpha(theme.palette.grey[100], 0.8),
-                      fontFamily: 'monospace',
-                    } 
+                      fontFamily: "monospace",
+                    },
                   }}
                   InputLabelProps={{ shrink: true }}
                   variant="outlined"
                   sx={{
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5, // Custom border radius for text field
-                    }
+                    },
                   }}
                 />
               </GridItem>
@@ -505,10 +654,14 @@ const BotDetail = () => {
                     backgroundColor: alpha(theme.palette.background.paper, 0.8),
                   }}
                 >
-                  <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                  <Typography
+                    variant="subtitle1"
+                    fontWeight={600}
+                    sx={{ mb: 2 }}
+                  >
                     Discord Bot Token
                   </Typography>
-                  
+
                   <Box sx={{ mb: 2 }}>
                     <TextField
                       fullWidth
@@ -517,17 +670,20 @@ const BotDetail = () => {
                       InputProps={{
                         readOnly: true,
                         startAdornment: (
-                          <Box 
+                          <Box
                             component="span"
                             sx={{
-                              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                              backgroundColor: alpha(
+                                theme.palette.primary.main,
+                                0.1
+                              ),
                               color: theme.palette.primary.main,
                               py: 0.5,
                               px: 1,
                               borderRadius: 1,
                               mr: 1,
-                              fontSize: '0.8rem',
-                              fontWeight: 600
+                              fontSize: "0.8rem",
+                              fontWeight: 600,
                             }}
                           >
                             SECURED
@@ -536,46 +692,56 @@ const BotDetail = () => {
                       }}
                       variant="outlined"
                       sx={{
-                        '& .MuiOutlinedInput-root': {
-                          backgroundColor: alpha(theme.palette.common.white, 0.9),
+                        "& .MuiOutlinedInput-root": {
+                          backgroundColor: alpha(
+                            theme.palette.common.white,
+                            0.9
+                          ),
                           borderRadius: 1.5,
-                        }
+                        },
                       }}
                     />
                   </Box>
-                  
-                  <Alert 
-                    severity="info" 
-                    sx={{ 
+
+                  <Alert
+                    severity="info"
+                    sx={{
                       mb: 2,
                       borderRadius: 1,
                       border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
                     }}
                   >
-                    For security, Discord bot tokens are encrypted and cannot be viewed after creation.
-                    If you need to update your token, you can use the form below.
+                    For security, Discord bot tokens are encrypted and cannot be
+                    viewed after creation. If you need to update your token, you
+                    can use the form below.
                   </Alert>
-                  
+
                   <Box
                     component="form"
                     sx={{
-                      display: 'flex',
-                      flexDirection: { xs: 'column', sm: 'row' },
+                      display: "flex",
+                      flexDirection: { xs: "column", sm: "row" },
                       gap: 2,
-                      alignItems: { xs: 'stretch', sm: 'flex-start' },
+                      alignItems: { xs: "stretch", sm: "flex-start" },
                     }}
                     onSubmit={(e) => {
                       e.preventDefault();
-                      // You would need to implement a method to update just the token
-                      if (id && document.getElementById('new-token')) {
-                        const tokenInput = document.getElementById('new-token') as HTMLInputElement;
+                      // Clear any previous errors
+                      setValidationError(null);
+                      
+                      if (id && document.getElementById("new-token")) {
+                        const tokenInput = document.getElementById(
+                          "new-token"
+                        ) as HTMLInputElement;
                         if (tokenInput && tokenInput.value) {
                           updateBot(id, { discordToken: tokenInput.value })
                             .then(() => {
-                              tokenInput.value = '';
+                              tokenInput.value = "";
                               toast.success("Bot token updated successfully");
                             })
                             .catch((error) => {
+                              // Set validation error for display in the UI
+                              setValidationError(error);
                               console.error("Error updating token:", error);
                               toast.error("Failed to update bot token");
                             });
@@ -590,10 +756,13 @@ const BotDetail = () => {
                       fullWidth
                       sx={{
                         flexGrow: 1,
-                        '& .MuiOutlinedInput-root': {
-                          backgroundColor: alpha(theme.palette.common.white, 0.9),
+                        "& .MuiOutlinedInput-root": {
+                          backgroundColor: alpha(
+                            theme.palette.common.white,
+                            0.9
+                          ),
                           borderRadius: 1.5,
-                        }
+                        },
                       }}
                     />
                     <Button
@@ -603,8 +772,8 @@ const BotDetail = () => {
                       sx={{
                         px: 3,
                         borderRadius: 1,
-                        height: { xs: 'auto', sm: 56 },
-                        whiteSpace: 'nowrap',
+                        height: { xs: "auto", sm: 56 },
+                        whiteSpace: "nowrap",
                       }}
                     >
                       Update Token
@@ -614,7 +783,7 @@ const BotDetail = () => {
               </GridItem>
             </Box>
 
-            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+            <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
               <Button
                 variant="contained"
                 startIcon={<SaveIcon />}
@@ -637,7 +806,9 @@ const BotDetail = () => {
           <CardContent>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
               <GridItem item xs={12}>
-                <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+                <Box
+                  sx={{ mb: 3, display: "flex", justifyContent: "flex-end" }}
+                >
                   <Button
                     variant="outlined"
                     size="small"
@@ -648,7 +819,7 @@ const BotDetail = () => {
                     Preview Personality
                   </Button>
                 </Box>
-                
+
                 <TextField
                   fullWidth
                   multiline
@@ -660,10 +831,10 @@ const BotDetail = () => {
                   helperText="This is the primary instruction set that defines your bot's behavior"
                   InputLabelProps={{ shrink: true }}
                   sx={{
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
                       borderRadius: 1.5, // Custom border radius for text field
-                    }
+                    },
                   }}
                 />
               </GridItem>
@@ -678,10 +849,10 @@ const BotDetail = () => {
                   helperText="A short description of your bot's personality"
                   InputLabelProps={{ shrink: true }}
                   sx={{
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
                       borderRadius: 1.5, // Custom border radius for text field
-                    }
+                    },
                   }}
                 />
               </GridItem>
@@ -706,8 +877,8 @@ const BotDetail = () => {
                           variant="text"
                           onClick={handleAddTrait}
                           disabled={!newTrait}
-                          sx={{ 
-                            whiteSpace: 'nowrap',
+                          sx={{
+                            whiteSpace: "nowrap",
                             borderRadius: 1, // Custom border radius for button
                           }}
                         >
@@ -717,13 +888,15 @@ const BotDetail = () => {
                     }}
                     InputLabelProps={{ shrink: true }}
                     sx={{
-                      '& .MuiOutlinedInput-root': {
+                      "& .MuiOutlinedInput-root": {
                         backgroundColor: alpha(theme.palette.common.white, 0.9),
                         borderRadius: 1.5, // Custom border radius for text field
-                      }
+                      },
                     }}
                   />
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1 }}>
+                  <Box
+                    sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1 }}
+                  >
                     {traits.map((trait) => (
                       <Chip
                         key={trait}
@@ -731,12 +904,12 @@ const BotDetail = () => {
                         onDelete={() => handleRemoveTrait(trait)}
                         color="primary"
                         variant="outlined"
-                        sx={{ 
+                        sx={{
                           borderRadius: 1, // Custom border radius for chip
                           borderWidth: 1.5,
-                          '& .MuiChip-deleteIcon': {
+                          "& .MuiChip-deleteIcon": {
                             color: theme.palette.primary.main,
-                          }
+                          },
                         }}
                       />
                     ))}
@@ -756,16 +929,16 @@ const BotDetail = () => {
                   helperText="Give your bot a rich backstory to enhance its character"
                   InputLabelProps={{ shrink: true }}
                   sx={{
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
                       borderRadius: 1.5, // Custom border radius for text field
-                    }
+                    },
                   }}
                 />
               </GridItem>
             </Box>
 
-            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+            <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
               <Button
                 variant="contained"
                 startIcon={<SaveIcon />}
@@ -791,38 +964,39 @@ const BotDetail = () => {
                 <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 2 }}>
                   LLM Provider and Model
                 </Typography>
-                
-                <ModelSelector 
+
+                <ModelSelector
                   onModelSelect={(modelId) => setSelectedModel(modelId)}
                   defaultModel={selectedModel}
                 />
-                
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  Select the AI model that powers your bot's responses. This determines the capabilities and quality of your bot.
+
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", mt: 1 }}
+                >
+                  Select the AI model that powers your bot's responses. This
+                  determines the capabilities and quality of your bot.
                 </Typography>
               </GridItem>
 
               <GridItem item xs={12}>
-                <TextField
-                  fullWidth
-                  label="API Key"
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Your LLM provider API key"
-                  helperText="Your API key will be encrypted in our database"
-                  InputLabelProps={{ shrink: true }}
+                <Alert
+                  severity="info"
                   sx={{
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: alpha(theme.palette.common.white, 0.9),
-                      borderRadius: 1.5, // Custom border radius for text field
-                    }
+                    borderRadius: 1, // Custom border radius for alert
+                    border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
                   }}
-                />
+                >
+                  API keys for providers are managed securely by the backend
+                  through environment variables. If you need to use a specific
+                  provider, please ensure its API key is configured in the
+                  server's environment.
+                </Alert>
               </GridItem>
             </Box>
 
-            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+            <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
               <Button
                 variant="contained"
                 startIcon={<SaveIcon />}
@@ -859,42 +1033,54 @@ const BotDetail = () => {
 
               <GridItem item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel id="image-provider-label">Image Provider</InputLabel>
+                  <InputLabel id="image-provider-label">
+                    Image Provider
+                  </InputLabel>
                   <Select
                     labelId="image-provider-label"
                     value={imageProvider}
                     label="Image Provider"
-                    onChange={(e) => setImageProvider(e.target.value as ImageProvider)}
+                    onChange={(e) =>
+                      setImageProvider(e.target.value as ImageProvider)
+                    }
                     sx={{
                       backgroundColor: alpha(theme.palette.common.white, 0.9),
                       borderRadius: 1.5, // Custom border radius for select
-                      '& .MuiOutlinedInput-notchedOutline': {
+                      "& .MuiOutlinedInput-notchedOutline": {
                         borderRadius: 1.5,
-                      }
+                      },
                     }}
                   >
-                    <MenuItem value={ImageProvider.OPENAI}>OpenAI DALL-E</MenuItem>
-                    <MenuItem value={ImageProvider.STABILITY}>Stability AI</MenuItem>
-                    <MenuItem value={ImageProvider.MIDJOURNEY}>Midjourney</MenuItem>
+                    <MenuItem value={ImageProvider.OPENAI}>
+                      OpenAI DALL-E
+                    </MenuItem>
+                    <MenuItem value={ImageProvider.STABILITY}>
+                      Stability AI
+                    </MenuItem>
+                    <MenuItem value={ImageProvider.MIDJOURNEY}>
+                      Midjourney
+                    </MenuItem>
                   </Select>
                 </FormControl>
               </GridItem>
 
               <GridItem item xs={12}>
-                <Alert 
+                <Alert
                   severity="info"
                   sx={{
                     borderRadius: 1, // Custom border radius for alert
                     border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
                   }}
                 >
-                  The bot will use your LLM provider's API key for image generation if available (like with OpenAI).
-                  Custom API keys for specific image providers can be configured in a future update.
+                  The bot will use your LLM provider's API key for image
+                  generation if available (like with OpenAI). Custom API keys
+                  for specific image providers can be configured in a future
+                  update.
                 </Alert>
               </GridItem>
             </Box>
 
-            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+            <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
               <Button
                 variant="contained"
                 startIcon={<SaveIcon />}
@@ -920,15 +1106,23 @@ const BotDetail = () => {
         onClose={() => setSnackbarOpen(false)}
       >
         <Alert
-          severity={botActionInProgress ? "info" : snackbarMessage.includes("Error") ? "error" : "success"}
+          severity={
+            botActionInProgress
+              ? "info"
+              : snackbarMessage.includes("Error")
+                ? "error"
+                : "success"
+          }
           variant="filled"
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           {snackbarMessage}
-          {botActionInProgress && <CircularProgress size={16} sx={{ ml: 1, color: 'white' }} />}
+          {botActionInProgress && (
+            <CircularProgress size={16} sx={{ ml: 1, color: "white" }} />
+          )}
         </Alert>
       </Snackbar>
-      
+
       {/* Delete confirmation dialog */}
       <ConfirmDialog
         open={deleteDialogOpen}
@@ -939,13 +1133,13 @@ const BotDetail = () => {
         onConfirm={handleDeleteBot}
         onCancel={() => setDeleteDialogOpen(false)}
       />
-      
+
       {/* Invite link dialog */}
-      <Dialog 
-        open={inviteDialogOpen} 
+      <Dialog
+        open={inviteDialogOpen}
         onClose={() => setInviteDialogOpen(false)}
         PaperProps={{
-          sx: { borderRadius: 2 }
+          sx: { borderRadius: 2 },
         }}
       >
         <DialogTitle>Add Bot to Server</DialogTitle>
@@ -961,14 +1155,15 @@ const BotDetail = () => {
             sx={{ mb: 2 }}
           />
           <Alert severity="info">
-            You need to have "Manage Server" permission on the Discord server to add this bot.
+            You need to have "Manage Server" permission on the Discord server to
+            add this bot.
           </Alert>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setInviteDialogOpen(false)} color="inherit">
             Close
           </Button>
-          <Button 
+          <Button
             onClick={copyInviteLink}
             color="primary"
             variant="contained"
@@ -976,8 +1171,8 @@ const BotDetail = () => {
           >
             Copy Link
           </Button>
-          <Button 
-            onClick={() => window.open(inviteUrl, '_blank')}
+          <Button
+            onClick={() => window.open(inviteUrl, "_blank")}
             color="primary"
             variant="contained"
             endIcon={<LaunchIcon />}
@@ -995,7 +1190,7 @@ const BotDetail = () => {
         maxWidth="md"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 2 }
+          sx: { borderRadius: 2 },
         }}
       >
         <DialogTitle>Bot Personality Preview</DialogTitle>

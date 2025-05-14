@@ -361,7 +361,7 @@ OpenRouter is implemented using the official `@openrouter/ai-sdk-provider` from 
 
 1. **Native AI SDK Provider**:
    - Uses official `createOpenRouter` function from `@openrouter/ai-sdk-provider`
-   - Fully compatible with Vercel AI's streaming primitives
+   - Fully compatible with Vercel AI's primitives
    - Provides direct access to all OpenRouter features with proper type support
 
 2. **Model Variant Slug Handling**:
@@ -396,7 +396,7 @@ Individual provider models can be accessed either directly or through OpenRouter
 
 #### 3. Vercel AI SDK Integration
 
-The Vercel AI SDK integration provides a flexible, streaming-ready interface to all LLM providers:
+The Vercel AI SDK integration provides a flexible interface to all LLM providers:
 
 1. **Provider Registry**:
    - Dynamically constructs a provider registry based on available API keys
@@ -410,7 +410,6 @@ The Vercel AI SDK integration provides a flexible, streaming-ready interface to 
 
 3. **Model Mapping**:
    - Automatic mapping between internal model IDs and provider-specific IDs
-   - Support for streaming completions with proper backpressure handling
    - Graceful fallbacks when specific providers are unavailable
 
 4. **Management API**:

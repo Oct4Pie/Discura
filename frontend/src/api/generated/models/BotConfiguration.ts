@@ -16,7 +16,7 @@ export type BotConfiguration = {
     backstory: string;
     llmProvider: LLMProvider;
     llmModel: string;
-    apiKey: string;
+    apiKey?: string;
     knowledge: Array<KnowledgeBase>;
     imageGeneration: ImageGenerationConfig;
     toolsEnabled: boolean;

@@ -48,6 +48,7 @@ export interface LlmProviderConstants {
   LMNT: string;
   HUME: string;
   OPENROUTER: string;
+  CHUTES: string;
   CUSTOM: string;
   LABELS: {
     openai: string;
@@ -75,6 +76,7 @@ export interface LlmProviderConstants {
     lmnt: string;
     hume: string;
     openrouter: string;
+    chutes: string;
     custom: string;
   };
 }

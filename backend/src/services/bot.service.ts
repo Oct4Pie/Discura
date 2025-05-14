@@ -201,11 +201,13 @@ async function validateBotConfiguration(bot: any): Promise<void> {
   if (bot.configuration && bot.configuration.llmProvider) {
     const provider = bot.configuration.llmProvider as LLMProvider;
     const model = bot.configuration.llmModel;
-    const apiKey = bot.configuration.apiKey || process.env.OPENAI_API_KEY;
-
-    // Check if API key is present for the provider (required for non-CUSTOM providers)
-    if (provider !== LLMProvider.CUSTOM && !apiKey) {
-      throw new Error(`API key is required for ${provider} provider`);
+    
+    // Check for environment variables for API keys
+    const envApiKey = process.env[`${provider.toUpperCase()}_KEY`];
+    
+    // For non-CUSTOM providers, check if the API key is in environment variables
+    if (provider !== LLMProvider.CUSTOM && !envApiKey) {
+      throw new Error(`API key for ${provider} provider not found in environment variables. Please set ${provider.toUpperCase()}_KEY in your .env file.`);
     }
 
     // Check if model is specified
@@ -226,6 +228,15 @@ async function validateBotConfiguration(bot: any): Promise<void> {
       );
     }
 
+    // Check for environment variables for image provider API keys
+    // only if it's different from the LLM provider
+    if (provider !== bot.configuration.llmProvider) {
+      const envApiKey = process.env[`${provider.toUpperCase()}_KEY`];
+      if (!envApiKey) {
+        throw new Error(`API key for image provider ${provider} not found in environment variables. Please set ${provider.toUpperCase()}_KEY in your .env file.`);
+      }
+    }
+    
     // Additional image provider validation can be added here
   }
 
@@ -298,7 +309,7 @@ export async function updateBot(id: string, botData: any) {
  * @param config Configuration data
  * @returns Updated bot data
  */
-export async function updateBotConfiguration(id: string, config: any) {
+export async function updateBotConfiguration(id: string, request: any) {
   try {
     // Get current bot data
     const bot = await BotAdapter.findById(id);
@@ -306,10 +317,15 @@ export async function updateBotConfiguration(id: string, config: any) {
       throw new Error("Bot not found");
     }
 
+    // Extract the configuration from the request
+    // This handles both UpdateBotConfigurationRequestDto format (with nested configuration property)
+    // and direct configuration object format
+    const configData = request.configuration || request;
+
     // Merge new configuration with existing configuration
     const updatedConfig = {
       ...bot.configuration,
-      ...config,
+      ...configData,
     };
 
     // Verify configuration is valid

@@ -57,6 +57,7 @@ export class ConstantsController extends CommonConstantsController {
         LMNT: constants.LLM_PROVIDER.LMNT || "lmnt",
         HUME: constants.LLM_PROVIDER.HUME || "hume",
         OPENROUTER: constants.LLM_PROVIDER.OPENROUTER || "openrouter",
+        CHUTES: constants.LLM_PROVIDER.CHUTES || "chutes", // Add missing CHUTES property
         CUSTOM: constants.LLM_PROVIDER.CUSTOM,
         LABELS: {
           openai: constants.LLM_PROVIDER.LABELS.openai,
@@ -84,6 +85,7 @@ export class ConstantsController extends CommonConstantsController {
           deepgram: constants.LLM_PROVIDER.LABELS.deepgram || "Deepgram",
           lmnt: constants.LLM_PROVIDER.LABELS.lmnt || "LMNT",
           hume: constants.LLM_PROVIDER.LABELS.hume || "Hume",
+          chutes: constants.LLM_PROVIDER.LABELS.chutes || "Chutes AI", // Add missing label for Chutes
           openrouter: constants.LLM_PROVIDER.LABELS.openrouter || "OpenRouter",
           custom: constants.LLM_PROVIDER.LABELS.custom,
         },

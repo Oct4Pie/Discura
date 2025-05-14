@@ -298,7 +298,7 @@ export function mapOpenRouterProviderToLLMProvider(
     "voyage": LLMProvider.CUSTOM,
     "openrouter": LLMProvider.OPENROUTER,
     "deepinfra": LLMProvider.DEEPINFRA,
-    "chutes": LLMProvider.CUSTOM,
+    "chutes": LLMProvider.CHUTES, // Fixed: Now properly mapped to LLMProvider.CHUTES
     "replicate": LLMProvider.CUSTOM,
     "qwen": LLMProvider.CUSTOM,
     "lmstudio": LLMProvider.CUSTOM,
@@ -306,7 +306,15 @@ export function mapOpenRouterProviderToLLMProvider(
     "nousresearch": LLMProvider.CUSTOM,
   };
 
-  return nameMapping[providerName.toLowerCase()] || LLMProvider.CUSTOM;
+  const providerNameLower = providerName.toLowerCase();
+  const mappedProvider = nameMapping[providerNameLower] || LLMProvider.CUSTOM;
+  
+  // Add debug logging for Chutes provider mapping
+  if (providerNameLower === "chutes" || mappedProvider === LLMProvider.CHUTES) {
+    logger.info(`Mapping provider "${providerName}" to ${mappedProvider}`);
+  }
+
+  return mappedProvider;
 }
 
 /**
