@@ -47,8 +47,8 @@ import {
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { BotStatus, ImageProvider } from "../types";
-import { LLMProvider, BotsService } from "../api/";
+import { BotStatus } from "../types";
+import { LLMProvider, BotsService, ImageProvider, UpdateBotConfigurationRequestDto, BotConfiguration, LlmService } from "../api/";
 import { handleApiError } from "../api"; // Import error handler
 import BotStatusBadge from "../components/BotStatusBadge";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -58,6 +58,23 @@ import ValidationErrorDisplay from "../components/ValidationErrorDisplay"; // Im
 import { useBotStore } from "../stores/botStore";
 import PersonalityPreview from "../components/PersonalityPreview";
 import ModelSelector from "../components/ModelSelector";
+
+// Function to extract provider and model from combined format
+const parseModelId = (combinedModelId: string): { provider: string; model: string } => {
+  if (!combinedModelId || !combinedModelId.includes('/')) {
+    // Default for invalid format
+    return { provider: 'openai', model: 'gpt-3.5-turbo' };
+  }
+
+  // Find the index of the first slash
+  const firstSlashIndex = combinedModelId.indexOf('/');
+  // Provider is everything before the first slash
+  const provider = combinedModelId.substring(0, firstSlashIndex);
+  // Model is everything after the first slash (including any additional slashes)
+  const model = combinedModelId.substring(firstSlashIndex + 1);
+
+  return { provider, model };
+};
 
 const BotDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -92,19 +109,9 @@ const BotDetail = () => {
   const [traits, setTraits] = useState<string[]>([]);
   const [newTrait, setNewTrait] = useState("");
   const [backstory, setBackstory] = useState("");
-
-  // Combined model ID in format "provider/model"
-  const [selectedModel, setSelectedModel] =
-    useState<string>("openai/gpt-4o-mini");
-
-  // Derived values for backward compatibility
-  const llmProvider = selectedModel.split("/")[0] as LLMProvider;
-  const llmModel = selectedModel.split("/").slice(1).join("/");
-
+  const [selectedModel, setSelectedModel] = useState<string>("openai/gpt-4o-mini");
   const [imageGenEnabled, setImageGenEnabled] = useState(false);
-  const [imageProvider, setImageProvider] = useState<ImageProvider>(
-    ImageProvider.OPENAI
-  );
+  const [imageProvider, setImageProvider] = useState<ImageProvider>(ImageProvider.OPENAI);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
@@ -128,19 +135,21 @@ const BotDetail = () => {
       setPersonality(currentBot.configuration?.personality || "");
       setTraits(currentBot.configuration?.traits || []);
       setBackstory(currentBot.configuration?.backstory || "");
+      
+      // Set selected model properly using provider and model
+      if (currentBot.configuration?.llmProvider && currentBot.configuration?.llmModel) {
+        setSelectedModel(`${currentBot.configuration.llmProvider}/${currentBot.configuration.llmModel}`);
+      } else {
+        setSelectedModel("openai/gpt-4o-mini"); // default
+      }
 
-      const provider = currentBot.configuration?.llmProvider || "openai";
-      setSelectedModel(
-        `${provider}/${currentBot.configuration?.llmModel || "gpt-3.5-turbo"}`
-      );
-
-      setImageGenEnabled(
-        currentBot.configuration?.imageGeneration?.enabled || false
-      );
-      setImageProvider(
-        (currentBot.configuration?.imageGeneration
-          ?.provider as ImageProvider) || ImageProvider.OPENAI
-      );
+      setImageGenEnabled(currentBot.configuration?.imageGeneration?.enabled || false);
+      
+      if (currentBot.configuration?.imageGeneration?.provider) {
+        setImageProvider(currentBot.configuration.imageGeneration.provider);
+      } else {
+        setImageProvider(ImageProvider.OPENAI);
+      }
     }
   }, [currentBot]);
 
@@ -184,23 +193,22 @@ const BotDetail = () => {
     setValidationError(null); // Clear previous errors
     
     try {
-      await updateBotConfiguration(id, {
+      // Create a new configuration object that retains all existing config values
+      // but updates the personality-related fields
+      const updatedConfig: BotConfiguration = {
+        ...currentBot.configuration,
         systemPrompt,
         personality,
         traits,
         backstory,
-        // Maintain other properties from current config
-        llmProvider: currentBot.configuration?.llmProvider || LLMProvider.OPENAI,
-        llmModel: currentBot.configuration?.llmModel || "gpt-3.5-turbo",
-        apiKey: currentBot.configuration?.apiKey || "",
-        knowledge: currentBot.configuration?.knowledge || [],
-        imageGeneration: currentBot.configuration?.imageGeneration || {
-          enabled: false,
-          provider: ImageProvider.OPENAI
-        },
-        toolsEnabled: currentBot.configuration?.toolsEnabled || false,
-        tools: currentBot.configuration?.tools || []
-      });
+      };
+      
+      // Use the typed DTO for the update
+      const configUpdate: UpdateBotConfigurationRequestDto = {
+        configuration: updatedConfig
+      };
+      
+      await updateBotConfiguration(id, configUpdate.configuration);
       toast.success("Bot personality updated");
     } catch (error) {
       // Use the structured error handling
@@ -218,22 +226,49 @@ const BotDetail = () => {
     setValidationError(null); // Clear previous errors
     
     try {
-      await updateBotConfiguration(id, {
-        systemPrompt: currentBot.configuration?.systemPrompt || "",
-        personality: currentBot.configuration?.personality || "",
-        traits: currentBot.configuration?.traits || [],
-        backstory: currentBot.configuration?.backstory || "",
-        llmProvider,
-        llmModel,
-        apiKey: currentBot.configuration?.apiKey || "",
-        knowledge: currentBot.configuration?.knowledge || [],
-        imageGeneration: currentBot.configuration?.imageGeneration || {
-          enabled: false,
-          provider: ImageProvider.OPENAI
-        },
-        toolsEnabled: currentBot.configuration?.toolsEnabled || false,
-        tools: currentBot.configuration?.tools || [],
-      });
+      // Instead of manually parsing the model string, fetch all available models 
+      // to find the correct provider for the selected model
+      const allProvidersResponse = await LlmService.getAllProviderModels();
+      
+      // Find the model in the response
+      let matchedProvider: string | undefined;
+      let matchedModelName: string | undefined;
+      
+      // Search all providers to find which one contains our selected model
+      for (const providerData of allProvidersResponse.providers) {
+        const foundModel = providerData.models.find(model => model.id === selectedModel);
+        if (foundModel) {
+          matchedProvider = providerData.provider;
+          
+          // The model ID is in format "provider/model-name"
+          // The backend expects just the model name in the llmModel field,
+          // so we use the provider_model_id if available
+          matchedModelName = foundModel.provider_model_id || selectedModel;
+          break;
+        }
+      }
+      
+      // If we couldn't find the model in the API response, fall back to the current selection
+      // without any parsing
+      if (!matchedProvider) {
+        console.warn(`Could not find model ${selectedModel} in the API response. Using the model ID as-is.`);
+      }
+      
+      // Create a new configuration object that retains all existing config values
+      const updatedConfig: BotConfiguration = {
+        ...currentBot.configuration,
+        // Use the identified provider if found, otherwise keep the current provider
+        llmProvider: (matchedProvider as LLMProvider) || currentBot.configuration?.llmProvider,
+        // Use the full selected model ID directly from the UI or ModelSelector
+        llmModel: selectedModel,
+      };
+      
+      // Use the typed DTO for the update
+      const configUpdate: UpdateBotConfigurationRequestDto = {
+        configuration: updatedConfig
+      };
+      
+      await updateBotConfiguration(id, configUpdate.configuration);
       toast.success("LLM settings updated");
     } catch (error) {
       // Use the structured error handling
@@ -251,22 +286,22 @@ const BotDetail = () => {
     setValidationError(null); // Clear previous errors
     
     try {
-      await updateBotConfiguration(id, {
-        systemPrompt: currentBot.configuration?.systemPrompt || "",
-        personality: currentBot.configuration?.personality || "",
-        traits: currentBot.configuration?.traits || [],
-        backstory: currentBot.configuration?.backstory || "",
-        llmProvider: currentBot.configuration?.llmProvider || LLMProvider.OPENAI,
-        llmModel: currentBot.configuration?.llmModel || "gpt-3.5-turbo",
-        apiKey: currentBot.configuration?.apiKey || "",
-        knowledge: currentBot.configuration?.knowledge || [],
+      // Create a new configuration object that retains all existing config values
+      // but updates the image generation fields
+      const updatedConfig: BotConfiguration = {
+        ...currentBot.configuration,
         imageGeneration: {
           enabled: imageGenEnabled,
           provider: imageProvider,
         },
-        toolsEnabled: currentBot.configuration?.toolsEnabled || false,
-        tools: currentBot.configuration?.tools || [],
-      });
+      };
+      
+      // Use the typed DTO for the update
+      const configUpdate: UpdateBotConfigurationRequestDto = {
+        configuration: updatedConfig
+      };
+      
+      await updateBotConfiguration(id, configUpdate.configuration);
       toast.success("Image generation settings updated");
     } catch (error) {
       // Use the structured error handling

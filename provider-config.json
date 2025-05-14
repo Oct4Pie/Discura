@@ -9,9 +9,7 @@
     "google": {
       "enabled": true
     },
-    "openrouter": {
-      "enabled": true
-    },
+    
     "chutes": {
       "enabled": true
     },

@@ -42,8 +42,7 @@ import {
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import { useBotStore } from "../stores/botStore";
-import { LLMProvider } from "../api";
-import { ImageProvider } from "../api";
+import { LLMProvider, ImageProvider, CreateBotRequestDto, BotConfiguration } from "../api/";
 import { validate } from "../utils/validation";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import ModelSelector from "../components/ModelSelector";
@@ -122,6 +121,22 @@ const AVAILABLE_TRAITS = [
   "Diplomatic",
 ];
 
+const parseModelId = (combinedModelId: string): { provider: string; model: string } => {
+  if (!combinedModelId || !combinedModelId.includes('/')) {
+    // Default for invalid format
+    return { provider: 'openai', model: 'gpt-3.5-turbo' };
+  }
+
+  // Find the index of the first slash
+  const firstSlashIndex = combinedModelId.indexOf('/');
+  // Provider is everything before the first slash
+  const provider = combinedModelId.substring(0, firstSlashIndex);
+  // Model is everything after the first slash (including any additional slashes)
+  const model = combinedModelId.substring(firstSlashIndex + 1);
+
+  return { provider, model };
+};
+
 const CreateBot = () => {
   const navigate = useNavigate();
   const { createBot, isLoading } = useBotStore();
@@ -149,14 +164,8 @@ const CreateBot = () => {
     PERSONALITY_TEMPLATES.FRIENDLY.backstory
   );
 
-  // LLM Provider and Model - using full string ID format for model (provider/model)
-  const [selectedModel, setSelectedModel] = useState<string>(
-    "openai/gpt-3.5-turbo"
-  );
-
-  // Derive provider and model separately for the form submission
-  const llmProvider = selectedModel.split("/")[0] as LLMProvider;
-  const llmModel = selectedModel.split("/").slice(1).join("/");
+  // Model selection using combined format 
+  const [selectedModel, setSelectedModel] = useState<string>("openai/gpt-3.5-turbo");
 
   const validateCurrentStep = () => {
     if (activeStep === 0) {
@@ -224,25 +233,32 @@ const CreateBot = () => {
     }
 
     try {
-      const botData = {
+      // Create a properly typed configuration object
+      const configuration: BotConfiguration = {
+        systemPrompt,
+        personality,
+        traits,
+        backstory,
+        // Use the model ID directly from ModelSelector without parsing
+        llmModel: selectedModel,
+        // We need to provide a valid LLMProvider value to satisfy the type system
+        // The actual provider will be extracted from the model ID by the backend
+        llmProvider: LLMProvider.OPENAI,
+        apiKey: "", // API key will be set in the detailed view
+        imageGeneration: {
+          enabled: false,
+          provider: ImageProvider.OPENAI,
+        },
+        toolsEnabled: false,
+        tools: [],
+        knowledge: [],
+      };
+      
+      // Create a properly typed request DTO
+      const botData: CreateBotRequestDto = {
         name: name.trim(),
         discordToken: token.trim(),
-        configuration: {
-          systemPrompt,
-          personality,
-          traits,
-          backstory,
-          llmProvider,
-          llmModel,
-          apiKey: "", // API key will be set in the detailed view
-          imageGeneration: {
-            enabled: false,
-            provider: ImageProvider.OPENAI,
-          },
-          toolsEnabled: false,
-          tools: [],
-          knowledge: [],
-        },
+        configuration
       };
 
       const bot = await createBot(botData);

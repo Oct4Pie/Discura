@@ -10,7 +10,7 @@ import path from "path";
 import { bedrock, createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { anthropic, createAnthropic } from "@ai-sdk/anthropic";
 import { assemblyai, createAssemblyAI } from "@ai-sdk/assemblyai";
-import { createAzure } from "@ai-sdk/azure";
+import { azure, createAzure } from "@ai-sdk/azure";
 import { cerebras, createCerebras } from "@ai-sdk/cerebras";
 import { cohere, createCohere } from "@ai-sdk/cohere";
 import { deepgram, createDeepgram } from "@ai-sdk/deepgram";
@@ -49,7 +49,6 @@ import { CoreMessage, createProviderRegistry, generateText } from "ai";
 import axios from "axios";
 
 import { logger } from "../utils/logger";
-import { getModelVariantSlug } from "./openrouter.service";
 
 // Provider config path - updated to point to root directory
 const PROVIDER_CONFIG_PATH = path.join(
@@ -58,19 +57,16 @@ const PROVIDER_CONFIG_PATH = path.join(
   "provider-config.json"
 );
 
-// Model ID separator for registry
-const MODEL_ID_SEPARATOR = " > ";
-
-// Configuration for custom OpenAI-compatible providers that aren't directly available in the AI SDK
-interface ProviderConfig {
-  useOpenAICompatible: boolean;
-  baseURL?: string;
-  requiresApiKey: boolean;
-  options?: Record<string, any>;
-}
-
 // Configuration for providers that need custom setup via createOpenAICompatible
-const CUSTOM_PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
+const CUSTOM_PROVIDER_CONFIGS: Record<
+  string,
+  {
+    useOpenAICompatible: boolean;
+    baseURL?: string;
+    requiresApiKey: boolean;
+    options?: Record<string, any>;
+  }
+> = {
   openrouter: {
     useOpenAICompatible: true,
     baseURL: "https://openrouter.ai/api/v1",
@@ -367,77 +363,7 @@ export async function createAiProviderRegistry() {
   }
 
   // Create and return the provider registry
-  return createProviderRegistry(registry, { separator: MODEL_ID_SEPARATOR });
-}
-
-/**
- * Convert from our LLMModelData to Vercel AI model ID format
- */
-export function convertToVercelAiModelId(model: LLMModelData): string {
-  // Map from our provider to Vercel AI provider prefix
-  const providerMapping: Record<string, string> = {
-    // Built-in providers (native AI SDK)
-    openai: "openai",
-    anthropic: "anthropic",
-    google: "google",
-    mistral: "mistral",
-    cohere: "cohere",
-    groq: "groq",
-    deepseek: "deepseek",
-    amazon: "amazon",
-    bedrock: "amazon", // Alias for amazon bedrock
-    azure: "azure",
-    fireworks: "fireworks",
-    togetherai: "togetherai",
-    together: "togetherai", // Alias
-    perplexity: "perplexity",
-    deepinfra: "deepinfra",
-    xai: "xai",
-    grok: "xai", // Alias
-    ollama: "ollama",
-    huggingface: "huggingface",
-    cerebras: "cerebras",
-    elevenlabs: "elevenlabs",
-    gladia: "gladia",
-    assemblyai: "assemblyai",
-    revai: "revai",
-    deepgram: "deepgram",
-    lmnt: "lmnt",
-    hume: "hume",
-
-    // OpenAI-compatible providers
-    chutes: "chutes",
-    microsoft: "microsoft",
-    qwen: "qwen",
-    openrouter: "openrouter",
-    anyscale: "anyscale",
-    voyage: "voyage",
-    voyageai: "voyage",
-    lmstudio: "lmstudio",
-  };
-
-  const provider =
-    providerMapping[model.owned_by.toLowerCase()] ||
-    model.owned_by.toLowerCase();
-
-  // Use provider_model_id if available, otherwise fall back to id
-  const modelId = model.provider_model_id || model.id;
-
-  return `${provider}${MODEL_ID_SEPARATOR}${modelId}`;
-}
-
-/**
- * Parse a Vercel AI model ID back to our format
- */
-export function parseVercelAiModelId(vercelAiModelId: string): {
-  provider: string;
-  modelId: string;
-} {
-  const [provider, ...modelParts] = vercelAiModelId.split(MODEL_ID_SEPARATOR);
-  return {
-    provider,
-    modelId: modelParts.join(MODEL_ID_SEPARATOR), // Rejoin in case model ID itself contains the separator
-  };
+  return createProviderRegistry(registry);
 }
 
 // Initialize the provider registry on module load
@@ -453,48 +379,4 @@ export async function getAiProviderRegistry() {
 export async function refreshAiProviderRegistry() {
   aiProviderRegistry = await createAiProviderRegistry();
   return aiProviderRegistry;
-}
-
-/**
- * Calculate token count for a variety of content formats
- * Used by the Vercel AI SDK integration
- */
-function calculateTokenCount(
-  content: string | any[] | Record<string, any> | undefined | null
-): number {
-  // If content is undefined or null
-  if (content === undefined || content === null) {
-    return 0;
-  }
-
-  // If content is a string
-  if (typeof content === "string") {
-    // Rough approximation, assumes ~4 chars per token on average
-    return Math.ceil(content.length / 4);
-  }
-
-  // If content is an array (multimodal content)
-  if (Array.isArray(content)) {
-    return content.reduce((acc, part) => {
-      // Handle text parts
-      if (typeof part === "object" && part !== null) {
-        if (part.type === "text" && typeof part.text === "string") {
-          return acc + Math.ceil(part.text.length / 4);
-        }
-        // Handle image parts - estimate based on image size/complexity
-        else if (part.type === "image") {
-          return acc + 150; // Rough estimate for image description
-        }
-      }
-      return acc + 10; // Default token count for unknown parts
-    }, 0);
-  }
-
-  // For object structures
-  if (typeof content === "object") {
-    // Try to estimate based on JSON stringification
-    return Math.ceil(JSON.stringify(content).length / 4);
-  }
-
-  return 10; // Default return for unknown types
 }

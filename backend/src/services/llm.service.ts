@@ -15,6 +15,15 @@ import {
   CustomProviderConfig,
 } from "@discura/common";
 
+// Import centralized provider constants from the common package
+import {
+  PROVIDER_CACHE_TTL,
+  DEFAULT_PROVIDER_MODELS,
+  DEFAULT_MODELS,
+  OPENROUTER_ROUTING_MODELS,
+  LLM_PROVIDER,
+} from "@discura/common/constants";
+
 // Import specific types from Vercel AI SDK
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
@@ -25,14 +34,11 @@ import {
   groupModelsByProvider,
   mapOpenRouterProviderToLLMProvider,
   convertOpenRouterModelToEnhancedModel,
-  getModelVariantSlug,
 } from "./openrouter.service";
 import {
   getAiProviderRegistry,
   refreshAiProviderRegistry,
   saveProviderConfig,
-  convertToVercelAiModelId,
-  parseVercelAiModelId,
 } from "./vercel-ai-sdk.service";
 import { BotAdapter } from "../models/adapters/bot.adapter";
 import { logger } from "../utils/logger";
@@ -66,497 +72,16 @@ const OPENROUTER_RATE_LIMIT_WAIT = parseInt(
   10
 ); // 5 seconds
 
-// Provider-specific cache TTLs in milliseconds
-const PROVIDER_CACHE_TTL: Record<LLMProvider, number> = {
-  [LLMProvider.OPENAI]: DEFAULT_CACHE_TTL,
-  [LLMProvider.ANTHROPIC]: DEFAULT_CACHE_TTL,
-  [LLMProvider.GOOGLE]: DEFAULT_CACHE_TTL,
-  [LLMProvider.GROQ]: DEFAULT_CACHE_TTL,
-  [LLMProvider.COHERE]: DEFAULT_CACHE_TTL,
-  [LLMProvider.DEEPSEEK]: DEFAULT_CACHE_TTL,
-  [LLMProvider.MISTRAL]: DEFAULT_CACHE_TTL,
-  [LLMProvider.AMAZON]: DEFAULT_CACHE_TTL,
-  [LLMProvider.AZURE]: DEFAULT_CACHE_TTL,
-  [LLMProvider.FIREWORKS]: DEFAULT_CACHE_TTL,
-  [LLMProvider.TOGETHERAI]: DEFAULT_CACHE_TTL,
-  [LLMProvider.PERPLEXITY]: DEFAULT_CACHE_TTL,
-  [LLMProvider.DEEPINFRA]: DEFAULT_CACHE_TTL,
-  [LLMProvider.XAI]: DEFAULT_CACHE_TTL,
-  [LLMProvider.OLLAMA]: DEFAULT_CACHE_TTL,
-  [LLMProvider.HUGGINGFACE]: DEFAULT_CACHE_TTL,
-  [LLMProvider.CEREBRAS]: DEFAULT_CACHE_TTL,
-  [LLMProvider.ELEVENLABS]: DEFAULT_CACHE_TTL,
-  [LLMProvider.GLADIA]: DEFAULT_CACHE_TTL,
-  [LLMProvider.ASSEMBLYAI]: DEFAULT_CACHE_TTL,
-  [LLMProvider.REVAI]: DEFAULT_CACHE_TTL,
-  [LLMProvider.DEEPGRAM]: DEFAULT_CACHE_TTL,
-  [LLMProvider.LMNT]: DEFAULT_CACHE_TTL,
-  [LLMProvider.HUME]: DEFAULT_CACHE_TTL,
-  [LLMProvider.OPENROUTER]: OPENROUTER_CACHE_TTL, // Use OpenRouter-specific TTL
-  [LLMProvider.CHUTES]: DEFAULT_CACHE_TTL, // Add Chutes provider
-  [LLMProvider.CUSTOM]: DEFAULT_CACHE_TTL,
-};
-
-// Provider display names mapping
-const PROVIDER_DISPLAY_NAMES: Record<LLMProvider, string> = {
-  [LLMProvider.OPENAI]: "OpenAI",
-  [LLMProvider.ANTHROPIC]: "Anthropic",
-  [LLMProvider.GOOGLE]: "Google AI",
-  [LLMProvider.GROQ]: "Groq",
-  [LLMProvider.COHERE]: "Cohere",
-  [LLMProvider.DEEPSEEK]: "DeepSeek",
-  [LLMProvider.MISTRAL]: "Mistral AI",
-  [LLMProvider.AMAZON]: "Amazon Bedrock",
-  [LLMProvider.AZURE]: "Azure OpenAI",
-  [LLMProvider.FIREWORKS]: "Fireworks AI",
-  [LLMProvider.TOGETHERAI]: "Together AI",
-  [LLMProvider.PERPLEXITY]: "Perplexity",
-  [LLMProvider.DEEPINFRA]: "DeepInfra",
-  [LLMProvider.XAI]: "xAI Grok",
-  [LLMProvider.OLLAMA]: "Ollama",
-  [LLMProvider.HUGGINGFACE]: "Hugging Face",
-  [LLMProvider.CEREBRAS]: "Cerebras",
-  [LLMProvider.ELEVENLABS]: "ElevenLabs",
-  [LLMProvider.GLADIA]: "Gladia",
-  [LLMProvider.ASSEMBLYAI]: "AssemblyAI",
-  [LLMProvider.REVAI]: "Rev.ai",
-  [LLMProvider.DEEPGRAM]: "Deepgram",
-  [LLMProvider.LMNT]: "LMNT",
-  [LLMProvider.HUME]: "Hume",
-  [LLMProvider.OPENROUTER]: "OpenRouter",
-  [LLMProvider.CHUTES]: "Chutes AI", // Add Chutes display name
-  [LLMProvider.CUSTOM]: "Custom API",
-};
-
-// Default models by provider - These will be used as fallbacks when OpenRouter data is unavailable
-const DEFAULT_PROVIDER_MODELS: Record<LLMProvider, LLMModelData[]> = {
-  [LLMProvider.OPENAI]: [
-    {
-      id: "gpt-4o",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 10,
-      owned_by: "openai",
-      display_name: "GPT-4o",
-      provider_model_id: "gpt-4o",
-      context_length: 128000,
-      capabilities: {
-        input_modalities: ["text", "image"],
-        output_modalities: ["text"],
-        supports_tool_calling: true,
-        supports_streaming: true,
-        supports_vision: true,
-      },
-    },
-  ],
-  [LLMProvider.ANTHROPIC]: [
-    {
-      id: "claude-3-5-sonnet-20240620",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 5,
-      owned_by: "anthropic",
-      display_name: "Claude 3.5 Sonnet",
-      provider_model_id: "claude-3-5-sonnet-20240620",
-      context_length: 200000,
-      capabilities: {
-        input_modalities: ["text", "image"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-        supports_vision: true,
-      },
-    },
-  ],
-  [LLMProvider.GOOGLE]: [
-    {
-      id: "gemini-pro",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 30,
-      owned_by: "google",
-      display_name: "Gemini Pro",
-      provider_model_id: "gemini-pro",
-      context_length: 32768,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.GROQ]: [
-    {
-      id: "llama3-70b-8192",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 10,
-      owned_by: "groq",
-      display_name: "Llama3 70B",
-      provider_model_id: "llama3-70b-8192",
-      context_length: 8192,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.COHERE]: [
-    {
-      id: "command-r-plus",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 20,
-      owned_by: "cohere",
-      display_name: "Command R+",
-      provider_model_id: "command-r-plus",
-      context_length: 128000,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.DEEPSEEK]: [
-    {
-      id: "deepseek-coder",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 30,
-      owned_by: "deepseek",
-      display_name: "DeepSeek Coder",
-      provider_model_id: "deepseek-coder",
-      context_length: 32768,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.MISTRAL]: [
-    {
-      id: "mistral-medium-latest",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 10,
-      owned_by: "mistral",
-      display_name: "Mistral Medium (Latest)",
-      provider_model_id: "mistral-medium-latest",
-      context_length: 32768,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.AMAZON]: [
-    {
-      id: "anthropic.claude-3-sonnet-20240229-v1:0",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 15,
-      owned_by: "amazon",
-      display_name: "Claude 3 Sonnet (Amazon Bedrock)",
-      provider_model_id: "anthropic.claude-3-sonnet-20240229-v1:0",
-      context_length: 200000,
-      capabilities: {
-        input_modalities: ["text", "image"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-        supports_vision: true,
-      },
-    },
-  ],
-  [LLMProvider.AZURE]: [
-    {
-      id: "gpt-4",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 20,
-      owned_by: "azure",
-      display_name: "GPT-4 (Azure)",
-      provider_model_id: "gpt-4",
-      context_length: 128000,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.FIREWORKS]: [
-    {
-      id: "llama-v3-70b-instruct",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 10,
-      owned_by: "fireworks",
-      display_name: "Llama 3 70B Instruct",
-      provider_model_id: "llama-v3-70b-instruct",
-      context_length: 8192,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.TOGETHERAI]: [
-    {
-      id: "mistralai/mixtral-8x7b-instruct-v0.1",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 60,
-      owned_by: "togetherai",
-      display_name: "Mixtral 8x7B Instruct",
-      provider_model_id: "mistralai/mixtral-8x7b-instruct-v0.1",
-      context_length: 32768,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.PERPLEXITY]: [
-    {
-      id: "sonar-medium-online",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 30,
-      owned_by: "perplexity",
-      display_name: "Sonar Medium Online",
-      provider_model_id: "sonar-medium-online",
-      context_length: 12000,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.DEEPINFRA]: [
-    {
-      id: "meta-llama/llama-3-70b-instruct",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 15,
-      owned_by: "deepinfra",
-      display_name: "Llama 3 70B Instruct",
-      provider_model_id: "meta-llama/llama-3-70b-instruct",
-      context_length: 8192,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.XAI]: [
-    {
-      id: "grok-1",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 45,
-      owned_by: "xai",
-      display_name: "Grok-1",
-      provider_model_id: "grok-1",
-      context_length: 8192,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.OLLAMA]: [
-    {
-      id: "llama3",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 10,
-      owned_by: "ollama",
-      display_name: "Llama 3",
-      provider_model_id: "llama3",
-      context_length: 8192,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.HUGGINGFACE]: [
-    {
-      id: "meta-llama/llama-3-8b-instruct",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 15,
-      owned_by: "huggingface",
-      display_name: "Llama 3 8B Instruct",
-      provider_model_id: "meta-llama/llama-3-8b-instruct",
-      context_length: 8192,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.CEREBRAS]: [
-    {
-      id: "cerebras-gpt",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 120,
-      owned_by: "cerebras",
-      display_name: "Cerebras-GPT",
-      provider_model_id: "cerebras-gpt",
-      context_length: 4096,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.ELEVENLABS]: [
-    {
-      id: "eleven-multilingual-v2",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 30,
-      owned_by: "elevenlabs",
-      display_name: "Eleven Multilingual V2",
-      provider_model_id: "eleven-multilingual-v2",
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["audio"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.GLADIA]: [
-    {
-      id: "transcription",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 45,
-      owned_by: "gladia",
-      display_name: "Transcription",
-      provider_model_id: "transcription",
-      capabilities: {
-        input_modalities: ["audio"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.ASSEMBLYAI]: [
-    {
-      id: "assemblyai-transcribe",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 60,
-      owned_by: "assemblyai",
-      display_name: "AssemblyAI Transcribe",
-      provider_model_id: "assemblyai-transcribe",
-      capabilities: {
-        input_modalities: ["audio"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.REVAI]: [
-    {
-      id: "revai-transcribe",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 60,
-      owned_by: "revai",
-      display_name: "Rev.ai Transcribe",
-      provider_model_id: "revai-transcribe",
-      capabilities: {
-        input_modalities: ["audio"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.DEEPGRAM]: [
-    {
-      id: "nova-2",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 30,
-      owned_by: "deepgram",
-      display_name: "Nova 2",
-      provider_model_id: "nova-2",
-      capabilities: {
-        input_modalities: ["audio"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.LMNT]: [
-    {
-      id: "lmnt-tts",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 45,
-      owned_by: "lmnt",
-      display_name: "LMNT Text-to-Speech",
-      provider_model_id: "lmnt-tts",
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["audio"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.HUME]: [
-    {
-      id: "hume-tts",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 30,
-      owned_by: "hume",
-      display_name: "Hume Text-to-Speech",
-      provider_model_id: "hume-tts",
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["audio"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.OPENROUTER]: [
-    {
-      id: "openrouter/auto",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 5,
-      owned_by: "openrouter",
-      display_name: "OpenRouter Auto",
-      provider_model_id: "auto",
-      context_length: 128000,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.CHUTES]: [
-    {
-      id: "chutes/nexus-7b-v1",
-      object: "model",
-      created: Math.floor(Date.now() / 1000) - 86400 * 2,
-      owned_by: "chutes",
-      display_name: "Nexus 7B v1",
-      provider_model_id: "nexus-7b-v1",
-      context_length: 32768,
-      capabilities: {
-        input_modalities: ["text"],
-        output_modalities: ["text"],
-        supports_streaming: true,
-      },
-    },
-  ],
-  [LLMProvider.CUSTOM]: [],
-};
-
-// Default models to show when no provider is available
-const DEFAULT_MODELS: LLMModelData[] = [
-  {
-    id: "gpt-3.5-turbo",
-    object: "model",
-    created: Math.floor(Date.now() / 1000) - 86400 * 30, // 30 days ago
-    owned_by: "openai",
-    display_name: "GPT-3.5 Turbo", // Added required property
-    provider_model_id: "gpt-3.5-turbo", // Added required property
+// Use labels from common package as display names
+const PROVIDER_DISPLAY_NAMES: Record<LLMProvider, string> = Object.entries(
+  LLM_PROVIDER.LABELS
+).reduce(
+  (acc, [key, value]) => {
+    acc[key as LLMProvider] = value;
+    return acc;
   },
-];
+  {} as Record<LLMProvider, string>
+);
 
 // Model cache
 interface ModelCache {
@@ -714,8 +239,10 @@ export const createChatCompletionWithVercelAi = async (
 ): Promise<LLMCompletionResponseDto> => {
   try {
     const { model: modelId, provider } = request;
+    const effectiveProvider = provider || LLMProvider.OPENROUTER; // Default to OpenRouter if not specified
+
     logger.info(
-      `Creating chat completion with Vercel AI SDK. Model: ${modelId}, Provider: ${provider || "default (OpenRouter)"}`
+      `Creating chat completion with Vercel AI SDK. Model: ${modelId}, Provider: ${effectiveProvider}`
     );
 
     const registry = await getAiProviderRegistry();
@@ -734,75 +261,34 @@ export const createChatCompletionWithVercelAi = async (
     }));
 
     const startTime = Date.now();
-    let result: GenerateTextResult<any, any>; // Using <any, any> for diagnostics
-    let responseModelIdentifier = modelId; // What we report back in the response
+    let result: GenerateTextResult<any, any>;
 
-    // Path 1: Explicit provider specified (and not OpenRouter)
-    if (provider && provider !== LLMProvider.OPENROUTER) {
-      logger.info(
-        `Attempting direct Vercel AI provider call: ${provider} > ${modelId}`
+    // Create a standard response identifier format
+    const responseModelIdentifier = `${effectiveProvider}/${modelId}`;
+
+    // Check if the provider exists in the registry
+    if (!registry[effectiveProvider]) {
+      logger.error(
+        `Provider ${effectiveProvider} not found in registry. Ensure API key is set with ${effectiveProvider.toUpperCase()}_KEY`
       );
-
-      if (!registry[provider]) {
-        logger.error(
-          `Provider ${provider} not found in registry or not configured properly`
-        );
-        throw new Error(
-          `Provider ${provider} not configured. Check if the API key is set (e.g., ${provider.toUpperCase()}_KEY)`
-        );
-      }
-
-      const vercelModel = registry.languageModel(`${provider} > ${modelId}`);
-      responseModelIdentifier = `${provider}/${modelId}`;
-
-      result = await generateText({
-        model: vercelModel,
-        messages,
-        temperature: request.temperature,
-        topP: request.top_p,
-        maxTokens: request.max_tokens,
-        presencePenalty: request.presence_penalty,
-        frequencyPenalty: request.frequency_penalty,
-      });
-    } else {
-      // Path 2: OpenRouter (either explicitly specified or as default)
-      let slugForOpenRouter = modelId;
-      if (modelId.startsWith("openrouter/")) {
-        slugForOpenRouter = modelId.substring(11); // Remove "openrouter/"
-      }
-      // If provider is explicitly OpenRouter, we ensure the model string reflects that for clarity
-      if (
-        provider === LLMProvider.OPENROUTER &&
-        !modelId.startsWith("openrouter/")
-      ) {
-        responseModelIdentifier = `openrouter/${modelId}`;
-      } else {
-        responseModelIdentifier = modelId; // Use the original slug or openrouter/slug
-      }
-
-      logger.info(`Attempting OpenRouter call with slug: ${slugForOpenRouter}`);
-
-      if (!registry.openrouter) {
-        logger.error(
-          "OpenRouter provider not found in registry. Ensure OPENROUTER_KEY is set."
-        );
-        throw new Error(
-          "OpenRouter provider not configured in the Vercel AI SDK registry."
-        );
-      }
-
-      const openRouterModel = registry.openrouter.chat(slugForOpenRouter);
-
-      result = await generateText({
-        model: openRouterModel,
-        messages,
-        temperature: request.temperature,
-        topP: request.top_p,
-        maxTokens: request.max_tokens,
-        presencePenalty: request.presence_penalty,
-        frequencyPenalty: request.frequency_penalty,
-      });
+      throw new Error(
+        `Provider ${effectiveProvider} not configured in the Vercel AI SDK registry.`
+      );
     }
+
+    // Use the provider's chat method directly with the model ID
+    // This works consistently for all providers including OpenRouter
+    const model = registry[effectiveProvider].chat(modelId);
+
+    result = await generateText({
+      model,
+      messages,
+      temperature: request.temperature,
+      topP: request.top_p,
+      maxTokens: request.max_tokens,
+      presencePenalty: request.presence_penalty,
+      frequencyPenalty: request.frequency_penalty,
+    });
 
     const endTime = Date.now();
     const promptTokens = messages.reduce(
@@ -812,14 +298,14 @@ export const createChatCompletionWithVercelAi = async (
     const completionTokens = calculateTokenCount(result.text);
 
     logger.info(
-      `Completion generated with Vercel AI SDK in ${endTime - startTime}ms. Provider: ${provider || "OpenRouter"}, Model: ${modelId}`
+      `Completion generated with Vercel AI SDK in ${endTime - startTime}ms. Provider: ${effectiveProvider}, Model: ${modelId}`
     );
 
     return {
-      id: `${provider || "openrouter"}-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`,
+      id: `${effectiveProvider}-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`,
       object: "chat.completion",
       created: Math.floor(Date.now() / 1000),
-      model: responseModelIdentifier, // Use the potentially modified identifier
+      model: responseModelIdentifier,
       choices: [
         {
           index: 0,
@@ -1394,10 +880,8 @@ async function fetchModelsFromOpenRouter(): Promise<
     // Reset rate limit flag since request was successful
     openRouterRateLimitHit = false;
 
-    // Filter out any hidden or disabled models
     const validModels = filterValidModels(openRouterModelsResponse);
 
-    // Group models by provider name from the endpoint.provider_name field
     const modelsByProviderName = groupModelsByProvider(validModels);
 
     // Create a mapping from our LLMProvider enum to lists of models
@@ -1517,65 +1001,8 @@ async function fetchProviderModels(
         const openRouterModels = await fetchOpenRouterModels();
 
         if (openRouterModels && openRouterModels.length > 0) {
-          // Add special routing endpoints as the first models
-          const routingEndpoints: LLMModelData[] = [
-            {
-              id: "openrouter/auto",
-              object: "model",
-              created: Math.floor(Date.now() / 1000) - 86400,
-              owned_by: "openrouter",
-              display_name: "OpenRouter Auto",
-              provider_model_id: "auto",
-              context_length: 128000,
-              capabilities: {
-                input_modalities: ["text"],
-                output_modalities: ["text"],
-                supports_streaming: true,
-              },
-            },
-            {
-              id: "openrouter/best",
-              object: "model",
-              created: Math.floor(Date.now() / 1000) - 86400,
-              owned_by: "openrouter",
-              display_name: "OpenRouter Best",
-              provider_model_id: "best",
-              context_length: 128000,
-              capabilities: {
-                input_modalities: ["text"],
-                output_modalities: ["text"],
-                supports_streaming: true,
-              },
-            },
-            {
-              id: "openrouter/fastest",
-              object: "model",
-              created: Math.floor(Date.now() / 1000) - 86400,
-              owned_by: "openrouter",
-              display_name: "OpenRouter Fastest",
-              provider_model_id: "fastest",
-              context_length: 128000,
-              capabilities: {
-                input_modalities: ["text"],
-                output_modalities: ["text"],
-                supports_streaming: true,
-              },
-            },
-            {
-              id: "openrouter/cheapest",
-              object: "model",
-              created: Math.floor(Date.now() / 1000) - 86400,
-              owned_by: "openrouter",
-              display_name: "OpenRouter Cheapest",
-              provider_model_id: "cheapest",
-              context_length: 128000,
-              capabilities: {
-                input_modalities: ["text"],
-                output_modalities: ["text"],
-                supports_streaming: true,
-              },
-            },
-          ];
+          // Add special routing endpoints from the centralized constant
+          const routingEndpoints = OPENROUTER_ROUTING_MODELS;
 
           // Filter the models to just get valid ones for display
           const validModels = filterValidModels(openRouterModels);
@@ -1589,7 +1016,7 @@ async function fetchProviderModels(
           models = [...routingEndpoints, ...enhancedModels];
 
           logger.info(
-            `Fetched ${models.length} models from OpenRouter API (${enhancedModels.length} regular models plus 4 routing endpoints)`
+            `Fetched ${models.length} models from OpenRouter API (${enhancedModels.length} regular models plus ${routingEndpoints.length} routing endpoints)`
           );
         } else {
           // If we didn't get any models, fall back to defaults
@@ -1825,7 +1252,9 @@ export const refreshProviderModels = async (
  * Fetch models and populate the cache
  * This function is called periodically to refresh the cache
  */
-async function fetchModelsAndPopulateCache(forceRefresh = false): Promise<void> {
+async function fetchModelsAndPopulateCache(
+  forceRefresh = false
+): Promise<void> {
   if (!modelCache) {
     logger.warn(
       "fetchModelsAndPopulateCache called with no modelCache initialized. Attempting to load."

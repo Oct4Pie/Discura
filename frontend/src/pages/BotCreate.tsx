@@ -20,7 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useBotStore } from "../stores/botStore";
 import GridItem from "../components/GridItem";
-import { LLMProvider, ImageProvider } from "../api";
+import { LLMProvider, ImageProvider, CreateBotRequestDto, BotConfiguration } from "../api";
 
 const BotCreate = () => {
   const navigate = useNavigate();
@@ -92,27 +92,33 @@ const BotCreate = () => {
       setError(null);
 
       try {
-        const bot = await createBot({
+        // Create a properly typed configuration object
+        const configuration: BotConfiguration = {
+          systemPrompt: defaultSystemPrompt.replace("{{botName}}", botName),
+          personality: defaultPersonality,
+          traits: defaultTraits,
+          backstory: defaultBackstory,
+          llmProvider: LLMProvider.OPENAI,
+          llmModel: "gpt-3.5-turbo",
+          apiKey: "", // Will be set later in settings
+          knowledge: [],
+          imageGeneration: {
+            enabled: false,
+            provider: ImageProvider.OPENAI,
+          },
+          toolsEnabled: false,
+          tools: [],
+        };
+        
+        // Create a properly typed request DTO
+        const botData: CreateBotRequestDto = {
           name: botName,
           discordToken,
           applicationId,
-          configuration: {
-            systemPrompt: defaultSystemPrompt.replace("{{botName}}", botName),
-            personality: defaultPersonality,
-            traits: defaultTraits,
-            backstory: defaultBackstory,
-            llmProvider: LLMProvider.OPENAI, // Use the enum value instead of string literal
-            llmModel: "gpt-3.5-turbo", // Default model
-            apiKey: "", // Will be set later in settings
-            knowledge: [], // No initial knowledge base
-            imageGeneration: {
-              enabled: false,
-              provider: ImageProvider.OPENAI, // Use the enum value instead of string literal
-            },
-            toolsEnabled: false,
-            tools: [],
-          },
-        });
+          configuration
+        };
+
+        const bot = await createBot(botData);
 
         toast.success("Bot created successfully!");
         navigate(`/bots/${bot.id}`);
