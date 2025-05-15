@@ -69,7 +69,7 @@ const Login = () => {
             height: 100,
             background: `linear-gradient(135deg, transparent 70%, ${alpha(
               theme.palette.primary.main,
-              0.1
+              0.1,
             )} 70%)`,
             zIndex: 0,
           }}

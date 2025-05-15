@@ -1,5 +1,5 @@
 import { Chip, SxProps, Theme, alpha, useTheme } from "@mui/material";
-import { BotStatus } from "../api";
+import { BotStatus } from "@discura/common/types"; // Import from common package instead of API
 import {
   CheckCircleOutline as OnlineIcon,
   ErrorOutline as ErrorIcon,
@@ -9,7 +9,7 @@ import {
 import { useState, useEffect, ReactElement } from "react";
 
 interface BotStatusBadgeProps {
-  status?: BotStatus;
+  status?: BotStatus | string; // Accept string as well for compatibility
   sx?: SxProps<Theme>;
 }
 
@@ -22,30 +22,30 @@ interface StatusConfig {
 }
 
 // Map BotStatus enum to badge color and icon
-const statusConfig: Record<BotStatus, StatusConfig> = {
-  [BotStatus.ONLINE]: {
+const statusConfig: Record<string, StatusConfig> = {
+  "ONLINE": {
     color: "success",
     label: "Online",
     icon: <OnlineIcon fontSize="small" />,
   },
-  [BotStatus.OFFLINE]: {
+  "OFFLINE": {
     color: "default",
     label: "Offline",
     icon: <OfflineIcon fontSize="small" />,
   },
-  [BotStatus.STARTING]: {
+  "STARTING": {
     color: "warning",
     label: "Starting",
     icon: <SyncIcon fontSize="small" />,
     pulseAnimation: true,
   },
-  [BotStatus.STOPPING]: {
+  "STOPPING": {
     color: "warning",
     label: "Stopping",
     icon: <SyncIcon fontSize="small" />,
     pulseAnimation: true,
   },
-  [BotStatus.ERROR]: {
+  "ERROR": {
     color: "error",
     label: "Error",
     icon: <ErrorIcon fontSize="small" />,
@@ -55,16 +55,22 @@ const statusConfig: Record<BotStatus, StatusConfig> = {
 const BotStatusBadge = ({ status, sx }: BotStatusBadgeProps) => {
   const theme = useTheme();
   const [animate, setAnimate] = useState(false);
-  const validStatus = Object.values(BotStatus).includes(status as BotStatus);
+  
+  // Convert status to string for reliable comparison
+  const statusString = String(status || "").toUpperCase();
+  
+  // Check if the status string is in our config
+  const validStatus = Object.keys(statusConfig).includes(statusString);
 
-  // Default values for invalid status
-  const config: StatusConfig = validStatus
-    ? statusConfig[status as BotStatus]
+  // Create a config object with either the matched status or default values
+  // Using type assertion for the entire expression to ensure TypeScript knows it's always StatusConfig
+  const config = (validStatus
+    ? statusConfig[statusString]
     : {
         color: "default",
         label: "Unknown",
         icon: <OfflineIcon fontSize="small" />,
-      };
+      }) as StatusConfig;
 
   // Set up animation for statuses that need it
   useEffect(() => {

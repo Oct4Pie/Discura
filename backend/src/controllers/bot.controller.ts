@@ -13,6 +13,7 @@ import {
   DeleteBotResponseDto,
   BotStatus,
   TokenValidationResult,
+  MessageResponseDto,
 } from "@discura/common";
 import { BotController as CommonBotController } from "@discura/common/controllers";
 import { Request } from "express";
@@ -27,6 +28,7 @@ import {
   updateBotConfiguration,
   deleteBot,
   generateBotInviteLink,
+  registerCommandsForGuild,
 } from "../services/bot.service";
 import { validateBotToken } from "../services/discord.service";
 import { logger } from "../utils/logger";
@@ -359,6 +361,16 @@ export class BotController extends CommonBotController {
         requestBody.configuration?.llmProvider
       )
         updatedAspects.push("LLM settings");
+      if (
+        requestBody.configuration?.visionModel ||
+        requestBody.configuration?.visionProvider
+      )
+        updatedAspects.push("vision model settings");
+      if (
+        requestBody.configuration?.imageGeneration?.enabled !== undefined ||
+        requestBody.configuration?.imageGeneration?.provider
+      )
+        updatedAspects.push("image generation settings");
 
       const aspectsMessage =
         updatedAspects.length > 0
@@ -574,6 +586,65 @@ export class BotController extends CommonBotController {
         messageContentEnabled: false,
         error: `Token validation failed: ${error.message}`,
       };
+    }
+  }
+
+  /**
+   * Force register slash commands for a bot in a specific server
+   * @param id Bot ID
+   * @param requestBody Request containing guild ID
+   * @param request Express request
+   * @returns Success message
+   */
+  public async registerBotCommands(
+    id: string,
+    requestBody: { guildId: string },
+    request: Request
+  ): Promise<MessageResponseDto> {
+    try {
+      // Get user ID from authenticated user
+      const userId = request.user?.id;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
+      // Get bot data
+      const bot = await getBotById(id);
+
+      // Check if bot exists
+      if (!bot) {
+        throw new Error("Bot not found");
+      }
+
+      // Check if bot belongs to user
+      if (bot.user !== userId) {
+        throw new Error("You do not have permission to manage this bot");
+      }
+
+      // Check if application ID is available
+      if (!bot.applicationId) {
+        throw new Error("Bot application ID is not available");
+      }
+
+      // Register commands for the specific guild
+      await registerCommandsForGuild(
+        bot.applicationId,
+        bot.discordToken,
+        requestBody.guildId
+      );
+
+      logger.info(
+        `Manually registered commands for bot ${id} in guild ${requestBody.guildId}`
+      );
+
+      // Return success response
+      return {
+        success: true,
+        message: `Successfully registered commands for bot in Discord server`,
+      };
+    } catch (error: any) {
+      logger.error(`Register commands for bot ${id} failed:`, error);
+      throw new Error(`Failed to register commands: ${error.message}`);
     }
   }
 }

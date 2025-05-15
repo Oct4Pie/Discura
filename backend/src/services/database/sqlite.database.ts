@@ -83,6 +83,18 @@ const SCHEMA_STATEMENTS = [
     FOREIGN KEY (bot_id) REFERENCES bots(id) ON DELETE CASCADE
   )`,
 
+  // Activated channels table for storing which channels have auto-response enabled
+  `CREATE TABLE IF NOT EXISTS activated_channels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bot_id TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    activated INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(bot_id, channel_id),
+    FOREIGN KEY (bot_id) REFERENCES bots(id) ON DELETE CASCADE
+  )`,
+
   // Sessions table for storing user sessions
   `CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
@@ -98,6 +110,7 @@ const SCHEMA_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_bots_user_id ON bots(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_knowledge_bot_id ON knowledge_items(bot_id)`,
   `CREATE INDEX IF NOT EXISTS idx_tools_bot_id ON tool_definitions(bot_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_activated_channels_bot_id ON activated_channels(bot_id)`,
   `CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)`,
 ];

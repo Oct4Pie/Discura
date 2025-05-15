@@ -1,12 +1,12 @@
 /**
  * User type definitions for the frontend
- * 
+ *
  * Following Discura Project Guidelines, we use types directly from the generated
  * API models as the single source of truth.
  */
 
-import { UserResponseDto } from '../api'
-import { UserProfileResponseDto } from '../api/';
+import { UserResponseDto } from "../api";
+import { UserProfileResponseDto } from "../api/";
 
 /**
  * For frontend use, we directly use the API-generated UserResponseDto

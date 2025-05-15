@@ -1,6 +1,6 @@
 {
-  "timestamp": 1747216599286,
-  "openRouterLastFetch": 1747216599286,
+  "timestamp": 1747308409583,
+  "openRouterLastFetch": 1747308409583,
   "providers": {
     "chutes": {
       "provider": "chutes",
@@ -508,7 +508,7 @@
           "owned_by": "Chutes",
           "display_name": "Llama 4 Maverick (free)",
           "provider_model_id": "chutesai/Llama-4-Maverick-17B-128E-Instruct-FP8",
-          "context_length": 256000,
+          "context_length": 128000,
           "capabilities": {
             "input_modalities": [
               "text",
@@ -1266,7 +1266,7 @@
           "provider_display_name": "Chutes"
         }
       ],
-      "last_updated": 1747216599286
+      "last_updated": 1747308409583
     },
     "mistral": {
       "provider": "mistral",
@@ -1457,32 +1457,6 @@
           "provider_display_name": "Mistral"
         },
         {
-          "id": "mistralai/ministral-3b",
-          "object": "model",
-          "created": 1729123200,
-          "owned_by": "Mistral",
-          "display_name": "Ministral 3B",
-          "provider_model_id": "ministral-3b-2410",
-          "context_length": 131072,
-          "capabilities": {
-            "input_modalities": [
-              "text"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": false
-          },
-          "pricing": {
-            "prompt_tokens": 4e-8,
-            "completion_tokens": 4e-8
-          },
-          "model_variant_slug": "mistralai/ministral-3b",
-          "provider_display_name": "Mistral"
-        },
-        {
           "id": "mistralai/ministral-8b",
           "object": "model",
           "created": 1729123200,
@@ -1506,6 +1480,32 @@
             "completion_tokens": 1e-7
           },
           "model_variant_slug": "mistralai/ministral-8b",
+          "provider_display_name": "Mistral"
+        },
+        {
+          "id": "mistralai/ministral-3b",
+          "object": "model",
+          "created": 1729123200,
+          "owned_by": "Mistral",
+          "display_name": "Ministral 3B",
+          "provider_model_id": "ministral-3b-2410",
+          "context_length": 131072,
+          "capabilities": {
+            "input_modalities": [
+              "text"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": true,
+            "supports_vision": false
+          },
+          "pricing": {
+            "prompt_tokens": 4e-8,
+            "completion_tokens": 4e-8
+          },
+          "model_variant_slug": "mistralai/ministral-3b",
           "provider_display_name": "Mistral"
         },
         {
@@ -1561,32 +1561,6 @@
           "provider_display_name": "Mistral"
         },
         {
-          "id": "mistralai/mistral-small",
-          "object": "model",
-          "created": 1704844800,
-          "owned_by": "Mistral",
-          "display_name": "Mistral Small",
-          "provider_model_id": "mistral-small-2409",
-          "context_length": 32768,
-          "capabilities": {
-            "input_modalities": [
-              "text"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": false
-          },
-          "pricing": {
-            "prompt_tokens": 2e-7,
-            "completion_tokens": 6e-7
-          },
-          "model_variant_slug": "mistralai/mistral-small",
-          "provider_display_name": "Mistral"
-        },
-        {
           "id": "mistralai/mistral-medium",
           "object": "model",
           "created": 1704844800,
@@ -1610,6 +1584,32 @@
             "completion_tokens": 0.0000081
           },
           "model_variant_slug": "mistralai/mistral-medium",
+          "provider_display_name": "Mistral"
+        },
+        {
+          "id": "mistralai/mistral-small",
+          "object": "model",
+          "created": 1704844800,
+          "owned_by": "Mistral",
+          "display_name": "Mistral Small",
+          "provider_model_id": "mistral-small-2409",
+          "context_length": 32768,
+          "capabilities": {
+            "input_modalities": [
+              "text"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": true,
+            "supports_vision": false
+          },
+          "pricing": {
+            "prompt_tokens": 2e-7,
+            "completion_tokens": 6e-7
+          },
+          "model_variant_slug": "mistralai/mistral-small",
           "provider_display_name": "Mistral"
         },
         {
@@ -1639,7 +1639,7 @@
           "provider_display_name": "Mistral"
         }
       ],
-      "last_updated": 1747216599286
+      "last_updated": 1747308409583
     },
     "custom": {
       "provider": "custom",
@@ -1672,7 +1672,7 @@
           "provider_display_name": "Cloudflare"
         }
       ],
-      "last_updated": 1747216599286
+      "last_updated": 1747308409583
     },
     "togetherai": {
       "provider": "togetherai",
@@ -1966,33 +1966,6 @@
           "provider_display_name": "Together"
         },
         {
-          "id": "meta-llama/llama-3.2-11b-vision-instruct",
-          "object": "model",
-          "created": 1727222400,
-          "owned_by": "Together",
-          "display_name": "Llama 3.2 11B Vision Instruct (free)",
-          "provider_model_id": "meta-llama/Llama-Vision-Free",
-          "context_length": 131072,
-          "capabilities": {
-            "input_modalities": [
-              "text",
-              "image"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": false,
-            "supports_vision": true
-          },
-          "pricing": {
-            "prompt_tokens": 0,
-            "completion_tokens": 0
-          },
-          "model_variant_slug": "meta-llama/llama-3.2-11b-vision-instruct:free",
-          "provider_display_name": "Together"
-        },
-        {
           "id": "meta-llama/llama-3.2-90b-vision-instruct",
           "object": "model",
           "created": 1727222400,
@@ -2017,6 +1990,33 @@
             "completion_tokens": 0.0000012
           },
           "model_variant_slug": "meta-llama/llama-3.2-90b-vision-instruct",
+          "provider_display_name": "Together"
+        },
+        {
+          "id": "meta-llama/llama-3.2-11b-vision-instruct",
+          "object": "model",
+          "created": 1727222400,
+          "owned_by": "Together",
+          "display_name": "Llama 3.2 11B Vision Instruct (free)",
+          "provider_model_id": "meta-llama/Llama-Vision-Free",
+          "context_length": 131072,
+          "capabilities": {
+            "input_modalities": [
+              "text",
+              "image"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": false,
+            "supports_vision": true
+          },
+          "pricing": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0
+          },
+          "model_variant_slug": "meta-llama/llama-3.2-11b-vision-instruct:free",
           "provider_display_name": "Together"
         },
         {
@@ -2150,7 +2150,7 @@
           "provider_display_name": "Together"
         }
       ],
-      "last_updated": 1747216599286
+      "last_updated": 1747308409583
     },
     "deepinfra": {
       "provider": "deepinfra",
@@ -2657,32 +2657,6 @@
           "provider_display_name": "DeepInfra"
         },
         {
-          "id": "meta-llama/llama-3.3-70b-instruct",
-          "object": "model",
-          "created": 1733506137.828,
-          "owned_by": "DeepInfra",
-          "display_name": "Llama 3.3 70B Instruct",
-          "provider_model_id": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-          "context_length": 131072,
-          "capabilities": {
-            "input_modalities": [
-              "text"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": false
-          },
-          "pricing": {
-            "prompt_tokens": 8e-8,
-            "completion_tokens": 2.5e-7
-          },
-          "model_variant_slug": "meta-llama/llama-3.3-70b-instruct",
-          "provider_display_name": "DeepInfra"
-        },
-        {
           "id": "qwen/qwen-2.5-coder-32b-instruct",
           "object": "model",
           "created": 1731368400.276,
@@ -2866,32 +2840,6 @@
           "provider_display_name": "DeepInfra"
         },
         {
-          "id": "meta-llama/llama-3.1-70b-instruct",
-          "object": "model",
-          "created": 1721692800,
-          "owned_by": "DeepInfra",
-          "display_name": "Llama 3.1 70B Instruct",
-          "provider_model_id": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
-          "context_length": 131072,
-          "capabilities": {
-            "input_modalities": [
-              "text"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": false
-          },
-          "pricing": {
-            "prompt_tokens": 1e-7,
-            "completion_tokens": 2.8e-7
-          },
-          "model_variant_slug": "meta-llama/llama-3.1-70b-instruct",
-          "provider_display_name": "DeepInfra"
-        },
-        {
           "id": "meta-llama/llama-3.1-405b-instruct",
           "object": "model",
           "created": 1721692800,
@@ -2915,6 +2863,32 @@
             "completion_tokens": 8e-7
           },
           "model_variant_slug": "meta-llama/llama-3.1-405b-instruct",
+          "provider_display_name": "DeepInfra"
+        },
+        {
+          "id": "meta-llama/llama-3.1-70b-instruct",
+          "object": "model",
+          "created": 1721692800,
+          "owned_by": "DeepInfra",
+          "display_name": "Llama 3.1 70B Instruct",
+          "provider_model_id": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+          "context_length": 131072,
+          "capabilities": {
+            "input_modalities": [
+              "text"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": true,
+            "supports_vision": false
+          },
+          "pricing": {
+            "prompt_tokens": 1e-7,
+            "completion_tokens": 2.8e-7
+          },
+          "model_variant_slug": "meta-llama/llama-3.1-70b-instruct",
           "provider_display_name": "DeepInfra"
         },
         {
@@ -3048,7 +3022,7 @@
           "provider_display_name": "DeepInfra"
         }
       ],
-      "last_updated": 1747216599286
+      "last_updated": 1747308409583
     },
     "openai": {
       "provider": "openai",
@@ -3435,6 +3409,32 @@
           "provider_display_name": "OpenAI"
         },
         {
+          "id": "openai/o1-preview",
+          "object": "model",
+          "created": 1726099200,
+          "owned_by": "OpenAI",
+          "display_name": "o1-preview",
+          "provider_model_id": "o1-preview",
+          "context_length": 128000,
+          "capabilities": {
+            "input_modalities": [
+              "text"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": false,
+            "supports_vision": false
+          },
+          "pricing": {
+            "prompt_tokens": 0.000015,
+            "completion_tokens": 0.00006
+          },
+          "model_variant_slug": "openai/o1-preview",
+          "provider_display_name": "OpenAI"
+        },
+        {
           "id": "openai/o1-preview-2024-09-12",
           "object": "model",
           "created": 1726099200,
@@ -3458,32 +3458,6 @@
             "completion_tokens": 0.00006
           },
           "model_variant_slug": "openai/o1-preview-2024-09-12",
-          "provider_display_name": "OpenAI"
-        },
-        {
-          "id": "openai/o1-mini-2024-09-12",
-          "object": "model",
-          "created": 1726099200,
-          "owned_by": "OpenAI",
-          "display_name": "o1-mini (2024-09-12)",
-          "provider_model_id": "o1-mini-2024-09-12",
-          "context_length": 128000,
-          "capabilities": {
-            "input_modalities": [
-              "text"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": false,
-            "supports_vision": false
-          },
-          "pricing": {
-            "prompt_tokens": 0.0000011,
-            "completion_tokens": 0.0000044
-          },
-          "model_variant_slug": "openai/o1-mini-2024-09-12",
           "provider_display_name": "OpenAI"
         },
         {
@@ -3513,12 +3487,12 @@
           "provider_display_name": "OpenAI"
         },
         {
-          "id": "openai/o1-preview",
+          "id": "openai/o1-mini-2024-09-12",
           "object": "model",
           "created": 1726099200,
           "owned_by": "OpenAI",
-          "display_name": "o1-preview",
-          "provider_model_id": "o1-preview",
+          "display_name": "o1-mini (2024-09-12)",
+          "provider_model_id": "o1-mini-2024-09-12",
           "context_length": 128000,
           "capabilities": {
             "input_modalities": [
@@ -3532,10 +3506,10 @@
             "supports_vision": false
           },
           "pricing": {
-            "prompt_tokens": 0.000015,
-            "completion_tokens": 0.00006
+            "prompt_tokens": 0.0000011,
+            "completion_tokens": 0.0000044
           },
-          "model_variant_slug": "openai/o1-preview",
+          "model_variant_slug": "openai/o1-mini-2024-09-12",
           "provider_display_name": "OpenAI"
         },
         {
@@ -3594,34 +3568,6 @@
           "provider_display_name": "OpenAI"
         },
         {
-          "id": "openai/gpt-4o-mini-2024-07-18",
-          "object": "model",
-          "created": 1721260800,
-          "owned_by": "OpenAI",
-          "display_name": "GPT-4o-mini (2024-07-18)",
-          "provider_model_id": "gpt-4o-mini-2024-07-18",
-          "context_length": 128000,
-          "capabilities": {
-            "input_modalities": [
-              "text",
-              "image",
-              "file"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": true
-          },
-          "pricing": {
-            "prompt_tokens": 1.5e-7,
-            "completion_tokens": 6e-7
-          },
-          "model_variant_slug": "openai/gpt-4o-mini-2024-07-18",
-          "provider_display_name": "OpenAI"
-        },
-        {
           "id": "openai/gpt-4o-mini",
           "object": "model",
           "created": 1721260800,
@@ -3647,6 +3593,34 @@
             "completion_tokens": 6e-7
           },
           "model_variant_slug": "openai/gpt-4o-mini",
+          "provider_display_name": "OpenAI"
+        },
+        {
+          "id": "openai/gpt-4o-mini-2024-07-18",
+          "object": "model",
+          "created": 1721260800,
+          "owned_by": "OpenAI",
+          "display_name": "GPT-4o-mini (2024-07-18)",
+          "provider_model_id": "gpt-4o-mini-2024-07-18",
+          "context_length": 128000,
+          "capabilities": {
+            "input_modalities": [
+              "text",
+              "image",
+              "file"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": true,
+            "supports_vision": true
+          },
+          "pricing": {
+            "prompt_tokens": 1.5e-7,
+            "completion_tokens": 6e-7
+          },
+          "model_variant_slug": "openai/gpt-4o-mini-2024-07-18",
           "provider_display_name": "OpenAI"
         },
         {
@@ -3787,32 +3761,6 @@
           "provider_display_name": "OpenAI"
         },
         {
-          "id": "openai/gpt-4-1106-preview",
-          "object": "model",
-          "created": 1699228800,
-          "owned_by": "OpenAI",
-          "display_name": "GPT-4 Turbo (older v1106)",
-          "provider_model_id": "gpt-4-1106-preview",
-          "context_length": 128000,
-          "capabilities": {
-            "input_modalities": [
-              "text"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": false
-          },
-          "pricing": {
-            "prompt_tokens": 0.00001,
-            "completion_tokens": 0.00003
-          },
-          "model_variant_slug": "openai/gpt-4-1106-preview",
-          "provider_display_name": "OpenAI"
-        },
-        {
           "id": "openai/gpt-3.5-turbo-1106",
           "object": "model",
           "created": 1699228800,
@@ -3836,6 +3784,32 @@
             "completion_tokens": 0.000002
           },
           "model_variant_slug": "openai/gpt-3.5-turbo-1106",
+          "provider_display_name": "OpenAI"
+        },
+        {
+          "id": "openai/gpt-4-1106-preview",
+          "object": "model",
+          "created": 1699228800,
+          "owned_by": "OpenAI",
+          "display_name": "GPT-4 Turbo (older v1106)",
+          "provider_model_id": "gpt-4-1106-preview",
+          "context_length": 128000,
+          "capabilities": {
+            "input_modalities": [
+              "text"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": true,
+            "supports_vision": false
+          },
+          "pricing": {
+            "prompt_tokens": 0.00001,
+            "completion_tokens": 0.00003
+          },
+          "model_variant_slug": "openai/gpt-4-1106-preview",
           "provider_display_name": "OpenAI"
         },
         {
@@ -3943,58 +3917,6 @@
           "provider_display_name": "OpenAI"
         },
         {
-          "id": "openai/gpt-4",
-          "object": "model",
-          "created": 1685232000,
-          "owned_by": "OpenAI",
-          "display_name": "GPT-4",
-          "provider_model_id": "gpt-4",
-          "context_length": 8191,
-          "capabilities": {
-            "input_modalities": [
-              "text"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": false
-          },
-          "pricing": {
-            "prompt_tokens": 0.00003,
-            "completion_tokens": 0.00006
-          },
-          "model_variant_slug": "openai/gpt-4",
-          "provider_display_name": "OpenAI"
-        },
-        {
-          "id": "openai/gpt-4-0314",
-          "object": "model",
-          "created": 1685232000,
-          "owned_by": "OpenAI",
-          "display_name": "GPT-4 (older v0314)",
-          "provider_model_id": "gpt-4-0314",
-          "context_length": 8191,
-          "capabilities": {
-            "input_modalities": [
-              "text"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": false
-          },
-          "pricing": {
-            "prompt_tokens": 0.00003,
-            "completion_tokens": 0.00006
-          },
-          "model_variant_slug": "openai/gpt-4-0314",
-          "provider_display_name": "OpenAI"
-        },
-        {
           "id": "openai/gpt-3.5-turbo",
           "object": "model",
           "created": 1685232000,
@@ -4045,9 +3967,61 @@
           },
           "model_variant_slug": "openai/gpt-3.5-turbo-0125",
           "provider_display_name": "OpenAI"
+        },
+        {
+          "id": "openai/gpt-4",
+          "object": "model",
+          "created": 1685232000,
+          "owned_by": "OpenAI",
+          "display_name": "GPT-4",
+          "provider_model_id": "gpt-4",
+          "context_length": 8191,
+          "capabilities": {
+            "input_modalities": [
+              "text"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": true,
+            "supports_vision": false
+          },
+          "pricing": {
+            "prompt_tokens": 0.00003,
+            "completion_tokens": 0.00006
+          },
+          "model_variant_slug": "openai/gpt-4",
+          "provider_display_name": "OpenAI"
+        },
+        {
+          "id": "openai/gpt-4-0314",
+          "object": "model",
+          "created": 1685232000,
+          "owned_by": "OpenAI",
+          "display_name": "GPT-4 (older v0314)",
+          "provider_model_id": "gpt-4-0314",
+          "context_length": 8191,
+          "capabilities": {
+            "input_modalities": [
+              "text"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": true,
+            "supports_vision": false
+          },
+          "pricing": {
+            "prompt_tokens": 0.00003,
+            "completion_tokens": 0.00006
+          },
+          "model_variant_slug": "openai/gpt-4-0314",
+          "provider_display_name": "OpenAI"
         }
       ],
-      "last_updated": 1747216599286
+      "last_updated": 1747308409583
     },
     "fireworks": {
       "provider": "fireworks",
@@ -4107,7 +4081,7 @@
           "provider_display_name": "Fireworks"
         }
       ],
-      "last_updated": 1747216599286
+      "last_updated": 1747308409583
     },
     "cohere": {
       "provider": "cohere",
@@ -4166,32 +4140,6 @@
           "provider_display_name": "Cohere"
         },
         {
-          "id": "cohere/command-r-08-2024",
-          "object": "model",
-          "created": 1724976000,
-          "owned_by": "Cohere",
-          "display_name": "Command R (08-2024)",
-          "provider_model_id": "command-r-08-2024",
-          "context_length": 128000,
-          "capabilities": {
-            "input_modalities": [
-              "text"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": false
-          },
-          "pricing": {
-            "prompt_tokens": 1.5e-7,
-            "completion_tokens": 6e-7
-          },
-          "model_variant_slug": "cohere/command-r-08-2024",
-          "provider_display_name": "Cohere"
-        },
-        {
           "id": "cohere/command-r-plus-08-2024",
           "object": "model",
           "created": 1724976000,
@@ -4215,6 +4163,32 @@
             "completion_tokens": 0.00001
           },
           "model_variant_slug": "cohere/command-r-plus-08-2024",
+          "provider_display_name": "Cohere"
+        },
+        {
+          "id": "cohere/command-r-08-2024",
+          "object": "model",
+          "created": 1724976000,
+          "owned_by": "Cohere",
+          "display_name": "Command R (08-2024)",
+          "provider_model_id": "command-r-08-2024",
+          "context_length": 128000,
+          "capabilities": {
+            "input_modalities": [
+              "text"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": true,
+            "supports_vision": false
+          },
+          "pricing": {
+            "prompt_tokens": 1.5e-7,
+            "completion_tokens": 6e-7
+          },
+          "model_variant_slug": "cohere/command-r-08-2024",
           "provider_display_name": "Cohere"
         },
         {
@@ -4348,7 +4322,7 @@
           "provider_display_name": "Cohere"
         }
       ],
-      "last_updated": 1747216599286
+      "last_updated": 1747308409583
     },
     "perplexity": {
       "provider": "perplexity",
@@ -4514,32 +4488,6 @@
           "provider_display_name": "Perplexity"
         },
         {
-          "id": "perplexity/llama-3.1-sonar-large-128k-online",
-          "object": "model",
-          "created": 1722470400,
-          "owned_by": "Perplexity",
-          "display_name": "Llama 3.1 Sonar 70B Online",
-          "provider_model_id": "llama-3.1-sonar-large-128k-online",
-          "context_length": 127072,
-          "capabilities": {
-            "input_modalities": [
-              "text"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": false,
-            "supports_vision": false
-          },
-          "pricing": {
-            "prompt_tokens": 0.000001,
-            "completion_tokens": 0.000001
-          },
-          "model_variant_slug": "perplexity/llama-3.1-sonar-large-128k-online",
-          "provider_display_name": "Perplexity"
-        },
-        {
           "id": "perplexity/llama-3.1-sonar-small-128k-online",
           "object": "model",
           "created": 1722470400,
@@ -4564,9 +4512,35 @@
           },
           "model_variant_slug": "perplexity/llama-3.1-sonar-small-128k-online",
           "provider_display_name": "Perplexity"
+        },
+        {
+          "id": "perplexity/llama-3.1-sonar-large-128k-online",
+          "object": "model",
+          "created": 1722470400,
+          "owned_by": "Perplexity",
+          "display_name": "Llama 3.1 Sonar 70B Online",
+          "provider_model_id": "llama-3.1-sonar-large-128k-online",
+          "context_length": 127072,
+          "capabilities": {
+            "input_modalities": [
+              "text"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": false,
+            "supports_vision": false
+          },
+          "pricing": {
+            "prompt_tokens": 0.000001,
+            "completion_tokens": 0.000001
+          },
+          "model_variant_slug": "perplexity/llama-3.1-sonar-large-128k-online",
+          "provider_display_name": "Perplexity"
         }
       ],
-      "last_updated": 1747216599286
+      "last_updated": 1747308409583
     },
     "anthropic": {
       "provider": "anthropic",
@@ -4597,60 +4571,6 @@
             "completion_tokens": 0.000015
           },
           "model_variant_slug": "anthropic/claude-3.7-sonnet:beta",
-          "provider_display_name": "Anthropic"
-        },
-        {
-          "id": "anthropic/claude-3.5-haiku-20241022",
-          "object": "model",
-          "created": 1730678400,
-          "owned_by": "Anthropic",
-          "display_name": "Claude 3.5 Haiku (2024-10-22) (self-moderated)",
-          "provider_model_id": "claude-3-5-haiku-20241022",
-          "context_length": 200000,
-          "capabilities": {
-            "input_modalities": [
-              "text",
-              "image"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": true
-          },
-          "pricing": {
-            "prompt_tokens": 8e-7,
-            "completion_tokens": 0.000004
-          },
-          "model_variant_slug": "anthropic/claude-3.5-haiku-20241022:beta",
-          "provider_display_name": "Anthropic"
-        },
-        {
-          "id": "anthropic/claude-3.5-haiku-20241022",
-          "object": "model",
-          "created": 1730678400,
-          "owned_by": "Anthropic",
-          "display_name": "Claude 3.5 Haiku (2024-10-22)",
-          "provider_model_id": "claude-3-5-haiku-20241022",
-          "context_length": 200000,
-          "capabilities": {
-            "input_modalities": [
-              "text",
-              "image"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": true
-          },
-          "pricing": {
-            "prompt_tokens": 8e-7,
-            "completion_tokens": 0.000004
-          },
-          "model_variant_slug": "anthropic/claude-3.5-haiku-20241022",
           "provider_display_name": "Anthropic"
         },
         {
@@ -4705,6 +4625,60 @@
             "completion_tokens": 0.000004
           },
           "model_variant_slug": "anthropic/claude-3.5-haiku",
+          "provider_display_name": "Anthropic"
+        },
+        {
+          "id": "anthropic/claude-3.5-haiku-20241022",
+          "object": "model",
+          "created": 1730678400,
+          "owned_by": "Anthropic",
+          "display_name": "Claude 3.5 Haiku (2024-10-22) (self-moderated)",
+          "provider_model_id": "claude-3-5-haiku-20241022",
+          "context_length": 200000,
+          "capabilities": {
+            "input_modalities": [
+              "text",
+              "image"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": true,
+            "supports_vision": true
+          },
+          "pricing": {
+            "prompt_tokens": 8e-7,
+            "completion_tokens": 0.000004
+          },
+          "model_variant_slug": "anthropic/claude-3.5-haiku-20241022:beta",
+          "provider_display_name": "Anthropic"
+        },
+        {
+          "id": "anthropic/claude-3.5-haiku-20241022",
+          "object": "model",
+          "created": 1730678400,
+          "owned_by": "Anthropic",
+          "display_name": "Claude 3.5 Haiku (2024-10-22)",
+          "provider_model_id": "claude-3-5-haiku-20241022",
+          "context_length": 200000,
+          "capabilities": {
+            "input_modalities": [
+              "text",
+              "image"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": true,
+            "supports_vision": true
+          },
+          "pricing": {
+            "prompt_tokens": 8e-7,
+            "completion_tokens": 0.000004
+          },
+          "model_variant_slug": "anthropic/claude-3.5-haiku-20241022",
           "provider_display_name": "Anthropic"
         },
         {
@@ -4870,60 +4844,6 @@
           "provider_display_name": "Anthropic"
         },
         {
-          "id": "anthropic/claude-3-sonnet",
-          "object": "model",
-          "created": 1709596800,
-          "owned_by": "Anthropic",
-          "display_name": "Claude 3 Sonnet (self-moderated)",
-          "provider_model_id": "claude-3-sonnet-20240229",
-          "context_length": 200000,
-          "capabilities": {
-            "input_modalities": [
-              "text",
-              "image"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": true
-          },
-          "pricing": {
-            "prompt_tokens": 0.000003,
-            "completion_tokens": 0.000015
-          },
-          "model_variant_slug": "anthropic/claude-3-sonnet:beta",
-          "provider_display_name": "Anthropic"
-        },
-        {
-          "id": "anthropic/claude-3-sonnet",
-          "object": "model",
-          "created": 1709596800,
-          "owned_by": "Anthropic",
-          "display_name": "Claude 3 Sonnet",
-          "provider_model_id": "claude-3-sonnet-20240229",
-          "context_length": 200000,
-          "capabilities": {
-            "input_modalities": [
-              "text",
-              "image"
-            ],
-            "output_modalities": [
-              "text"
-            ],
-            "supports_streaming": true,
-            "supports_tool_calling": true,
-            "supports_vision": true
-          },
-          "pricing": {
-            "prompt_tokens": 0.000003,
-            "completion_tokens": 0.000015
-          },
-          "model_variant_slug": "anthropic/claude-3-sonnet",
-          "provider_display_name": "Anthropic"
-        },
-        {
           "id": "anthropic/claude-3-opus",
           "object": "model",
           "created": 1709596800,
@@ -4978,55 +4898,57 @@
           "provider_display_name": "Anthropic"
         },
         {
-          "id": "anthropic/claude-2",
+          "id": "anthropic/claude-3-sonnet",
           "object": "model",
-          "created": 1700611200,
+          "created": 1709596800,
           "owned_by": "Anthropic",
-          "display_name": "Claude v2 (self-moderated)",
-          "provider_model_id": "claude-2.1",
+          "display_name": "Claude 3 Sonnet (self-moderated)",
+          "provider_model_id": "claude-3-sonnet-20240229",
           "context_length": 200000,
           "capabilities": {
             "input_modalities": [
-              "text"
+              "text",
+              "image"
             ],
             "output_modalities": [
               "text"
             ],
             "supports_streaming": true,
-            "supports_tool_calling": false,
-            "supports_vision": false
+            "supports_tool_calling": true,
+            "supports_vision": true
           },
           "pricing": {
-            "prompt_tokens": 0.000008,
-            "completion_tokens": 0.000024
+            "prompt_tokens": 0.000003,
+            "completion_tokens": 0.000015
           },
-          "model_variant_slug": "anthropic/claude-2:beta",
+          "model_variant_slug": "anthropic/claude-3-sonnet:beta",
           "provider_display_name": "Anthropic"
         },
         {
-          "id": "anthropic/claude-2",
+          "id": "anthropic/claude-3-sonnet",
           "object": "model",
-          "created": 1700611200,
+          "created": 1709596800,
           "owned_by": "Anthropic",
-          "display_name": "Claude v2",
-          "provider_model_id": "claude-2.1",
+          "display_name": "Claude 3 Sonnet",
+          "provider_model_id": "claude-3-sonnet-20240229",
           "context_length": 200000,
           "capabilities": {
             "input_modalities": [
-              "text"
+              "text",
+              "image"
             ],
             "output_modalities": [
               "text"
             ],
             "supports_streaming": true,
-            "supports_tool_calling": false,
-            "supports_vision": false
+            "supports_tool_calling": true,
+            "supports_vision": true
           },
           "pricing": {
-            "prompt_tokens": 0.000008,
-            "completion_tokens": 0.000024
+            "prompt_tokens": 0.000003,
+            "completion_tokens": 0.000015
           },
-          "model_variant_slug": "anthropic/claude-2",
+          "model_variant_slug": "anthropic/claude-3-sonnet",
           "provider_display_name": "Anthropic"
         },
         {
@@ -5082,6 +5004,58 @@
           "provider_display_name": "Anthropic"
         },
         {
+          "id": "anthropic/claude-2",
+          "object": "model",
+          "created": 1700611200,
+          "owned_by": "Anthropic",
+          "display_name": "Claude v2 (self-moderated)",
+          "provider_model_id": "claude-2.1",
+          "context_length": 200000,
+          "capabilities": {
+            "input_modalities": [
+              "text"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": false,
+            "supports_vision": false
+          },
+          "pricing": {
+            "prompt_tokens": 0.000008,
+            "completion_tokens": 0.000024
+          },
+          "model_variant_slug": "anthropic/claude-2:beta",
+          "provider_display_name": "Anthropic"
+        },
+        {
+          "id": "anthropic/claude-2",
+          "object": "model",
+          "created": 1700611200,
+          "owned_by": "Anthropic",
+          "display_name": "Claude v2",
+          "provider_model_id": "claude-2.1",
+          "context_length": 200000,
+          "capabilities": {
+            "input_modalities": [
+              "text"
+            ],
+            "output_modalities": [
+              "text"
+            ],
+            "supports_streaming": true,
+            "supports_tool_calling": false,
+            "supports_vision": false
+          },
+          "pricing": {
+            "prompt_tokens": 0.000008,
+            "completion_tokens": 0.000024
+          },
+          "model_variant_slug": "anthropic/claude-2",
+          "provider_display_name": "Anthropic"
+        },
+        {
           "id": "anthropic/claude-2.0",
           "object": "model",
           "created": 1690502400,
@@ -5134,7 +5108,7 @@
           "provider_display_name": "Anthropic"
         }
       ],
-      "last_updated": 1747216599286
+      "last_updated": 1747308409583
     },
     "google": {
       "provider": "google",
@@ -5143,7 +5117,7 @@
         {
           "id": "gemini-pro",
           "object": "model",
-          "created": 1744624603,
+          "created": 1744716414,
           "owned_by": "google",
           "display_name": "Gemini Pro",
           "provider_model_id": "gemini-pro",
@@ -5159,7 +5133,7 @@
           }
         }
       ],
-      "last_updated": 1747216610870
+      "last_updated": 1747308473323
     }
   }
 }

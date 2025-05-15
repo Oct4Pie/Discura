@@ -18,14 +18,14 @@ import { logger } from "../utils/logger";
 const OPENROUTER_MODELS_CACHE_FILE = path.join(
   process.cwd(),
   "data",
-  "provider-models-cache.json"
+  "provider-models-cache.json",
 );
 
 // Cache TTL in milliseconds (default: 12 hours) - using the constant from common package
 const OPENROUTER_CACHE_TTL = parseInt(
   process.env.OPENROUTER_CACHE_TTL ||
     PROVIDER_CACHE_TTL[LLMProvider.OPENROUTER].toString(),
-  10
+  10,
 );
 
 // OpenRouter rate limit protection
@@ -72,7 +72,7 @@ async function saveCache() {
     await fs.writeFile(
       OPENROUTER_MODELS_CACHE_FILE,
       JSON.stringify(modelsCache, null, 2),
-      "utf-8"
+      "utf-8",
     );
     logger.info("Saved OpenRouter models cache to file");
   } catch (error) {
@@ -102,7 +102,7 @@ function shouldThrottleRequests(): boolean {
  * Fetch models from OpenRouter API with rate limiting and caching
  */
 export async function fetchOpenRouterModels(
-  forceRefresh = false
+  forceRefresh = false,
 ): Promise<any[]> {
   // Use cache if available and not expired, unless forced refresh
   if (modelsCache && !isCacheExpired() && !forceRefresh) {
@@ -161,7 +161,7 @@ export async function fetchOpenRouterModels(
             process.env.OPENROUTER_REFERER || "https://discura.ai",
           "X-Title": "Discura Bot Platform",
         },
-      }
+      },
     );
 
     // Extract models array from response, handling both old and new formats
@@ -249,7 +249,7 @@ export function groupModelsByProvider(models: any[]): Record<string, any[]> {
  * Map OpenRouter provider name to our LLMProvider enum
  */
 export function mapOpenRouterProviderToLLMProvider(
-  providerName: string
+  providerName: string,
 ): LLMProvider {
   const nameMapping: Record<string, LLMProvider> = {
     // Major providers

@@ -37,10 +37,12 @@ const PersonalityPreview = ({
 }: PersonalityPreviewProps) => {
   const theme = useTheme();
   const [userMessage, setUserMessage] = useState("");
-  const [conversation, setConversation] = useState<Array<{
-    role: "user" | "bot";
-    content: string;
-  }>>([]);
+  const [conversation, setConversation] = useState<
+    Array<{
+      role: "user" | "bot";
+      content: string;
+    }>
+  >([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Generate a response based on the bot's personality
@@ -54,11 +56,11 @@ const PersonalityPreview = ({
     setTimeout(() => {
       // Generate a response based on personality, traits, and backstory
       const response = simulateBotResponse(userMessage);
-      
+
       setConversation([
-        ...conversation, 
+        ...conversation,
         { role: "user", content: userMessage },
-        { role: "bot", content: response }
+        { role: "bot", content: response },
       ]);
       setUserMessage("");
       setIsGenerating(false);
@@ -69,34 +71,42 @@ const PersonalityPreview = ({
   const simulateBotResponse = (message: string): string => {
     // This is a simplified simulation based on personality, traits, and backstory
     // In a real application, this would call an API to generate a response using an LLM
-    
+
     // Default responses based on common message patterns
-    if (message.toLowerCase().includes("hello") || message.toLowerCase().includes("hi")) {
+    if (
+      message.toLowerCase().includes("hello") ||
+      message.toLowerCase().includes("hi")
+    ) {
       return getGreeting();
     }
-    
-    if (message.toLowerCase().includes("who are you") || message.toLowerCase().includes("what are you")) {
+
+    if (
+      message.toLowerCase().includes("who are you") ||
+      message.toLowerCase().includes("what are you")
+    ) {
       return getIdentityResponse();
     }
-    
-    if (message.toLowerCase().includes("help") || message.toLowerCase().includes("can you")) {
+
+    if (
+      message.toLowerCase().includes("help") ||
+      message.toLowerCase().includes("can you")
+    ) {
       return getHelpfulResponse();
     }
-    
+
     // Default generic response
     return getGenericResponse();
   };
-  
+
   // Generate responses that reflect the bot's personality
-  
+
   const getGreeting = (): string => {
     const safeTraits = traits && traits.length > 0 ? traits : [];
-    const greeting =
-      `Hi there! I'm ${botName}${safeTraits.length > 0 ? ", and I'm " + (safeTraits[0]?.toLowerCase() || "") : ""}.`;
+    const greeting = `Hi there! I'm ${botName}${safeTraits.length > 0 ? ", and I'm " + (safeTraits[0]?.toLowerCase() || "") : ""}.`;
     const greetings = [
       `Hello! I'm ${botName}. ${personality ? `I'm ${personality.toLowerCase()}.` : ""}`,
       greeting,
-      `Greetings! ${botName} at your service${backstory ? ". " + getBackstoryMention() : "!"}`
+      `Greetings! ${botName} at your service${backstory ? ". " + getBackstoryMention() : "!"}`,
     ];
     return greetings[Math.floor(Math.random() * greetings.length)] || "Hello!";
   };
@@ -119,10 +129,13 @@ const PersonalityPreview = ({
     const safeTraits = traits && traits.length > 0 ? traits : [];
     const helpResponses = [
       `I'd be ${personality ? personality.toLowerCase() + " and" : ""} happy to help with that!`,
-      `As a ${safeTraits.length > 0 ? (safeTraits[Math.floor(Math.random() * safeTraits.length)]?.toLowerCase() || "helpful") : "helpful"} assistant, I can definitely assist with that.`,
-      `I'm here to help! Let me know what you need.`
+      `As a ${safeTraits.length > 0 ? safeTraits[Math.floor(Math.random() * safeTraits.length)]?.toLowerCase() || "helpful" : "helpful"} assistant, I can definitely assist with that.`,
+      `I'm here to help! Let me know what you need.`,
     ];
-    return helpResponses[Math.floor(Math.random() * helpResponses.length)] || "I'm here to help!";
+    return (
+      helpResponses[Math.floor(Math.random() * helpResponses.length)] ||
+      "I'm here to help!"
+    );
   };
 
   const getGenericResponse = (): string => {
@@ -130,28 +143,33 @@ const PersonalityPreview = ({
     const genericResponses = [
       `As a ${personality ? personality.toLowerCase() : "helpful"} bot, I'm here to assist you!`,
       `I'm ${botName}${safeTraits.length > 0 ? `, and I'm known for being ${safeTraits[Math.floor(Math.random() * safeTraits.length)]?.toLowerCase()}` : ""}.`,
-      `I'm processing your request. ${getTraitMention()}`
+      `I'm processing your request. ${getTraitMention()}`,
     ];
-    return genericResponses[Math.floor(Math.random() * genericResponses.length)] || "I'm here to assist you!";
+    return (
+      genericResponses[Math.floor(Math.random() * genericResponses.length)] ||
+      "I'm here to assist you!"
+    );
   };
 
   const getBackstoryMention = (): string => {
     if (!backstory) return "";
-    
+
     // Extract a relevant snippet from the backstory
-    const sentences = backstory.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const sentences = backstory
+      .split(/[.!?]+/)
+      .filter((s) => s.trim().length > 0);
     if (sentences.length === 0) return "";
-    
+
     return sentences[0] + ".";
   };
-  
+
   const getTraitMention = (): string => {
     const safeTraits = traits && traits.length > 0 ? traits : [];
     if (safeTraits.length === 0) return "";
     const traitPhrases = [
       `As someone who's ${safeTraits[Math.floor(Math.random() * safeTraits.length)]?.toLowerCase() || "helpful"}, I'll do my best to help.`,
       `Being ${safeTraits[Math.floor(Math.random() * safeTraits.length)]?.toLowerCase() || "helpful"} is important to me.`,
-      `I pride myself on being ${safeTraits[Math.floor(Math.random() * safeTraits.length)]?.toLowerCase() || "helpful"}.`
+      `I pride myself on being ${safeTraits[Math.floor(Math.random() * safeTraits.length)]?.toLowerCase() || "helpful"}.`,
     ];
     return traitPhrases[Math.floor(Math.random() * traitPhrases.length)] || "";
   };
@@ -177,7 +195,11 @@ const PersonalityPreview = ({
           border: `1px dashed ${alpha(theme.palette.primary.main, 0.4)}`,
         }}
       >
-        <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600, mb: 1 }}>
+        <Typography
+          variant="subtitle2"
+          color="primary"
+          sx={{ fontWeight: 600, mb: 1 }}
+        >
           System Prompt:
         </Typography>
         <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
@@ -190,28 +212,37 @@ const PersonalityPreview = ({
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
           Bot Personality:
         </Typography>
-        
+
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mr: 1, display: "inline" }}>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 500, mr: 1, display: "inline" }}
+            >
               Name:
             </Typography>
             <Typography variant="body2" sx={{ display: "inline" }}>
               {botName || "Unnamed Bot"}
             </Typography>
           </Box>
-          
+
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mr: 1, display: "inline" }}>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 500, mr: 1, display: "inline" }}
+            >
               Personality:
             </Typography>
             <Typography variant="body2" sx={{ display: "inline" }}>
               {personality || "Not specified"}
             </Typography>
           </Box>
-          
+
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, mr: 1, display: "inline" }}>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 500, mr: 1, display: "inline" }}
+            >
               Traits:
             </Typography>
             <Box sx={{ display: "inline-flex", flexWrap: "wrap", gap: 0.5 }}>
@@ -252,16 +283,16 @@ const PersonalityPreview = ({
       <Typography variant="h6" sx={{ mb: 2 }}>
         Chat Simulation
       </Typography>
-      
-      <Card 
+
+      <Card
         elevation={0}
-        sx={{ 
+        sx={{
           borderRadius: 2,
           border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
           mb: 2,
-          maxHeight: "300px", 
+          maxHeight: "300px",
           minHeight: "200px",
-          overflowY: "auto" 
+          overflowY: "auto",
         }}
       >
         <CardContent>
@@ -276,7 +307,13 @@ const PersonalityPreview = ({
                 p: 3,
               }}
             >
-              <BotIcon sx={{ fontSize: 48, color: alpha(theme.palette.text.primary, 0.2), mb: 2 }} />
+              <BotIcon
+                sx={{
+                  fontSize: 48,
+                  color: alpha(theme.palette.text.primary, 0.2),
+                  mb: 2,
+                }}
+              />
               <Typography variant="body1" color="text.secondary">
                 Type a message to see how {botName || "your bot"} would respond
               </Typography>
@@ -288,14 +325,18 @@ const PersonalityPreview = ({
                   key={index}
                   sx={{
                     display: "flex",
-                    flexDirection: message.role === "user" ? "row-reverse" : "row",
+                    flexDirection:
+                      message.role === "user" ? "row-reverse" : "row",
                     alignItems: "flex-start",
                     gap: 1,
                   }}
                 >
                   <Avatar
                     sx={{
-                      bgcolor: message.role === "user" ? "primary.main" : "secondary.main",
+                      bgcolor:
+                        message.role === "user"
+                          ? "primary.main"
+                          : "secondary.main",
                       width: 32,
                       height: 32,
                     }}
@@ -333,15 +374,21 @@ const PersonalityPreview = ({
           onKeyPress={handleKeyPress}
           disabled={isGenerating}
           sx={{
-            '& .MuiOutlinedInput-root': {
+            "& .MuiOutlinedInput-root": {
               borderRadius: 1.5,
-            }
+            },
           }}
         />
         <Button
           variant="contained"
           color="primary"
-          endIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+          endIcon={
+            isGenerating ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              <SendIcon />
+            )
+          }
           onClick={generateResponse}
           disabled={!userMessage.trim() || isGenerating}
           sx={{ borderRadius: 1.5 }}

@@ -1,9 +1,7 @@
 {
   "entryFile": "./src/index.ts",
   "noImplicitAdditionalProperties": "throw-on-extras",
-  "controllerPathGlobs": [
-    "./src/controllers/**/*.ts"
-  ],
+  "controllerPathGlobs": ["./src/controllers/**/*.ts"],
   "spec": {
     "outputDirectory": "./src/schema",
     "specVersion": 3,
@@ -57,18 +55,12 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "common/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"],
+      "common/*": ["./src/*"]
     },
     "outDir": "./build"
   },
-  "sources": [
-    "./src/types/api/**/*.ts"
-  ],
+  "sources": ["./src/types/api/**/*.ts"],
   "jsdoc": {
     "enabled": true
   }

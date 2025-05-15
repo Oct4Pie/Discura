@@ -15,6 +15,7 @@ export interface KnowledgeItemDto {
   content: string;
   type: string;
   priority: number;
+  source?: string;
   createdAt: string;
   updatedAt: string;
 }

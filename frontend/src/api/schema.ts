@@ -579,6 +579,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bots/{id}/register-commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Force register slash commands for a bot in a specific server
+         *
+         *     Manually triggers the registration of slash commands for a bot in a specific Discord server.
+         *     This can help when commands aren't showing up due to propagation delays or other issues. */
+        post: operations["RegisterBotCommands"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/constants": {
         parameters: {
             query?: never;
@@ -828,6 +848,7 @@ export interface components {
             type: string;
             /** Format: double */
             priority: number;
+            source?: string;
             createdAt: string;
             updatedAt: string;
         };
@@ -872,12 +893,12 @@ export interface components {
          * @description Image Provider Enum
          * @enum {string}
          */
-        ImageProvider: "openai" | "stability" | "midjourney";
+        ImageProvider: "openai" | "stability" | "midjourney" | "together" | "chutes_hidream";
         ImageGenerationConfig: {
             enabled: boolean;
             provider: components["schemas"]["ImageProvider"];
             apiKey?: string;
-            model?: string;
+            model?: string | null;
         };
         ToolParameter: {
             name: string;
@@ -892,6 +913,28 @@ export interface components {
             parameters: components["schemas"]["ToolParameter"][];
             implementation: string;
         };
+        /**
+         * @description Discord Activity Type Enum for bot presence
+         * @enum {number}
+         */
+        ActivityType: 0 | 1 | 2 | 3 | 5 | 4;
+        /** @description Bot Appearance Configuration */
+        AppearanceConfig: {
+            avatarUrl?: string;
+            presence?: {
+                activity?: {
+                    url?: string;
+                    type: components["schemas"]["ActivityType"];
+                    name: string;
+                };
+                /** @enum {string} */
+                status?: "online" | "idle" | "dnd" | "invisible";
+            };
+            colors?: {
+                accent?: string;
+                primary?: string;
+            };
+        };
         /** @description Bot Configuration Structure */
         BotConfiguration: {
             systemPrompt: string;
@@ -905,6 +948,9 @@ export interface components {
             imageGeneration: components["schemas"]["ImageGenerationConfig"];
             toolsEnabled: boolean;
             tools: components["schemas"]["Tool"][];
+            appearance?: components["schemas"]["AppearanceConfig"];
+            visionModel: string;
+            visionProvider: string;
         };
         /** @description Bot Response Data */
         BotResponseDto: {
@@ -2202,6 +2248,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TokenValidationResult"];
+                };
+            };
+        };
+    };
+    RegisterBotCommands: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unique identifier of the bot */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    guildId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponseDto"];
                 };
             };
         };

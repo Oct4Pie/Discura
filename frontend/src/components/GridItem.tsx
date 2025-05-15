@@ -1,11 +1,11 @@
 /**
  * GridItem Component
- * 
+ *
  * This is a wrapper around Material UI's Grid component that adds the required
  * "component" prop automatically, making it compatible with Material UI's typing.
  */
-import React from 'react';
-import { Grid, GridProps } from '@mui/material';
+import React from "react";
+import { Grid, GridProps } from "@mui/material";
 
 // Define the props type with all necessary properties including Material UI Grid props
 type GridItemProps = GridProps & {

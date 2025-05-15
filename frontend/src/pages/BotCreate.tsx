@@ -20,7 +20,12 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useBotStore } from "../stores/botStore";
 import GridItem from "../components/GridItem";
-import { LLMProvider, ImageProvider, CreateBotRequestDto, BotConfiguration } from "../api";
+import {
+  LLMProvider,
+  ImageProvider,
+  CreateBotRequestDto,
+  BotConfiguration,
+} from "../api";
 
 const BotCreate = () => {
   const navigate = useNavigate();
@@ -37,7 +42,7 @@ const BotCreate = () => {
   const [discordToken, setDiscordToken] = useState("");
   const [tokenValidated, setTokenValidated] = useState(false);
   const [validationMessage, setValidationMessage] = useState<string | null>(
-    null
+    null,
   );
   const [applicationId, setApplicationId] = useState("");
 
@@ -58,24 +63,28 @@ const BotCreate = () => {
 
       try {
         const result = await validateToken(discordToken);
-        
+
         if (result.valid) {
           if (result.messageContentEnabled) {
             // Only proceed if both token is valid AND message content intent is enabled
             setTokenValidated(true);
             setApplicationId(result.botId || "");
-            setValidationMessage("Token is valid and Message Content Intent is enabled!");
+            setValidationMessage(
+              "Token is valid and Message Content Intent is enabled!",
+            );
             setActiveStep(1);
           } else {
             // Token is valid but message content intent is not enabled
             setTokenValidated(false);
-            setError("Message Content Intent is not enabled for this bot. Please enable it in the Discord Developer Portal and try again.");
+            setError(
+              "Message Content Intent is not enabled for this bot. Please enable it in the Discord Developer Portal and try again.",
+            );
             setValidationMessage(null);
           }
         } else {
           setTokenValidated(false);
           setError(
-            result.error || "Invalid token. Please check and try again."
+            result.error || "Invalid token. Please check and try again.",
           );
           setValidationMessage(null);
         }
@@ -108,14 +117,16 @@ const BotCreate = () => {
           },
           toolsEnabled: false,
           tools: [],
+          visionModel: "", // Adding the required visionModel property with an empty string default
+          visionProvider: "", // Adding the required visionProvider property with an empty string default
         };
-        
+
         // Create a properly typed request DTO
         const botData: CreateBotRequestDto = {
           name: botName,
           discordToken,
           applicationId,
-          configuration
+          configuration,
         };
 
         const bot = await createBot(botData);

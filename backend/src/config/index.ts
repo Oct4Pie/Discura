@@ -3,7 +3,7 @@ import path from "path";
 import dotenv from "dotenv";
 
 // Load environment variables from project root first, then fallback to backend directory
-dotenv.config({ path: path.resolve(process.cwd(), '..', '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), "..", ".env") });
 // Also check the backend directory as fallback
 dotenv.config();
 

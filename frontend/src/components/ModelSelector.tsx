@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   FormControl,
   InputLabel,
@@ -11,11 +11,11 @@ import {
   SelectChangeEvent,
 } from "@mui/material";
 import {
-  LlmService,
   LLMProvider,
   ProviderModelsResponseDto,
-  LLMModelData
-} from "../api/"
+  LLMModelData,
+} from "../api/";
+import { useLLMModelsStore } from "../stores/llmModelsStore";
 
 interface ModelSelectorProps {
   onModelSelect: (modelId: string) => void;
@@ -23,136 +23,131 @@ interface ModelSelectorProps {
   disabled?: boolean;
 }
 
-// Helper function to get available models for selection 
-const getAvailableModelsForSelection = async () => {
-  try {
-    // Use the API client to call the backend - this returns the properly typed response
-    const response = await LlmService.getAllProviderModels();
-    
-    // Return the providers directly from the API without manual transformation
-    // The API already provides all the data we need in the correct format
-    return response.providers;
-  } catch (error) {
-    console.error("Error fetching models:", error);
-    return [];
-  }
-};
-
 const ModelSelector: React.FC<ModelSelectorProps> = ({
   onModelSelect,
-  defaultModel = "openai/gpt-3.5-turbo",
-  disabled = false
+  defaultModel = "gpt-3.5-turbo", // Default without provider prefix
+  disabled = false,
 }) => {
   const theme = useTheme();
-  const [providers, setProviders] = useState<ProviderModelsResponseDto[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  // Use the centralized store instead of local state and direct API calls
+  const { 
+    providers, 
+    isLoading, 
+    error, 
+    fetchProviders, 
+    getProviderByModelId 
+  } = useLLMModelsStore();
 
-  // Fetch available providers and models
+  // Fetch models once on component mount
   useEffect(() => {
-    async function fetchModels() {
-      try {
-        setIsLoading(true);
-        setError(null);
+    // This will use cached data if available and not stale
+    fetchProviders().catch(error => {
+      console.error("Error fetching models in ModelSelector:", error);
+    });
+  }, [fetchProviders]); // fetchProviders is stable across renders
 
-        const availableProviders = await getAvailableModelsForSelection();
-        setProviders(availableProviders);
-        
-        // Find where the default model is
-        if (defaultModel) {
-          let providerFound = false;
-          
-          // Look through all providers to find the one containing our model
-          for (const provider of availableProviders) {
-            const modelInProvider = provider.models.find(model => model.provider_model_id === defaultModel);
-            if (modelInProvider) {
-              setSelectedProvider(provider.provider);
-              setSelectedModel(defaultModel);
-              providerFound = true;
-              break;
-            }
-          }
-          
-          // If we couldn't find the provider with the default model, select the first available one
-          if (!providerFound && availableProviders.length > 0) {
-            const firstProvider = availableProviders[0];
-            if (firstProvider) {
-              setSelectedProvider(firstProvider.provider);
-              
-              if (firstProvider.models.length > 0) {
-                const firstModel = firstProvider.models[0];
-                if (firstModel && firstModel.provider_model_id) {
-                  const firstModelId = firstModel.provider_model_id;
-                  setSelectedModel(firstModelId);
-                  onModelSelect(firstModelId); // Notify parent of the model change
-                }
-              }
-            }
+  // Setup initial selection based on defaultModel and available providers
+  useEffect(() => {
+    // Skip if no providers or still loading
+    if (providers.length === 0 || !defaultModel || isLoading) return;
+
+    // Find provider that has the default model
+    const providerWithModel = getProviderByModelId(defaultModel);
+    
+    if (providerWithModel) {
+      // Found the model in a provider
+      setSelectedProvider(providerWithModel.provider);
+      setSelectedModel(defaultModel);
+    } else if (providers.length > 0) {
+      // Default model not found, select first provider and its first model
+      const firstProvider = providers[0];
+      if (!firstProvider) {
+        return; // Guard against undefined provider
+      }
+      
+      setSelectedProvider(firstProvider.provider);
+      
+      if (firstProvider.models && firstProvider.models.length > 0) {
+        const firstModel = firstProvider.models[0];
+        if (firstModel && firstModel.provider_model_id) {
+          setSelectedModel(firstModel.provider_model_id);
+          // Only notify parent if this is different from the defaultModel
+          if (firstModel.provider_model_id !== defaultModel) {
+            onModelSelect(firstModel.provider_model_id);
           }
         }
-      } catch (err) {
-        setError("Failed to load models. Please try again later.");
-        console.error("Error loading models:", err);
-      } finally {
-        setIsLoading(false);
       }
     }
+  }, [providers, defaultModel, isLoading, getProviderByModelId, onModelSelect]);
 
-    fetchModels();
-  }, [defaultModel, onModelSelect]);
+  // Memoize the current provider's models to prevent unnecessary re-renders
+  const currentProviderModels = useMemo(() => {
+    if (!selectedProvider) return [];
+    
+    const providerData = providers.find(
+      p => p.provider.toLowerCase() === selectedProvider.toLowerCase()
+    );
+    
+    return providerData?.models || [];
+  }, [providers, selectedProvider]);
 
-  const handleProviderChange = (event: SelectChangeEvent<string>) => {
+  // Handle provider selection change
+  const handleProviderChange = useCallback((event: SelectChangeEvent<string>) => {
     const newProvider = event.target.value;
     setSelectedProvider(newProvider);
 
-    // Find the provider data using case-insensitive comparison
-    const providerData = providers.find(p => 
-      p.provider.toLowerCase() === newProvider.toLowerCase()
+    // Find the provider data
+    const providerData = providers.find(
+      p => p.provider.toLowerCase() === newProvider.toLowerCase()
     );
-    
-    // When provider changes, select the first model from that provider
-    if (providerData && providerData.models.length > 0) {
-      // Safely access the first model
-      const firstModelObj = providerData.models[0];
-      if (firstModelObj) {
-        const firstModelId = firstModelObj.provider_model_id;
-        setSelectedModel(firstModelId);
-        
-        // Notify parent of the model change
-        onModelSelect(firstModelId);
+
+    // Select first model from the new provider
+    if (providerData?.models && providerData.models.length > 0) {
+      const firstModel = providerData.models[0];
+      if (firstModel && firstModel.provider_model_id) {
+        setSelectedModel(firstModel.provider_model_id);
+        onModelSelect(firstModel.provider_model_id);
       }
     }
-  };
+  }, [providers, onModelSelect]);
 
-  const handleModelChange = (event: SelectChangeEvent<string>) => {
+  // Handle model selection change
+  const handleModelChange = useCallback((event: SelectChangeEvent<string>) => {
     const newModelId = event.target.value;
     setSelectedModel(newModelId);
-    
-    // Notify parent of the model change
     onModelSelect(newModelId);
-  };
+  }, [onModelSelect]);
 
-  if (isLoading) {
+  if (isLoading && providers.length === 0) {
     return (
-      <Box sx={{ p: 2, textAlign: 'center' }}>
+      <Box sx={{ p: 2, textAlign: "center" }}>
         <Typography variant="body2">Loading models...</Typography>
       </Box>
     );
   }
 
-  if (error) {
+  if (error && providers.length === 0) {
     return (
       <Box sx={{ p: 2, color: theme.palette.error.main }}>
-        <Typography variant="body2">{error}</Typography>
+        <Typography variant="body2">
+          Failed to load models. Please try again later.
+        </Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
-      <FormControl fullWidth disabled={disabled || isLoading}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: { xs: "column", md: "row" },
+        gap: 2,
+      }}
+    >
+      <FormControl fullWidth disabled={disabled || (isLoading && providers.length === 0)}>
         <InputLabel id="provider-select-label">Provider</InputLabel>
         <Select
           labelId="provider-select-label"
@@ -176,7 +171,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
         </Select>
       </FormControl>
 
-      <FormControl fullWidth disabled={disabled || isLoading}>
+      <FormControl fullWidth disabled={disabled || (isLoading && providers.length === 0)}>
         <InputLabel id="model-select-label">Model</InputLabel>
         <Select
           labelId="model-select-label"
@@ -192,13 +187,14 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
             },
           }}
         >
-          {providers
-            .find((p) => p.provider.toLowerCase() === selectedProvider.toLowerCase())
-            ?.models.map((model: LLMModelData) => (
-              <MenuItem key={model.provider_model_id} value={model.provider_model_id}>
-                {model.display_name || model.provider_model_id}
-              </MenuItem>
-            ))}
+          {currentProviderModels.map((model: LLMModelData) => (
+            <MenuItem
+              key={model.provider_model_id}
+              value={model.provider_model_id}
+            >
+              {model.display_name || model.provider_model_id}
+            </MenuItem>
+          ))}
         </Select>
       </FormControl>
     </Box>

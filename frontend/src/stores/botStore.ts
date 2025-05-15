@@ -5,7 +5,9 @@ import {
   toBotModels,
   BotConfiguration,
 } from "../types";
-import { AuthenticationService, BotsService,
+import {
+  AuthenticationService,
+  BotsService,
   CreateBotRequestDto,
   TokenValidationResult,
   UpdateBotRequestDto,
@@ -25,14 +27,14 @@ interface BotsState {
   createBot: (botData: Partial<FrontendBot>) => Promise<FrontendBot>;
   updateBot: (
     id: string,
-    botData: Partial<FrontendBot>
+    botData: Partial<FrontendBot>,
   ) => Promise<FrontendBot>;
   deleteBot: (id: string) => Promise<void>;
   startBot: (id: string) => Promise<FrontendBot>;
   stopBot: (id: string) => Promise<FrontendBot>;
   updateBotConfiguration: (
     id: string,
-    config: Partial<BotConfiguration>
+    config: Partial<BotConfiguration>,
   ) => Promise<FrontendBot>;
   validateToken: (token: string) => Promise<TokenValidationResult>;
   clearError: () => void; // Added method to clear errors
@@ -93,7 +95,7 @@ export const useBotStore = create<BotsState>((set, get) => ({
     try {
       // Use the TSOA-generated API client
       const response = await BotsService.createBot(
-        botData as CreateBotRequestDto
+        botData as CreateBotRequestDto,
       );
       const bot = toBotModel(response);
 
@@ -118,7 +120,7 @@ export const useBotStore = create<BotsState>((set, get) => ({
       // Use the TSOA-generated API client
       const response = await BotsService.updateBot(
         id,
-        botData as UpdateBotRequestDto
+        botData as UpdateBotRequestDto,
       );
       const bot = toBotModel(response);
 
@@ -205,7 +207,7 @@ export const useBotStore = create<BotsState>((set, get) => ({
 
   updateBotConfiguration: async (
     id: string,
-    config: Partial<BotConfiguration>
+    config: Partial<BotConfiguration>,
   ) => {
     set({ isLoading: true, error: null });
     const currentBot = get().currentBot;
@@ -223,9 +225,9 @@ export const useBotStore = create<BotsState>((set, get) => ({
 
       // Use the specific updateBotConfiguration API method with correct structure
       const response = await BotsService.updateBotConfiguration(id, {
-        configuration: updatedConfig
+        configuration: updatedConfig,
       });
-      
+
       const bot = toBotModel(response);
 
       set((state) => ({
@@ -266,9 +268,10 @@ export const useBotStore = create<BotsState>((set, get) => ({
       return {
         valid: false,
         messageContentEnabled: false,
-        error: error instanceof Error
-          ? error.message
-          : "Unknown error validating token",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unknown error validating token",
       };
     }
   },

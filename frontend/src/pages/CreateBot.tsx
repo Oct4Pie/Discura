@@ -42,7 +42,12 @@ import {
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import { useBotStore } from "../stores/botStore";
-import { LLMProvider, ImageProvider, CreateBotRequestDto, BotConfiguration } from "../api/";
+import {
+  LLMProvider,
+  ImageProvider,
+  CreateBotRequestDto,
+  BotConfiguration,
+} from "../api/";
 import { validate } from "../utils/validation";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import ModelSelector from "../components/ModelSelector";
@@ -121,22 +126,6 @@ const AVAILABLE_TRAITS = [
   "Diplomatic",
 ];
 
-const parseModelId = (combinedModelId: string): { provider: string; model: string } => {
-  if (!combinedModelId || !combinedModelId.includes('/')) {
-    // Default for invalid format
-    return { provider: 'openai', model: 'gpt-3.5-turbo' };
-  }
-
-  // Find the index of the first slash
-  const firstSlashIndex = combinedModelId.indexOf('/');
-  // Provider is everything before the first slash
-  const provider = combinedModelId.substring(0, firstSlashIndex);
-  // Model is everything after the first slash (including any additional slashes)
-  const model = combinedModelId.substring(firstSlashIndex + 1);
-
-  return { provider, model };
-};
-
 const CreateBot = () => {
   const navigate = useNavigate();
   const { createBot, isLoading } = useBotStore();
@@ -164,8 +153,10 @@ const CreateBot = () => {
     PERSONALITY_TEMPLATES.FRIENDLY.backstory
   );
 
-  // Model selection using combined format 
-  const [selectedModel, setSelectedModel] = useState<string>("openai/gpt-3.5-turbo");
+  // Model selection using combined format
+  const [selectedModel, setSelectedModel] = useState<string>(
+    "openai/gpt-3.5-turbo"
+  );
 
   const validateCurrentStep = () => {
     if (activeStep === 0) {
@@ -252,13 +243,15 @@ const CreateBot = () => {
         toolsEnabled: false,
         tools: [],
         knowledge: [],
+        visionModel: "", // Adding required visionModel property with default empty string
+        visionProvider: "", // Adding required visionProvider property with default empty string
       };
-      
+
       // Create a properly typed request DTO
       const botData: CreateBotRequestDto = {
         name: name.trim(),
         discordToken: token.trim(),
-        configuration
+        configuration,
       };
 
       const bot = await createBot(botData);

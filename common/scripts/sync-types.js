@@ -102,14 +102,14 @@ try {
     schema = JSON.parse(schemaContent);
   } else if (fs.existsSync(schemaYamlPath)) {
     console.log(
-      "📄 Found swagger.yaml, converting to JSON for type generation"
+      "📄 Found swagger.yaml, converting to JSON for type generation",
     );
     schema = YAML.load(schemaYamlPath);
     fs.writeFileSync(schemaJsonPath, JSON.stringify(schema, null, 2));
     console.log("💾 Created swagger.json from YAML for future use");
   } else {
     console.error(
-      "❌ Error: No schema file found. Run generate-api-types.sh first."
+      "❌ Error: No schema file found. Run generate-api-types.sh first.",
     );
     process.exit(1);
   }
@@ -146,7 +146,7 @@ try {
       return {
         keyType: simpleRecordMatch[1],
         valueType: simpleRecordMatch[2],
-        typeName: `Record<${simpleRecordMatch[1]}, ${simpleRecordMatch[2]}>`
+        typeName: `Record<${simpleRecordMatch[1]}, ${simpleRecordMatch[2]}>`,
       };
     }
     return null;
@@ -197,9 +197,11 @@ try {
     // If it's a Record type, generate a type alias instead of an interface
     if (recordTypeMap.has(name)) {
       const { keyType, valueType, typeName } = recordTypeMap.get(name);
-      console.log(`[sync-types.js] Converting Record type: ${name} to ${typeName}`);
-      
-      const safeTypeName = name.replace(/\./g, '_');
+      console.log(
+        `[sync-types.js] Converting Record type: ${name} to ${typeName}`,
+      );
+
+      const safeTypeName = name.replace(/\./g, "_");
       output += `// Generated from TSOA Record type: ${name}\n`;
       output += `export type ${safeTypeName} = ${typeName};\n\n`;
       continue;
@@ -246,7 +248,7 @@ try {
       if (isIncompleteSchema(schemaData) && bootstrapTypes[name]) {
         // Use bootstrap properties if available
         console.log(
-          `[sync-types.js] Schema for ${name} appears incomplete, using bootstrap properties`
+          `[sync-types.js] Schema for ${name} appears incomplete, using bootstrap properties`,
         );
 
         if (
@@ -273,7 +275,7 @@ try {
       ) {
         // Use schema properties when available
         for (const [propName, propData] of Object.entries(
-          schemaData.properties
+          schemaData.properties,
         )) {
           const isRequired = schemaData.required?.includes(propName) ? "" : "?";
           let typeName = "any";
@@ -319,7 +321,7 @@ try {
             default:
               if (propData.$ref) {
                 const refType = propData.$ref.split("/").pop();
-                typeName = sanitizeTypeName(refType); 
+                typeName = sanitizeTypeName(refType);
               } else if (propData.enum) {
                 typeName = propData.enum.map((v) => `"${v}"`).join(" | ");
               }
@@ -340,7 +342,7 @@ try {
   // Write the output to the API types file
   fs.writeFileSync(schemaTypesPath, output);
   console.log(
-    "✅ API types synchronized successfully to common/src/schema/types.ts!"
+    "✅ API types synchronized successfully to common/src/schema/types.ts!",
   );
 } catch (error) {
   console.error("❌ Error syncing types:", error);

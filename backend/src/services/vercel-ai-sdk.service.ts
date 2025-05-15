@@ -54,7 +54,7 @@ import { logger } from "../utils/logger";
 const PROVIDER_CONFIG_PATH = path.join(
   process.cwd(),
   "..",
-  "provider-config.json"
+  "provider-config.json",
 );
 
 // Configuration for providers that need custom setup via createOpenAICompatible
@@ -154,7 +154,7 @@ export async function loadProviderConfig(): Promise<ProviderRegistryConfiguratio
             };
             return acc;
           },
-          {} as Record<LLMProvider, ProviderConfiguration>
+          {} as Record<LLMProvider, ProviderConfiguration>,
         ),
       };
 
@@ -165,7 +165,7 @@ export async function loadProviderConfig(): Promise<ProviderRegistryConfiguratio
       await fs.writeFile(
         PROVIDER_CONFIG_PATH,
         JSON.stringify(defaultConfig, null, 2),
-        "utf-8"
+        "utf-8",
       );
 
       return defaultConfig;
@@ -180,7 +180,7 @@ export async function loadProviderConfig(): Promise<ProviderRegistryConfiguratio
           acc[provider] = { enabled: provider !== LLMProvider.CUSTOM };
           return acc;
         },
-        {} as Record<LLMProvider, ProviderConfiguration>
+        {} as Record<LLMProvider, ProviderConfiguration>,
       ),
     };
   }
@@ -190,13 +190,13 @@ export async function loadProviderConfig(): Promise<ProviderRegistryConfiguratio
  * Save the provider configuration to file
  */
 export async function saveProviderConfig(
-  config: ProviderRegistryConfiguration
+  config: ProviderRegistryConfiguration,
 ): Promise<void> {
   try {
     await fs.writeFile(
       PROVIDER_CONFIG_PATH,
       JSON.stringify(config, null, 2),
-      "utf-8"
+      "utf-8",
     );
     logger.info("Provider configuration saved successfully");
   } catch (error) {
@@ -216,12 +216,12 @@ export function getApiKey(provider: LLMProvider): string | undefined {
   // Debug log for API key access attempts
   if (provider === LLMProvider.CHUTES) {
     logger.debug(
-      `Accessing ${envVarName} environment variable: ${apiKey ? "Found" : "Not found"}`
+      `Accessing ${envVarName} environment variable: ${apiKey ? "Found" : "Not found"}`,
     );
     logger.debug(
       `Environment variables available: ${Object.keys(process.env)
         .filter((k) => k.includes("KEY"))
-        .join(", ")}`
+        .join(", ")}`,
     );
   }
 
@@ -264,7 +264,7 @@ export async function createAiProviderRegistry() {
 
   // Add all built-in providers that are enabled and have API keys
   for (const [providerName, providerCreator] of Object.entries(
-    builtInProviders
+    builtInProviders,
   )) {
     // Get corresponding LLMProvider enum value
     const enumKey = providerName.toUpperCase() as keyof typeof LLMProvider;
@@ -284,7 +284,7 @@ export async function createAiProviderRegistry() {
         }
       } else {
         logger.warn(
-          `${providerName} provider is enabled but no API key found in ${providerEnum.toUpperCase()}_KEY environment variable`
+          `${providerName} provider is enabled but no API key found in ${providerEnum.toUpperCase()}_KEY environment variable`,
         );
         // Don't auto-disable the provider - we can still use it to list models from OpenRouter
         // We just won't be able to make completions with it
@@ -313,7 +313,7 @@ export async function createAiProviderRegistry() {
         // Don't register OpenRouter in the registry without an API key
         // We'll still be able to fetch models from the public API for display
         logger.info(
-          "OpenRouter provider enabled without API key - will support model listing only"
+          "OpenRouter provider enabled without API key - will support model listing only",
         );
       }
 
@@ -326,7 +326,7 @@ export async function createAiProviderRegistry() {
 
   // Add custom OpenAI-compatible providers that are enabled in our configuration
   for (const [providerName, providerConfig] of Object.entries(
-    CUSTOM_PROVIDER_CONFIGS
+    CUSTOM_PROVIDER_CONFIGS,
   )) {
     // Skip if provider is already added as a built-in provider
     if (providerName in builtInProviders) {
@@ -344,7 +344,7 @@ export async function createAiProviderRegistry() {
         const apiKey = getApiKey(providerEnum);
         if (!apiKey) {
           logger.warn(
-            `${providerName} provider is enabled but no API key found in ${providerEnum.toUpperCase()}_KEY`
+            `${providerName} provider is enabled but no API key found in ${providerEnum.toUpperCase()}_KEY`,
           );
           // Don't auto-disable the provider - we can still use it to list models from OpenRouter
           continue;

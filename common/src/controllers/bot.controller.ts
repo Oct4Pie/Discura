@@ -218,4 +218,24 @@ export class BotController extends Controller {
     // Implementation will be provided by backend
     throw new Error("Method not implemented in common package");
   }
+
+  /**
+   * Force register slash commands for a bot in a specific server
+   *
+   * Manually triggers the registration of slash commands for a bot in a specific Discord server.
+   * This can help when commands aren't showing up due to propagation delays or other issues.
+   *
+   * @param id The unique identifier of the bot
+   * @param guildId The Discord server ID where commands should be registered
+   */
+  @Post("{id}/register-commands")
+  @Security("jwt")
+  public async registerBotCommands(
+    @Path() id: string,
+    @Body() requestBody: { guildId: string },
+    @Request() request: ExpressRequest,
+  ): Promise<MessageResponseDto> {
+    // Implementation will be provided by backend
+    throw new Error("Method not implemented in common package");
+  }
 }

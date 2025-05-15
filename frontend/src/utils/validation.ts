@@ -8,11 +8,11 @@ export const validate = {
    */
   required: (value: any): boolean => {
     if (value === undefined || value === null) return false;
-    if (typeof value === 'string') return value.trim() !== '';
+    if (typeof value === "string") return value.trim() !== "";
     if (Array.isArray(value)) return value.length > 0;
     return true;
   },
-  
+
   /**
    * Check if a string meets minimum length
    */
@@ -20,7 +20,7 @@ export const validate = {
     if (!value) return false;
     return value.trim().length >= min;
   },
-  
+
   /**
    * Check if a string doesn't exceed maximum length
    */
@@ -28,7 +28,7 @@ export const validate = {
     if (!value) return true;
     return value.trim().length <= max;
   },
-  
+
   /**
    * Check if a value is a valid email
    */
@@ -47,5 +47,5 @@ export const validate = {
     // Discord tokens are typically dot-separated segments
     // This is just a basic format check, not a full validation
     return /^[\w-]{24}\.[\w-]{6}\.[\w-]{27}$/.test(token);
-  }
+  },
 };

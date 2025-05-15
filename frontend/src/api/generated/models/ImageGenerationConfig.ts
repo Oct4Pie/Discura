@@ -7,6 +7,6 @@ export type ImageGenerationConfig = {
     enabled: boolean;
     provider: ImageProvider;
     apiKey?: string;
-    model?: string;
+    model?: string | null;
 };
 

@@ -1,6 +1,7 @@
-import { ImageGenerationConfig } from "@discura/common"
+import { ImageGenerationConfig, LLMProvider } from "@discura/common";
 import axios from "axios";
 
+import { getApiKey } from "./vercel-ai-sdk.service";
 import { logger } from "../utils/logger";
 
 // Generate an image using the specified provider
@@ -24,6 +25,16 @@ export const generateImage = async (
         );
       case "midjourney":
         return await generateMidjourneyImage(prompt, config.apiKey || "");
+      case "together":
+        return await generateTogetherImage(
+          prompt,
+          config.apiKey || "",
+          config.model,
+        );
+      case "chutes_hidream":
+        // Use the getApiKey function to retrieve the key properly
+        const apiKey = config.apiKey || getApiKey(LLMProvider.CHUTES) || "";
+        return await generateChutesHiDreamImage(prompt, apiKey);
       default:
         logger.error(`Unknown image provider: ${config.provider}`);
         return null;
@@ -125,6 +136,75 @@ const generateMidjourneyImage = async (
     return response.data.imageUrl;
   } catch (error) {
     logger.error("Midjourney image generation error:", error);
+    return null;
+  }
+};
+
+// Generate image with Together AI
+const generateTogetherImage = async (
+  prompt: string,
+  apiKey: string,
+  model?: string,
+): Promise<string | null> => {
+  try {
+    const response = await axios.post(
+      "https://api.together.xyz/v1/images/generations",
+      {
+        model: model || "black-forest-labs/FLUX.1-schnell-Free",
+        prompt,
+        steps: 10,
+        n: 1
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    // Return the URL of the first generated image
+    return response.data.data[0].url;
+  } catch (error) {
+    logger.error("Together AI image generation error:", error);
+    return null;
+  }
+};
+
+// Generate image with Chutes HiDream
+const generateChutesHiDreamImage = async (
+  prompt: string,
+  apiKey: string,
+): Promise<string | null> => {
+  logger.info("Generating image with Chutes HiDream");
+  logger.debug(`API Key available: ${apiKey ? "Yes" : "No"}`);
+  
+  try {
+    const response = await axios.post(
+      "https://chutes-hidream.chutes.ai/generate",
+      {
+        seed: null,
+        shift: 3,
+        prompt,
+        resolution: "1024x1024",
+        guidance_scale: 5,
+        num_inference_steps: 50
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        responseType: 'arraybuffer'
+      },
+    );
+
+    // Convert the binary image data to a base64 URL
+    const imageBuffer = Buffer.from(response.data);
+    const base64Image = imageBuffer.toString('base64');
+    return `data:image/png;base64,${base64Image}`;
+  } catch (error) {
+    logger.error("Chutes HiDream image generation error:", error);
     return null;
   }
 };

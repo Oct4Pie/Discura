@@ -37,6 +37,7 @@ import routes from "./routes";
 import { initializeAllBots, stopAllBots } from "./services/bot.service";
 import { db } from "./services/database/database.factory";
 import { fetchOpenRouterModels } from "./services/openrouter.service";
+import { initializeHistoryStorage } from "./services/conversation-history.service";
 import { logger } from "./utils/logger";
 
 import { RegisterRoutes } from "@discura/common/routes";
@@ -149,24 +150,24 @@ function startServer() {
     if (err.stack) {
       logger.debug(err.stack);
     }
-    
+
     // Extract any additional error properties
     const validationErrors = (err as any).validationErrors;
     const errorCode = (err as any).code;
     const errorField = (err as any).field;
-    
+
     // Determine the appropriate status code
     let statusCode = 500;
-    if (errorCode === 'CONFIG_VALIDATION_ERROR') {
+    if (errorCode === "CONFIG_VALIDATION_ERROR") {
       statusCode = 400; // Bad request for validation errors
-    } else if (err.message.includes('not authenticated')) {
+    } else if (err.message.includes("not authenticated")) {
       statusCode = 401; // Unauthorized
-    } else if (err.message.includes('permission')) {
+    } else if (err.message.includes("permission")) {
       statusCode = 403; // Forbidden
-    } else if (err.message.includes('not found')) {
+    } else if (err.message.includes("not found")) {
       statusCode = 404; // Not found
     }
-    
+
     // Send a structured error response
     res.status(statusCode).json({
       message: err.message,
@@ -174,9 +175,18 @@ function startServer() {
       field: errorField,
       validationErrors: validationErrors,
       // Only include stack in development for debugging
-      stack: config.nodeEnv === 'development' ? err.stack : undefined,
+      stack: config.nodeEnv === "development" ? err.stack : undefined,
     });
   });
+
+  // Initialize conversation history storage
+  initializeHistoryStorage()
+    .then(() => {
+      logger.info("Conversation history storage initialized successfully");
+    })
+    .catch((error) => {
+      logger.error("Error initializing conversation history storage:", error);
+    });
 
   // Initialize all bots that were running when the server was last stopped
   // after server is fully started
@@ -185,13 +195,15 @@ function startServer() {
     initializeAllBots().catch((error) => {
       logger.error("Error initializing bots:", error);
     });
-    
+
     // Refresh OpenRouter models cache in the background
-    fetchOpenRouterModels(true).then(() => {
-      logger.info('OpenRouter models cache refreshed successfully');
-    }).catch((error) => {
-      logger.error('Error refreshing OpenRouter models cache:', error);
-    });
+    fetchOpenRouterModels(true)
+      .then(() => {
+        logger.info("OpenRouter models cache refreshed successfully");
+      })
+      .catch((error) => {
+        logger.error("Error refreshing OpenRouter models cache:", error);
+      });
   }, 2000);
 
   // Graceful shutdown

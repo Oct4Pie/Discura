@@ -15,8 +15,12 @@ import {
   ThreadChannel,
   Collection,
   TextBasedChannel,
+  AttachmentBuilder,
 } from "discord.js";
 import { v4 as uuidv4 } from "uuid";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 
 import { generateImage } from "./image.service";
 import { callLLM } from "./llm.service";
@@ -26,7 +30,14 @@ import {
   findMatchingTools,
   processToolCommand,
 } from "./tool.service";
+import {
+  getConversationHistory,
+  addToConversationHistory,
+  loadAllBotConversationHistories,
+  ConversationMessage,
+} from "./conversation-history.service";
 import { BotAdapter } from "../models/adapters/bot.adapter";
+import { ActivatedChannelAdapter } from "../models/adapters/activated-channel.adapter";
 import { Bot } from "../models/bot.model";
 import { logger } from "../utils/logger";
 
@@ -34,11 +45,147 @@ import { logger } from "../utils/logger";
 const typingIndicators = new Map<string, NodeJS.Timeout>();
 
 // Store conversation history
-const conversationHistory = new Map<
-  string,
-  Array<{ role: string; content: string; userId?: string; username?: string }>
->();
+const activatedChannels = new Map<string, boolean>(); // Map of channelId -> isActivated
+
+// Maximum number of messages to keep in history
 const MAX_HISTORY_LENGTH = 10; // Maximum number of messages to keep in history
+
+// Discord's message character limit
+const DISCORD_MESSAGE_LIMIT = 2000;
+
+/**
+ * Splits a long message into smaller chunks that fit within Discord's character limit
+ * @param content The message content to split
+ * @param limit Maximum characters per message (default: 2000)
+ * @returns An array of message chunks
+ */
+function splitMessage(
+  content: string,
+  limit: number = DISCORD_MESSAGE_LIMIT
+): string[] {
+  if (content.length <= limit) {
+    return [content];
+  }
+
+  const chunks: string[] = [];
+  let currentChunk = "";
+
+  // Split content by lines to try to maintain formatting
+  const lines = content.split("\n");
+
+  for (const line of lines) {
+    // If line by itself exceeds the limit, we need to split it
+    if (line.length > limit) {
+      // First, send any accumulated content in the current chunk
+      if (currentChunk) {
+        chunks.push(currentChunk);
+        currentChunk = "";
+      }
+
+      // Split the long line into appropriate sized chunks
+      let remainingLine = line;
+      while (remainingLine.length > 0) {
+        // Find an appropriate split point, trying to avoid splitting words
+        let splitPoint = limit;
+        if (remainingLine.length > limit) {
+          // Look for a space character to split on
+          while (
+            splitPoint > 0 &&
+            remainingLine[splitPoint] !== " " &&
+            remainingLine[splitPoint] !== "\n"
+          ) {
+            splitPoint--;
+          }
+
+          // If we couldn't find a good split point, just split at the limit
+          if (splitPoint === 0) {
+            splitPoint = limit;
+          }
+        } else {
+          splitPoint = remainingLine.length;
+        }
+
+        chunks.push(remainingLine.substring(0, splitPoint));
+        remainingLine = remainingLine.substring(splitPoint).trim();
+      }
+    }
+    // If adding this line would exceed the limit, push current chunk and start a new one
+    else if (currentChunk.length + line.length + 1 > limit) {
+      chunks.push(currentChunk);
+      currentChunk = line;
+    }
+    // Otherwise add the line to the current chunk
+    else {
+      if (currentChunk) {
+        currentChunk += "\n" + line;
+      } else {
+        currentChunk = line;
+      }
+    }
+  }
+
+  // Push the final chunk if there's any content left
+  if (currentChunk) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
+}
+
+/**
+ * Sends a message to a Discord channel, automatically splitting it if it exceeds the character limit
+ * @param channel The Discord channel to send the message to
+ * @param content The content to send
+ * @returns The sent message (or the last message if multiple were sent)
+ */
+async function sendMessageWithSplitting(
+  channel: TextBasedChannel,
+  content: string
+): Promise<Message | null> {
+  if (!content) {
+    return null;
+  }
+
+  try {
+    const chunks = splitMessage(content);
+    let lastMessage: Message | null = null;
+
+    // Send each chunk as a separate message
+    if (channel.isTextBased() && "send" in channel) {
+      for (const chunk of chunks) {
+        lastMessage = await channel.send(chunk);
+      }
+    }
+
+    return lastMessage;
+  } catch (error) {
+    logger.error(`Error sending message to channel ${channel.id}:`, error);
+    throw error;
+  }
+}
+
+// Load activated channels for a bot from the database
+async function loadActivatedChannels(botId: string): Promise<void> {
+  try {
+    logger.info(`[Bot ${botId}] Loading activated channels from database`);
+    const channels = await ActivatedChannelAdapter.getActivatedChannels(botId);
+
+    // Clear existing entries for this bot
+    for (const [channelId, _] of activatedChannels.entries()) {
+      activatedChannels.delete(channelId);
+    }
+
+    // Add loaded channels to the map
+    for (const channelId of channels) {
+      activatedChannels.set(channelId, true);
+      logger.debug(`[Bot ${botId}] Loaded activated channel: ${channelId}`);
+    }
+
+    logger.info(`[Bot ${botId}] Loaded ${channels.length} activated channels`);
+  } catch (error) {
+    logger.error(`[Bot ${botId}] Error loading activated channels:`, error);
+  }
+}
 
 // Set up message handlers for a Discord bot
 export const setupMessageHandlers = async (client: Client, botId: string) => {
@@ -49,38 +196,80 @@ export const setupMessageHandlers = async (client: Client, botId: string) => {
       throw new Error(`Bot configuration not found for bot ID: ${botId}`);
     }
 
-    logger.info(`Setting up message handlers for bot ${botId} with username ${client.user?.username || "unknown"}`);
+    // Store bot configuration in the client for real-time updates
+    (client as any).botConfig = bot.configuration;
+
+    logger.info(
+      `Setting up message handlers for bot ${botId} with username ${client.user?.username || "unknown"}`
+    );
+
+    // Load previous conversation histories for this bot
+    await loadAllBotConversationHistories(botId);
+    logger.info(`Loaded conversation histories for bot ${botId}`);
+
+    // Load activated channels for this bot
+    await loadActivatedChannels(botId);
 
     // Set up message event handler
     client.on(Events.MessageCreate, async (message) => {
-      logger.info(`[Bot ${botId}] Received message: "${message.content?.substring(0, 50)}${message.content?.length > 50 ? '...' : ''}" from ${message.author.username} (${message.author.id}) in channel ${message.channel.id} (DM: ${message.channel.type === ChannelType.DM})`);
-      
+      logger.info(
+        `[Bot ${botId}] Received message: "${message.content?.substring(0, 50)}${message.content?.length > 50 ? "..." : ""}" from ${message.author.username} (${message.author.id}) in channel ${message.channel.id} (DM: ${message.channel.type === ChannelType.DM})`
+      );
+
       if (message.author.bot) {
-        logger.info(`[Bot ${botId}] Ignoring message from another bot: ${message.author.username}`);
+        logger.info(
+          `[Bot ${botId}] Ignoring message from another bot: ${message.author.username}`
+        );
         return;
       }
 
       const mentioned = message.mentions.has(client.user!.id);
       const isDirectMessage = message.channel.type === ChannelType.DM;
-      
-      logger.info(`[Bot ${botId}] Message context - mentioned: ${mentioned}, isDirectMessage: ${isDirectMessage}`);
-      
-      await handleMessage(client, message, bot);
+
+      logger.info(
+        `[Bot ${botId}] Message context - mentioned: ${mentioned}, isDirectMessage: ${isDirectMessage}`
+      );
+
+      // Get the latest bot config, including any real-time updates
+      // Create a proper Bot instance to ensure it has all required methods
+      const latestConfig = (client as any).botConfig || bot.configuration;
+      const latestBot = Object.create(Object.getPrototypeOf(bot));
+      Object.assign(latestBot, bot); // Copy all properties including non-enumerable ones
+      latestBot.configuration = latestConfig; // Update with the latest configuration
+
+      await handleMessage(client, message, latestBot);
     });
 
     // Set up interaction event handlers
     client.on(Events.InteractionCreate, async (interaction) => {
+      // Get the latest bot config for this interaction
+      // Create a proper Bot instance to ensure it has all required methods
+      const latestConfig = (client as any).botConfig || bot.configuration;
+      const latestBot = Object.create(Object.getPrototypeOf(bot));
+      Object.assign(latestBot, bot); // Copy all properties including non-enumerable ones
+      latestBot.configuration = latestConfig; // Update with the latest configuration
+      
       if (interaction.isChatInputCommand()) {
-        await handleSlashCommand(interaction, bot);
+        await handleSlashCommand(interaction, latestBot);
       } else if (interaction.isButton()) {
-        await handleButtonInteraction(interaction, bot);
+        await handleButtonInteraction(interaction, latestBot);
       } else if (interaction.isModalSubmit()) {
-        await handleModalSubmitInteraction(interaction, bot);
+        await handleModalSubmitInteraction(interaction, latestBot);
       } else if (interaction.isContextMenuCommand()) {
-        await handleContextMenuInteraction(interaction, bot);
+        await handleContextMenuInteraction(interaction, latestBot);
       } else if (interaction.isAutocomplete()) {
-        await handleAutocompleteInteraction(interaction, bot);
+        await handleAutocompleteInteraction(interaction, latestBot);
       }
+    });
+    
+    // Set up a listener for the custom configuration update event
+    client.on('configurationUpdated', (updatedConfig) => {
+      logger.info(`[Bot ${botId}] Received real-time configuration update`);
+      
+      // Store the updated configuration in the client
+      (client as any).botConfig = updatedConfig;
+      
+      logger.info(`[Bot ${botId}] Configuration updated successfully - changes will take effect immediately`);
     });
 
     logger.info(`Message handlers set up for bot ${botId}`);
@@ -115,13 +304,23 @@ function generateSystemPrompt(botConfig: BotConfiguration): string {
   systemPrompt +=
     "\n\nYou're communicating through Discord, so you can use Discord's formatting (e.g., **bold**, *italic*, etc.).";
   systemPrompt += "\nRespond concisely but helpfully, and be conversational.";
+  
+  // Add image generation instructions if enabled
+  if (botConfig.imageGeneration?.enabled) {
+    systemPrompt += "\n\nIMPORTANT: You can generate images by using XML tags in this format:";
+    systemPrompt += "\n<generate_image prompt=\"detailed description of the image\"/>";
+    systemPrompt += "\nOR";
+    systemPrompt += "\n<generate_image><prompt>detailed description of the image</prompt></generate_image>";
+    systemPrompt += "\nUse this capability when a user requests an image or when visuals would enhance your response.";
+    systemPrompt += "\nMake the image prompt detailed and specific for best results.";
+  }
 
   return systemPrompt;
 }
 
 // Start typing indicator in channel
 async function startTypingIndicator(
-  channel: TextChannel | DMChannel | ThreadChannel,
+  channel: TextChannel | DMChannel | ThreadChannel
 ) {
   try {
     // If there's an existing typing indicator for this channel, clear it
@@ -138,7 +337,7 @@ async function startTypingIndicator(
       channel.sendTyping().catch((err) => {
         logger.warn(
           `Failed to maintain typing indicator in channel ${channel.id}:`,
-          err,
+          err
         );
         clearInterval(typingInterval);
         typingIndicators.delete(channel.id);
@@ -150,7 +349,7 @@ async function startTypingIndicator(
   } catch (error) {
     logger.warn(
       `Failed to start typing indicator in channel ${channel.id}:`,
-      error,
+      error
     );
   }
 }
@@ -164,59 +363,49 @@ function stopTypingIndicator(channelId: string) {
   }
 }
 
-// Get conversation history for a channel
-function getConversationHistory(channelId: string, userId: string) {
-  const key = `${channelId}_${userId}`;
-  if (!conversationHistory.has(key)) {
-    conversationHistory.set(key, []);
-  }
-  return conversationHistory.get(key) || [];
-}
-
-// Add a message to conversation history
-function addToConversationHistory(
-  channelId: string,
-  userId: string,
-  role: string,
-  content: string,
-  username?: string,
-) {
-  const key = `${channelId}_${userId}`;
-  const history = getConversationHistory(channelId, userId);
-
-  history.push({
-    role,
-    content,
-    userId: role === "user" ? userId : undefined,
-    username: role === "user" ? username : undefined,
-  });
-
-  // Trim history if it exceeds maximum length
-  while (history.length > MAX_HISTORY_LENGTH) {
-    history.shift();
-  }
-
-  conversationHistory.set(key, history);
-}
-
 // Handle incoming Discord messages
 export const handleMessage = async (
   client: Client,
   message: Message,
-  bot: Bot,
+  bot: Bot
 ) => {
-  // Ignore messages from bots or without content
-  if (message.author.bot || !message.content) {
-    logger.debug(`[Bot ${bot.id}] Ignoring message: ${!message.content ? "empty content" : "from a bot"}`);
+  // Check if message has image attachments
+  const hasImageAttachments = message.attachments.size > 0 && 
+    message.attachments.some(attachment => 
+      attachment.contentType?.startsWith('image/'));
+  
+  // Ignore messages from bots or without content and without image attachments
+  if (message.author.bot || (!message.content && !hasImageAttachments)) {
+    logger.debug(
+      `[Bot ${bot.id}] Ignoring message: ${!message.content ? "empty content" : "from a bot"}${!hasImageAttachments ? "" : " with image attachments"}`
+    );
     return;
   }
 
-  // Check if the message mentions the bot or is in a DM
+  // Check if the message mentions the bot, is in a DM, or is in an activated channel
   const mentioned = message.mentions.has(client.user!.id);
   const isDirectMessage = message.channel.type === ChannelType.DM;
 
-  if (!mentioned && !isDirectMessage) {
-    logger.debug(`[Bot ${bot.id}] Ignoring message: not a mention or DM`);
+  // First check memory cache for performance
+  let isActivatedChannel = activatedChannels.get(message.channel.id) === true;
+
+  // If not in memory, double-check with database
+  if (!isActivatedChannel) {
+    isActivatedChannel = await ActivatedChannelAdapter.isChannelActivated(
+      bot.id,
+      message.channel.id
+    );
+
+    // Update memory cache if found in database
+    if (isActivatedChannel) {
+      activatedChannels.set(message.channel.id, true);
+    }
+  }
+
+  if (!mentioned && !isDirectMessage && !isActivatedChannel) {
+    logger.debug(
+      `[Bot ${bot.id}] Ignoring message: not a mention, DM, or activated channel`
+    );
     return;
   }
 
@@ -225,43 +414,78 @@ export const handleMessage = async (
   if (mentioned) {
     const mentionRegex = new RegExp(`<@!?${client.user!.id}>`);
     content = content.replace(mentionRegex, "").trim();
-    logger.info(`[Bot ${bot.id}] Mention detected, extracted content: "${content}"`);
+    logger.info(
+      `[Bot ${bot.id}] Mention detected, extracted content: "${content}"`
+    );
   }
 
-  // Skip empty messages after removing the mention
+  // Process image attachments if present
+  if (hasImageAttachments) {
+    const imageAttachment = message.attachments.find(attachment => 
+      attachment.contentType?.startsWith('image/'));
+    
+    if (imageAttachment) {
+      // If there's no text content, create a default prompt about the image
+      if (!content) {
+        content = "Can you describe what's in this image?";
+        logger.info(
+          `[Bot ${bot.id}] Image attachment detected with no text, using default prompt: "${content}"`
+        );
+      } else {
+        content = `${content} [Image attached: ${imageAttachment.url}]`;
+        logger.info(
+          `[Bot ${bot.id}] Image attachment detected with text, appended to content: "${content}"`
+        );
+      }
+    }
+  }
+
+  // Skip empty messages after processing
   if (!content) {
-    logger.info(`[Bot ${bot.id}] Ignoring message: content is empty after removing mention`);
+    logger.info(
+      `[Bot ${bot.id}] Ignoring message: content is empty after processing`
+    );
     return;
   }
 
   const channel = message.channel;
-  logger.info(`[Bot ${bot.id}] Processing message in channel type: ${channel.type}`);
+  logger.info(
+    `[Bot ${bot.id}] Processing message in channel type: ${channel.type}`
+  );
 
   // Ensure the channel is text-based before proceeding
   if (!channel.isTextBased()) {
-    logger.warn(`[Bot ${bot.id}] Channel ${channel} is not text-based, cannot process message`);
+    logger.warn(
+      `[Bot ${bot.id}] Channel ${channel} is not text-based, cannot process message`
+    );
     return;
   }
 
   try {
     // Start typing indicator to show the bot is "thinking"
-    logger.info(`[Bot ${bot.id}] Starting typing indicator in channel ${channel.id}`);
+    logger.info(
+      `[Bot ${bot.id}] Starting typing indicator in channel ${channel.id}`
+    );
     await startTypingIndicator(
-      channel as TextChannel | DMChannel | ThreadChannel,
+      channel as TextChannel | DMChannel | ThreadChannel
     );
 
-    // Add the user's message to history
-    addToConversationHistory(
+    // Always include username when adding to conversation history
+    // Use the new addToConversationHistory that only requires channelId and botId (not userId)
+    await addToConversationHistory(
       channel.id,
       message.author.id,
+      bot.id,
       "user",
       content,
-      message.author.username,
+      message.author.username
     );
 
-    // Get conversation history
-    const history = getConversationHistory(channel.id, message.author.id);
-    logger.debug(`[Bot ${bot.id}] Conversation history length: ${history.length}`);
+    // Get conversation history - now only need channelId and botId
+    const history = await getConversationHistory(channel.id, bot.id);
+    logger.debug(
+      `[Bot ${bot.id}] Conversation history length: ${history.length}`
+    );
 
     // Generate system prompt from bot configuration
     const systemPrompt = generateSystemPrompt(
@@ -275,99 +499,239 @@ export const handleMessage = async (
         apiKey: "",
         imageGeneration: {
           enabled: false,
-          provider: ImageProvider.MIDJOURNEY, // Fixed: Using enum value instead of string literal
+          provider: ImageProvider.MIDJOURNEY,
         },
         toolsEnabled: false,
         tools: [],
         knowledge: [],
-      },
+        visionModel: "", // Add required visionModel property
+        visionProvider: "", // Add required visionProvider property
+      }
     );
 
-    logger.info(`[Bot ${bot.id}] Calling LLM with model: ${bot.configuration?.llmModel}, provider: ${bot.configuration?.llmProvider}`);
+    logger.info(
+      `[Bot ${bot.id}] Calling LLM with model: ${bot.configuration?.llmModel}, provider: ${bot.configuration?.llmProvider}`
+    );
+
+    // Enhance the system prompt to tell the bot to pay attention to different usernames in the conversation
+    const enhancedSystemPrompt = systemPrompt + "\n\nIMPORTANT: In Discord channels, there are multiple users. Pay attention to usernames to keep track of who is saying what. Address users by their names when appropriate.";
 
     // Call the LLM with the conversation history and system prompt
     try {
+      // Extract image URLs from attachments for vision processing
+      const imageURLs: string[] = [];
+      if (hasImageAttachments) {
+        message.attachments.forEach(attachment => {
+          if (attachment.contentType?.startsWith('image/')) {
+            imageURLs.push(attachment.url);
+            logger.info(`[Bot ${bot.id}] Added image URL to vision processing: ${attachment.url}`);
+          }
+        });
+      }
+
       const response = await callLLM({
         botId: bot.id,
         prompt: content,
-        systemPrompt: systemPrompt,
+        systemPrompt: enhancedSystemPrompt,
         history: history,
         userId: message.author.id,
         username: message.author.username,
         model: bot.configuration?.llmModel,
         provider: bot.configuration?.llmProvider,
+        imageUrls: imageURLs.length > 0 ? imageURLs : undefined,
+        visionModel: imageURLs.length > 0 ? bot.configuration?.visionModel : undefined
       });
 
-      logger.info(`[Bot ${bot.id}] LLM response received: "${response?.text?.substring(0, 50)}${response?.text?.length > 50 ? '...' : ''}"`);
+      logger.info(
+        `[Bot ${bot.id}] LLM response received: "${response?.text?.substring(0, 50)}${response?.text?.length > 50 ? "..." : ""}"`
+      );
 
-      // Add the bot's response to history
+      // Add the bot's response to history, using bot's username for clarity
       if (response && response.text) {
-        addToConversationHistory(
+        await addToConversationHistory(
           channel.id,
           message.author.id,
+          bot.id,
           "assistant",
           response.text,
+          client.user?.username || "Bot"
         );
       } else {
         logger.warn(`[Bot ${bot.id}] LLM returned empty or null response`);
       }
 
-      // Handle potential image generation
-      let sentMessage;
-      if (
-        response?.generateImage &&
-        bot.configuration?.imageGeneration?.enabled
-      ) {
-        try {
-          // Generate an image based on the prompt
-          logger.info(`[Bot ${bot.id}] Generating image with prompt: "${response.imagePrompt || content}"`);
-          const imageUrl = await generateImage(response.imagePrompt || content, {
-            provider: bot.configuration?.imageGeneration?.provider || "openai",
-            apiKey: bot.configuration?.apiKey || "",
-            model: bot.configuration?.imageGeneration?.model,
-            enabled: true,
-          });
-
-          // Use type guard to ensure channel is text-based before sending
-          if (channel.isTextBased() && "send" in channel) {
-            // Send the response with the image
-            logger.info(`[Bot ${bot.id}] Sending message with image to channel ${channel.id}`);
-            sentMessage = await channel.send({
-              content: response.text,
-              files: imageUrl
-                ? [{ attachment: imageUrl, name: "generated-image.png" }]
-                : [],
+      // Handle LLM response with tool calls if the model supports it and tools are enabled
+      if (response?.toolCalls && response.toolCalls.length > 0) {
+        // Only process tool calls if the bot has tool calling enabled in its configuration
+        if (bot.configuration?.toolsEnabled) {
+          logger.info(`[Bot ${bot.id}] Processing ${response.toolCalls.length} tool calls`);
+          
+          // Find matching tools from the bot's configuration
+          const availableTools = bot.configuration.tools || [];
+          
+          try {
+            // Execute each tool call
+            const toolResults = await executeTools(response.toolCalls, availableTools);
+            
+            // Evaluate tool results to create a response
+            // Properly map each tool result with its corresponding original call
+            const toolResultMessages = toolResults.map((result, index) => {
+              const originalCall = response.toolCalls[index];
+              return evaluateToolResult(result, originalCall);
             });
+            
+            // Combine messages or use the first one if only one tool was called
+            const toolResultMessage = toolResultMessages.length === 1 
+              ? toolResultMessages[0].message 
+              : toolResultMessages
+                  .map(r => r.message)
+                  .filter(Boolean)
+                  .join('\n\n');
+            
+            if (toolResultMessage) {
+              // Send the tool result as a follow-up message
+              if (channel.isTextBased() && "send" in channel) {
+                await sendMessageWithSplitting(channel, toolResultMessage);
+              }
+              
+              // Add the tool result to conversation history
+              await addToConversationHistory(
+                channel.id,
+                message.author.id,
+                bot.id,
+                "function",
+                toolResultMessage,
+                "Tools"
+              );
+            }
+          } catch (toolError) {
+            logger.error(`[Bot ${bot.id}] Error processing tool calls:`, toolError);
+            
+            if (channel.isTextBased() && "send" in channel) {
+              await sendMessageWithSplitting(channel, 
+                "I encountered an error while trying to execute a tool: " + 
+                (toolError instanceof Error ? toolError.message : "Unknown error")
+              );
+            }
           }
-        } catch (imageError) {
-          logger.error(`[Bot ${bot.id}] Image generation error:`, imageError);
-
-          // If image generation fails, just send the text response
+        } else {
+          // Tool calls were returned by the model, but tools are not enabled in bot configuration
+          logger.warn(`[Bot ${bot.id}] Model returned tool calls but tools are disabled in bot configuration`);
+          
           if (channel.isTextBased() && "send" in channel) {
-            sentMessage = await channel.send({
-              content: `${response.text}\n\n*(Failed to generate image: Something went wrong with image generation)*`,
-            });
+            await sendMessageWithSplitting(
+              channel,
+              response?.text || 
+              "I'd like to use tools to help with that, but tool support is currently disabled. Please enable tools in my configuration if you'd like me to use them."
+            );
           }
         }
       } else {
-        // Send regular text response
-        if (channel.isTextBased() && "send" in channel) {
-          logger.info(`[Bot ${bot.id}] Sending text response to channel ${channel.id}`);
-          sentMessage = await channel.send(
-            response?.text ||
-              "I'm sorry, I'm having trouble processing that request.",
-          );
-        } else {
-          logger.warn(`[Bot ${bot.id}] Could not send response - channel is not text-based or doesn't support send()`);
-        }
-      }
+        // Regular text response (no tool calls)
+        // Handle potential image generation
+        let sentMessage;
+        if (
+          response?.generateImage &&
+          bot.configuration?.imageGeneration?.enabled
+        ) {
+          // ... rest of the image generation code remains unchanged
+          try {
+            // Generate an image based on the prompt
+            logger.info(
+              `[Bot ${bot.id}] Generating image with prompt: "${response.imagePrompt || content}"`
+            );
+            const imageUrl = await generateImage(
+              response.imagePrompt || content,
+              {
+                provider:
+                  bot.configuration?.imageGeneration?.provider || "openai",
+                apiKey: bot.configuration?.apiKey || "",
+                model: bot.configuration?.imageGeneration?.model,
+                enabled: true,
+              }
+            );
 
-      logger.info(`[Bot ${bot.id}] Successfully responded to message in channel ${channel.id}`);
-      return sentMessage;
+            // Use type guard to ensure channel is text-based before sending
+            if (channel.isTextBased() && "send" in channel) {
+              // Check if we need to split the message
+              const responseText = response.text || "";
+
+              // Process the image for Discord attachment
+              let attachment;
+              if (imageUrl) {
+                try {
+                  attachment = await processImageForAttachment(imageUrl);
+                  logger.info(`[Bot ${bot.id}] Successfully processed image for attachment`);
+                } catch (attachmentError) {
+                  logger.error(`[Bot ${bot.id}] Error processing image attachment:`, attachmentError);
+                }
+              }
+
+              if (responseText.length > DISCORD_MESSAGE_LIMIT) {
+                // If the response is too long, split it and send the image with the last part
+                const chunks = splitMessage(responseText);
+
+                // Send all chunks except the last one
+                for (let i = 0; i < chunks.length - 1; i++) {
+                  await channel.send(chunks[i]);
+                }
+
+                // Send the last chunk with the image
+                sentMessage = await channel.send({
+                  content: chunks[chunks.length - 1],
+                  files: attachment ? [attachment] : [],
+                });
+              } else {
+                // If response is within limit, send as usual
+                sentMessage = await channel.send({
+                  content: responseText,
+                  files: attachment ? [attachment] : [],
+                });
+              }
+
+              logger.info(
+                `[Bot ${bot.id}] Sent response with image to channel ${channel.id}`
+              );
+            }
+          } catch (imageError) {
+            logger.error(`[Bot ${bot.id}] Image generation error:`, imageError);
+
+            // If image generation fails, just send the text response
+            if (channel.isTextBased() && "send" in channel) {
+              sentMessage = await sendMessageWithSplitting(
+                channel,
+                `${response.text || ""}\n\n*(Failed to generate image: Something went wrong with image generation)*`
+              );
+            }
+          }
+        } else {
+          // Send regular text response
+          if (channel.isTextBased() && "send" in channel) {
+            logger.info(
+              `[Bot ${bot.id}] Sending text response to channel ${channel.id}`
+            );
+            sentMessage = await sendMessageWithSplitting(
+              channel,
+              response?.text ||
+                "I'm sorry, I'm having trouble processing that request."
+            );
+          } else {
+            logger.warn(
+              `[Bot ${bot.id}] Could not send response - channel is not text-based or doesn't support send()`
+            );
+          }
+        }
+
+        logger.info(
+          `[Bot ${bot.id}] Successfully responded to message in channel ${channel.id}`
+        );
+        return sentMessage;
+      }
     } catch (llmError) {
       logger.error(`[Bot ${bot.id}] LLM service error:`, llmError);
       if (channel.isTextBased() && "send" in channel) {
-        await channel.send(
+        await sendMessageWithSplitting(
+          channel,
           "I'm sorry, I encountered an error while connecting to my AI service. Please try again later."
         );
       }
@@ -378,22 +742,65 @@ export const handleMessage = async (
     try {
       // Send error message to channel
       if (channel.isTextBased() && "send" in channel) {
-        await channel.send(
-          "I'm sorry, I encountered an error while processing your request. Please try again later.",
+        await sendMessageWithSplitting(
+          channel,
+          "I'm sorry, I encountered an error while processing your request. Please try again later."
         );
       }
     } catch (sendError) {
-      logger.error(
-        `[Bot ${bot.id}] Failed to send error message:`,
-        sendError,
-      );
+      logger.error(`[Bot ${bot.id}] Failed to send error message:`, sendError);
     }
   } finally {
     // Always stop the typing indicator
-    logger.info(`[Bot ${bot.id}] Stopping typing indicator for channel ${channel.id}`);
+    logger.info(
+      `[Bot ${bot.id}] Stopping typing indicator for channel ${channel.id}`
+    );
     stopTypingIndicator(channel.id);
   }
 };
+
+/**
+ * Processes an image URL or base64 string for Discord attachment
+ * @param imageData URL or base64 string of the image
+ * @returns An AttachmentBuilder object ready for Discord
+ */
+async function processImageForAttachment(imageData: string): Promise<AttachmentBuilder> {
+  try {
+    // Check if it's a base64 data URL
+    if (imageData.startsWith('data:')) {
+      logger.debug(`Processing base64 image data`);
+      
+      // Extract the base64 content
+      const matches = imageData.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+      
+      if (!matches || matches.length !== 3) {
+        throw new Error('Invalid base64 data URL format');
+      }
+      
+      const contentType = matches[1];
+      const base64Data = matches[2];
+      const extension = contentType.split('/')[1] || 'png';
+      
+      // Convert base64 to buffer
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Create a unique filename for the image
+      const filename = `generated-image-${Date.now()}.${extension}`;
+      
+      // Create an attachment builder with the buffer
+      return new AttachmentBuilder(buffer, { name: filename });
+    } 
+    // If it's a URL or file path
+    else {
+      // For direct URLs, Discord.js can handle them directly
+      // For file paths, we'll use the file path
+      return new AttachmentBuilder(imageData, { name: 'generated-image.png' });
+    }
+  } catch (error) {
+    logger.error('Error processing image for attachment:', error);
+    throw error;
+  }
+}
 
 /**
  * Handles slash command interactions
@@ -402,7 +809,7 @@ export const handleMessage = async (
  */
 async function handleSlashCommand(
   interaction: ChatInputCommandInteraction,
-  bot: any,
+  bot: any
 ): Promise<void> {
   // Handle different slash commands here...
   const commandName = interaction.commandName;
@@ -418,8 +825,148 @@ async function handleSlashCommand(
           "**Available Commands**\n" +
           "/ping - Check if the bot is online\n" +
           "/help - Show this help message\n" +
-          "/image - Generate an image from a prompt",
+          "/image - Generate an image from a prompt\n" +
+          "/activate - Enable auto-response in the current channel\n" +
+          "/deactivate - Disable auto-response in the current channel\n" +
+          "/flush [count] - Remove older messages from the conversation history (default: 10%)\n" +
+          "/clear [count] - Remove recent messages from the conversation history (default: 10%)\n" +
+          "/reset - Clear all conversation history for this channel",
       });
+    } else if (commandName === "activate") {
+      // Enable auto-response in the current channel
+      const channelId = interaction.channelId;
+
+      // Check if channel is already activated (check both memory and database)
+      const isActivated =
+        activatedChannels.get(channelId) ||
+        (await ActivatedChannelAdapter.isChannelActivated(bot.id, channelId));
+
+      if (isActivated) {
+        await interaction.editReply({
+          content: "✅ This channel is already set for auto-responses!",
+        });
+        return;
+      }
+
+      // Activate the channel in memory and database
+      activatedChannels.set(channelId, true);
+      await ActivatedChannelAdapter.activateChannel(bot.id, channelId);
+
+      logger.info(
+        `[Bot ${bot.id}] Activated auto-response for channel ${channelId}`
+      );
+
+      await interaction.editReply({
+        content:
+          "✅ Auto-response enabled for this channel! I'll now respond to all messages without needing to be mentioned.",
+      });
+    } else if (commandName === "deactivate") {
+      // Disable auto-response in the current channel
+      const channelId = interaction.channelId;
+
+      // Check if channel is activated (check both memory and database)
+      const isActivated =
+        activatedChannels.get(channelId) ||
+        (await ActivatedChannelAdapter.isChannelActivated(bot.id, channelId));
+
+      if (!isActivated) {
+        await interaction.editReply({
+          content: "⚠️ Auto-response is not enabled for this channel.",
+        });
+        return;
+      }
+
+      // Deactivate the channel in memory and database
+      activatedChannels.set(channelId, false);
+      await ActivatedChannelAdapter.deactivateChannel(bot.id, channelId);
+
+      logger.info(
+        `[Bot ${bot.id}] Deactivated auto-response for channel ${channelId}`
+      );
+
+      await interaction.editReply({
+        content:
+          "✅ Auto-response disabled for this channel! You'll need to mention me to get a response.",
+      });
+    } else if (commandName === "flush") {
+      // Flush conversation history for the current channel
+      const channelId = interaction.channelId;
+      // Get the optional count parameter if provided
+      const count = interaction.options.getInteger("count");
+
+      try {
+        // Import the flushConversationHistory function
+        const { flushConversationHistory } = require("./conversation-history.service");
+        
+        const flushedCount = await flushConversationHistory(channelId, bot.id, count || undefined);
+        
+        if (flushedCount > 0) {
+          await interaction.editReply({
+            content: `🧹 Successfully removed ${flushedCount} older messages from my conversation memory.`,
+          });
+        } else {
+          await interaction.editReply({
+            content: "⚠️ No conversation history to flush.",
+          });
+        }
+      } catch (error) {
+        logger.error(`[Bot ${bot.id}] Error flushing conversation history:`, error);
+        await interaction.editReply({
+          content: "❌ Error flushing conversation history. Please try again later.",
+        });
+      }
+    } else if (commandName === "clear") {
+      // Clear recent conversation history for the current channel
+      const channelId = interaction.channelId;
+      // Get the optional count parameter if provided
+      const count = interaction.options.getInteger("count");
+
+      try {
+        // Import the clearConversationHistory function
+        const { clearConversationHistory } = require("./conversation-history.service");
+        
+        const clearedCount = await clearConversationHistory(channelId, bot.id, count || undefined);
+        
+        if (clearedCount > 0) {
+          await interaction.editReply({
+            content: `🧹 Successfully removed ${clearedCount} recent messages from my conversation memory.`,
+          });
+        } else {
+          await interaction.editReply({
+            content: "⚠️ No conversation history to clear.",
+          });
+        }
+      } catch (error) {
+        logger.error(`[Bot ${bot.id}] Error clearing conversation history:`, error);
+        await interaction.editReply({
+          content: "❌ Error clearing conversation history. Please try again later.",
+        });
+      }
+    } else if (commandName === "reset") {
+      // Reset conversation history for the current channel
+      const channelId = interaction.channelId;
+      
+      try {
+        // Import the resetConversationHistory function
+        const { resetConversationHistory } = require("./conversation-history.service");
+        
+        const resetCount = await resetConversationHistory(channelId, bot.id);
+        
+        if (resetCount > 0) {
+          await interaction.editReply({
+            content: `🗑️ Successfully removed all ${resetCount} messages from my conversation memory. My memory for this channel is now clean!`,
+          });
+        } else {
+          await interaction.editReply({
+            content: "⚠️ No conversation history to reset.",
+          });
+        }
+      } catch (error) {
+        logger.error(`[Bot ${bot.id}] Error resetting conversation history:`, error);
+        await interaction.editReply({
+          content: "❌ Error resetting conversation history. Please try again later.",
+        });
+      }
     } else if (
       commandName === "image" &&
       bot.configuration?.imageGeneration?.enabled
@@ -439,19 +986,29 @@ async function handleSlashCommand(
         });
 
         if (imageUrl) {
-          await interaction.editReply({
-            content: `Generated image for: "${prompt}"`,
-            files: [{ attachment: imageUrl, name: "generated-image.png" }],
-          });
+          try {
+            // Process the image for Discord attachment
+            const attachment = await processImageForAttachment(imageUrl);
+            
+            await interaction.editReply({
+              content: `Generated image for: "${prompt}"`,
+              files: [attachment],
+            });
+          } catch (attachmentError) {
+            logger.error(`Error processing image attachment: ${attachmentError}`);
+            await interaction.editReply(
+              "Generated the image but encountered an error while preparing it for sending."
+            );
+          }
         } else {
           await interaction.editReply(
-            "Failed to generate image. Please try again.",
+            "Failed to generate image. Please try again."
           );
         }
       } catch (error) {
         logger.error(`Error generating image for bot ${bot.id}:`, error);
         await interaction.editReply(
-          "Failed to generate image due to an error. Please try again later.",
+          "Failed to generate image due to an error. Please try again later."
         );
       }
     } else if (commandName === "tool" && bot.configuration?.toolsEnabled) {
@@ -467,13 +1024,13 @@ async function handleSlashCommand(
         const result = await processToolCommand(
           bot.id,
           toolName,
-          toolInput || "",
+          toolInput || ""
         );
         await interaction.editReply(result || "Tool executed successfully.");
       } catch (error) {
         logger.error(`Error processing tool command for bot ${bot.id}:`, error);
         await interaction.editReply(
-          `Error executing tool: ${(error as Error).message}`,
+          `Error executing tool: ${(error as Error).message}`
         );
       }
     } else {
@@ -486,7 +1043,7 @@ async function handleSlashCommand(
       // Try to respond with an error message if we haven't replied yet
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(
-          "An error occurred while processing this command.",
+          "An error occurred while processing this command."
         );
       } else {
         await interaction.reply({
@@ -507,7 +1064,7 @@ async function handleSlashCommand(
  */
 async function handleButtonInteraction(
   interaction: ButtonInteraction,
-  bot: any,
+  bot: any
 ): Promise<void> {
   try {
     await interaction.deferUpdate();
@@ -552,7 +1109,7 @@ async function handleButtonInteraction(
  */
 async function handleModalSubmitInteraction(
   interaction: ModalSubmitInteraction,
-  bot: any,
+  bot: any
 ): Promise<void> {
   try {
     await interaction.deferReply({ ephemeral: true });
@@ -592,7 +1149,7 @@ async function handleModalSubmitInteraction(
  */
 async function handleContextMenuInteraction(
   interaction: ContextMenuCommandInteraction,
-  bot: any,
+  bot: any
 ): Promise<void> {
   // Extract the command name
   const commandName = interaction.commandName;
@@ -651,7 +1208,7 @@ async function handleContextMenuInteraction(
  */
 async function handleAutocompleteInteraction(
   interaction: AutocompleteInteraction,
-  bot: any,
+  bot: any
 ): Promise<void> {
   // Get the command name and focused option
   const commandName = interaction.commandName;
@@ -673,7 +1230,7 @@ async function handleAutocompleteInteraction(
         value: tool.id,
       }))
       .filter((choice: { name: string; value: string }) =>
-        choice.name.toLowerCase().includes(focusedOption.value.toLowerCase()),
+        choice.name.toLowerCase().includes(focusedOption.value.toLowerCase())
       );
 
     // Respond with matching choices (max 25 choices as per Discord's limit)

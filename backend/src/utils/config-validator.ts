@@ -5,11 +5,7 @@
  * before they are saved to the database or used to initialize a bot.
  */
 
-import {
-  BotConfiguration,
-  LLMProvider,
-  ImageProvider,
-} from "@discura/common";
+import { BotConfiguration, LLMProvider, ImageProvider } from "@discura/common";
 
 import { logger } from "./logger";
 
@@ -46,7 +42,7 @@ export function verifyBotConfig(config: any): ValidationResult {
     if (!config.llmModel) {
       errors.push("LLM model must be specified");
     }
-    
+
     // Note: API keys are managed through environment variables in the format ${PROVIDER}_KEY
     // and should not be included in the bot configuration
   } else {

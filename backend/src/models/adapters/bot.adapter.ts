@@ -45,6 +45,8 @@ interface BotConfigurationDbEntity {
   image_provider: string;
   image_api_key?: string;
   image_model?: string;
+  vision_model?: string;
+  vision_provider?: string;
   created_at: string;
   updated_at: string;
 }
@@ -91,6 +93,8 @@ export class Bot {
         toolsEnabled: false,
         tools: [],
         knowledge: [],
+        visionModel: configData.vision_model || "", // Add vision model
+        visionProvider: configData.vision_provider || "", // Add vision provider
       };
     }
   }
@@ -115,6 +119,8 @@ export class Bot {
       toolsEnabled: false,
       tools: [],
       knowledge: [],
+      visionModel: "",
+      visionProvider: "",
     };
 
     return {
@@ -154,6 +160,8 @@ export class Bot {
           parameters: tool.parameters || [],
           implementation: tool.implementation || "", // Add required implementation property with empty string default
         })),
+        visionModel: safeConfiguration.visionModel || "",
+        visionProvider: safeConfiguration.visionProvider || "",
       },
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
@@ -366,6 +374,8 @@ export class BotAdapter {
         image_provider: config.imageGeneration?.provider || "",
         image_api_key: config.imageGeneration?.apiKey,
         image_model: config.imageGeneration?.model,
+        vision_model: config.visionModel || "",
+        vision_provider: config.visionProvider || "",
         updated_at: now,
       };
 

@@ -1,6 +1,15 @@
-import React from 'react';
-import { Alert, Box, Typography, List, ListItem, ListItemIcon, ListItemText, alpha } from '@mui/material';
-import { ErrorOutline, ArrowRight } from '@mui/icons-material';
+import React from "react";
+import {
+  Alert,
+  Box,
+  Typography,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  alpha,
+} from "@mui/material";
+import { ErrorOutline, ArrowRight } from "@mui/icons-material";
 
 interface ValidationErrorDisplayProps {
   error: any;
@@ -12,41 +21,50 @@ interface ValidationErrorDisplayProps {
  * Handles different error formats including:
  * - Simple error messages
  * - Field-specific errors
- * - Lists of validation errors 
+ * - Lists of validation errors
  */
-const ValidationErrorDisplay: React.FC<ValidationErrorDisplayProps> = ({ error, onClose }) => {
+const ValidationErrorDisplay: React.FC<ValidationErrorDisplayProps> = ({
+  error,
+  onClose,
+}) => {
   // If no error, don't render anything
   if (!error) return null;
-  
+
   // Extract error details
-  const message = error.message || 'An error occurred';
+  const message = error.message || "An error occurred";
   const field = error.field || null;
   const validationErrors = error.validationErrors || [];
-  
+
   return (
-    <Alert 
-      severity="error" 
+    <Alert
+      severity="error"
       onClose={onClose}
       sx={{
         mb: 3,
         borderRadius: 1.5,
-        '& .MuiAlert-icon': {
-          alignItems: 'flex-start',
+        "& .MuiAlert-icon": {
+          alignItems: "flex-start",
           pt: 1.5,
-        }
+        },
       }}
     >
       <Box>
         <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 0.5 }}>
           {message}
         </Typography>
-        
+
         {field && (
           <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
-            Field: <Box component="span" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>{field}</Box>
+            Field:{" "}
+            <Box
+              component="span"
+              sx={{ fontFamily: "monospace", fontWeight: 500 }}
+            >
+              {field}
+            </Box>
           </Typography>
         )}
-        
+
         {validationErrors && validationErrors.length > 0 && (
           <>
             {validationErrors.length === 1 ? (
@@ -60,9 +78,9 @@ const ValidationErrorDisplay: React.FC<ValidationErrorDisplayProps> = ({ error, 
                     <ListItemIcon sx={{ minWidth: 28 }}>
                       <ArrowRight fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText 
-                      primary={error} 
-                      primaryTypographyProps={{ variant: 'body2' }} 
+                    <ListItemText
+                      primary={error}
+                      primaryTypographyProps={{ variant: "body2" }}
                     />
                   </ListItem>
                 ))}

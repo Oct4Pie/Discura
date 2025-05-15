@@ -2,9 +2,11 @@ import {
   KnowledgeItemDto,
   KnowledgeBaseResponseDto,
   MessageResponseDto,
+  KnowledgeBase,
 } from "@discura/common";
 import { KnowledgeController as CommonKnowledgeController } from "@discura/common/controllers";
 import { Request } from "express";
+import { v4 as uuidv4 } from "uuid";
 
 import { BotAdapter } from "../models/adapters/bot.adapter";
 import { logger } from "../utils/logger";
@@ -40,15 +42,15 @@ export class KnowledgeController extends CommonKnowledgeController {
       }
 
       // Get the knowledge items from the bot configuration
-      // In a real implementation, this might come from a separate repository
       const knowledgeItems = bot.configuration?.knowledge || [];
 
       // Convert to DTOs and ensure required fields exist
       const items: KnowledgeItemDto[] = knowledgeItems.map((item, index) => ({
-        id: item.id || index.toString(),
-        title: item.name || "Untitled",
+        id: item.id,
+        title: item.name,
         content: item.content,
         type: item.type,
+        source: item.source,
         priority: index + 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -98,24 +100,42 @@ export class KnowledgeController extends CommonKnowledgeController {
         throw new Error("You do not have permission to modify this bot");
       }
 
-      // Create a new knowledge item
-      const newItem: KnowledgeItemDto = {
-        id: new Date().getTime().toString(), // Simple ID generation
+      // Create a new knowledge item with a unique ID
+      const itemId = uuidv4();
+      const now = new Date().toISOString();
+
+      const newItem: KnowledgeBase = {
+        id: itemId,
+        name: item.title,
+        content: item.content,
+        type: item.type as "text" | "file", // Ensure type is correct
+        source: item.type === "file" ? item.content : undefined, // For file types, store URL/path in source
+      };
+
+      // Create DTO for response
+      const newItemDto: KnowledgeItemDto = {
+        id: itemId,
         title: item.title,
         content: item.content,
         type: item.type,
         priority: item.priority || 1,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
       };
 
-      // In a production implementation, this would be stored in the database
-      // For now, we'll just log that it would be created
-      logger.info(
-        `Created knowledge item for bot ${botId}: ${JSON.stringify(newItem)}`,
-      );
+      // Update bot configuration with new knowledge item
+      const knowledge = [...(bot.configuration?.knowledge || []), newItem];
+      
+      // Update the bot configuration
+      await BotAdapter.updateById(botId, {
+        configuration: {
+          ...bot.configuration,
+          knowledge,
+        }
+      });
 
-      return newItem;
+      logger.info(`Created knowledge item for bot ${botId}: ${JSON.stringify(newItem)}`);
+      return newItemDto;
     } catch (error) {
       logger.error(`Error in addKnowledgeItem for bot ${botId}:`, error);
       throw error;
@@ -155,28 +175,52 @@ export class KnowledgeController extends CommonKnowledgeController {
         throw new Error("You do not have permission to modify this bot");
       }
 
-      // In a production implementation, find and update the item in the database
-      // For now, return a mock updated item
-      const updatedItem: KnowledgeItemDto = {
-        id: itemId,
-        title: item.title || "Updated Item",
-        content: item.content || "Updated content",
-        type: item.type || "text",
-        priority: item.priority || 1,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+      // Find the knowledge item to update
+      const knowledgeItems = bot.configuration?.knowledge || [];
+      const itemIndex = knowledgeItems.findIndex(ki => ki.id === itemId);
+
+      if (itemIndex === -1) {
+        throw new Error("Knowledge item not found");
+      }
+
+      // Update the item
+      const existingItem = knowledgeItems[itemIndex];
+      const updatedItem: KnowledgeBase = {
+        ...existingItem,
+        name: item.title || existingItem.name,
+        content: item.content || existingItem.content,
+        type: (item.type as "text" | "file") || existingItem.type,
+        source: item.type === "file" && item.content ? item.content : existingItem.source,
       };
 
-      logger.info(
-        `Updated knowledge item ${itemId} for bot ${botId}: ${JSON.stringify(updatedItem)}`,
-      );
+      // Replace the item in the array
+      knowledgeItems[itemIndex] = updatedItem;
 
-      return updatedItem;
+      // Update the bot configuration
+      await BotAdapter.updateById(botId, {
+        configuration: {
+          ...bot.configuration,
+          knowledge: knowledgeItems,
+        }
+      });
+
+      // Create DTO for response
+      const now = new Date().toISOString();
+      const updatedItemDto: KnowledgeItemDto = {
+        id: itemId,
+        title: updatedItem.name,
+        content: updatedItem.content,
+        type: updatedItem.type,
+        source: updatedItem.source,
+        priority: item.priority || itemIndex + 1,
+        createdAt: now, // We don't store creation time, so this is an approximation
+        updatedAt: now,
+      };
+
+      logger.info(`Updated knowledge item ${itemId} for bot ${botId}`);
+      return updatedItemDto;
     } catch (error) {
-      logger.error(
-        `Error in updateKnowledgeItem for bot ${botId}, item ${itemId}:`,
-        error,
-      );
+      logger.error(`Error in updateKnowledgeItem for bot ${botId}, item ${itemId}:`, error);
       throw error;
     }
   }
@@ -208,19 +252,29 @@ export class KnowledgeController extends CommonKnowledgeController {
         throw new Error("You do not have permission to modify this bot");
       }
 
-      // In a production implementation, delete the item from the database
-      // For now, just log that it would be deleted
-      logger.info(`Deleted knowledge item ${itemId} for bot ${botId}`);
+      // Find the knowledge items excluding the one to delete
+      const knowledgeItems = bot.configuration?.knowledge || [];
+      const updatedKnowledgeItems = knowledgeItems.filter(ki => ki.id !== itemId);
+      
+      if (knowledgeItems.length === updatedKnowledgeItems.length) {
+        throw new Error("Knowledge item not found");
+      }
 
+      // Update the bot configuration
+      await BotAdapter.updateById(botId, {
+        configuration: {
+          ...bot.configuration,
+          knowledge: updatedKnowledgeItems,
+        }
+      });
+
+      logger.info(`Deleted knowledge item ${itemId} for bot ${botId}`);
       return {
         message: "Knowledge item deleted successfully",
         success: true,
       };
     } catch (error) {
-      logger.error(
-        `Error in deleteKnowledgeItem for bot ${botId}, item ${itemId}:`,
-        error,
-      );
+      logger.error(`Error in deleteKnowledgeItem for bot ${botId}, item ${itemId}:`, error);
       throw error;
     }
   }

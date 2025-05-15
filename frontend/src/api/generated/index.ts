@@ -7,7 +7,9 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
+export { ActivityType } from './models/ActivityType';
 export type { AllProviderModelsResponseDto } from './models/AllProviderModelsResponseDto';
+export { AppearanceConfig } from './models/AppearanceConfig';
 export type { BotConfiguration } from './models/BotConfiguration';
 export type { BotResponseDto } from './models/BotResponseDto';
 export { BotStatus } from './models/BotStatus';

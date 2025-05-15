@@ -9,4 +9,6 @@ export enum ImageProvider {
     OPENAI = 'openai',
     STABILITY = 'stability',
     MIDJOURNEY = 'midjourney',
+    TOGETHER = 'together',
+    CHUTES_HIDREAM = 'chutes_hidream',
 }

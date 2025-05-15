@@ -292,6 +292,7 @@ const models: TsoaRoute.Models = {
             "content": {"dataType":"string","required":true},
             "type": {"dataType":"string","required":true},
             "priority": {"dataType":"double","required":true},
+            "source": {"dataType":"string"},
             "createdAt": {"dataType":"string","required":true},
             "updatedAt": {"dataType":"string","required":true},
         },
@@ -357,7 +358,7 @@ const models: TsoaRoute.Models = {
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ImageProvider": {
         "dataType": "refEnum",
-        "enums": ["openai","stability","midjourney"],
+        "enums": ["openai","stability","midjourney","together","chutes_hidream"],
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ImageGenerationConfig": {
@@ -366,7 +367,7 @@ const models: TsoaRoute.Models = {
             "enabled": {"dataType":"boolean","required":true},
             "provider": {"ref":"ImageProvider","required":true},
             "apiKey": {"dataType":"string"},
-            "model": {"dataType":"string"},
+            "model": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
         },
         "additionalProperties": false,
     },
@@ -394,6 +395,21 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ActivityType": {
+        "dataType": "refEnum",
+        "enums": [0,1,2,3,5,4],
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "AppearanceConfig": {
+        "dataType": "refObject",
+        "properties": {
+            "avatarUrl": {"dataType":"string"},
+            "presence": {"dataType":"nestedObjectLiteral","nestedProperties":{"activity":{"dataType":"nestedObjectLiteral","nestedProperties":{"url":{"dataType":"string"},"type":{"ref":"ActivityType","required":true},"name":{"dataType":"string","required":true}}},"status":{"dataType":"union","subSchemas":[{"dataType":"enum","enums":["online"]},{"dataType":"enum","enums":["idle"]},{"dataType":"enum","enums":["dnd"]},{"dataType":"enum","enums":["invisible"]}]}}},
+            "colors": {"dataType":"nestedObjectLiteral","nestedProperties":{"accent":{"dataType":"string"},"primary":{"dataType":"string"}}},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "BotConfiguration": {
         "dataType": "refObject",
         "properties": {
@@ -408,6 +424,9 @@ const models: TsoaRoute.Models = {
             "imageGeneration": {"ref":"ImageGenerationConfig","required":true},
             "toolsEnabled": {"dataType":"boolean","required":true},
             "tools": {"dataType":"array","array":{"dataType":"refObject","ref":"Tool"},"required":true},
+            "appearance": {"ref":"AppearanceConfig"},
+            "visionModel": {"dataType":"string","required":true},
+            "visionProvider": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -1923,6 +1942,39 @@ export function RegisterRoutes(app: Router) {
 
               await templateService.apiHandler({
                 methodName: 'validateToken',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsBotController_registerBotCommands: Record<string, TsoaRoute.ParameterSchema> = {
+                id: {"in":"path","name":"id","required":true,"dataType":"string"},
+                requestBody: {"in":"body","name":"requestBody","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"guildId":{"dataType":"string","required":true}}},
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.post('/bots/:id/register-commands',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(BotController)),
+            ...(fetchMiddlewares<RequestHandler>(BotController.prototype.registerBotCommands)),
+
+            async function BotController_registerBotCommands(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsBotController_registerBotCommands, request, response });
+
+                const controller = new BotController();
+
+              await templateService.apiHandler({
+                methodName: 'registerBotCommands',
                 controller,
                 response,
                 next,

@@ -2,29 +2,29 @@
 
 /**
  * Type Bootstrap Script
- * 
+ *
  * This script creates a preliminary version of common/schema/types.ts with placeholder types.
  * It's used before running the TSOA generation to break circular dependencies.
- * 
+ *
  * The process:
  * 1. Scan common/src/types/api for @tsoaModel JSDoc comments
  * 2. Extract type names and generate placeholder definitions
  * 3. Write these to common/schema/types.ts
  * 4. Later, sync-types.js will replace these with proper definitions
- * 
+ *
  * This ensures that controllers can properly import from common/schema/types
  * while TSOA can still find all the original type definitions.
  */
 
-const fs = require('fs');
-const path = require('path');
-const glob = require('glob');
+const fs = require("fs");
+const path = require("path");
+const glob = require("glob");
 
 // Get absolute paths to ensure correct resolution
-const rootDir = path.resolve(__dirname, '../..');
-const typesDir = path.join(rootDir, 'common/src/types/api');
-const typesGlob = path.join(typesDir, '**/*.ts');
-const outputPath = path.join(rootDir, 'common/src/schema/types.ts');
+const rootDir = path.resolve(__dirname, "../..");
+const typesDir = path.join(rootDir, "common/src/types/api");
+const typesGlob = path.join(typesDir, "**/*.ts");
+const outputPath = path.join(rootDir, "common/src/schema/types.ts");
 
 // Debug file path resolution
 console.log(`Looking for API types in: ${typesDir}`);
@@ -37,17 +37,20 @@ if (!fs.existsSync(outputDir)) {
   console.log(`Created schema directory: ${outputDir}`);
 }
 
-console.log('🔍 Scanning common/src/types/api for @tsoaModel decorators...');
+console.log("🔍 Scanning common/src/types/api for @tsoaModel decorators...");
 
 // Type placeholders we've found
 const foundTypes = new Map();
 
 // Regular expressions for matching type definitions
-const enumRegex = /\/\*\*[\s\S]*?@tsoaModel[\s\S]*?\*\/\s*export\s+enum\s+([A-Za-z0-9_]+)[\s\S]*?{([\s\S]*?)}/g;
-const interfaceRegex = /\/\*\*[\s\S]*?@tsoaModel[\s\S]*?\*\/\s*export\s+(interface|type)\s+([A-Za-z0-9_]+)(?:\s+{([\s\S]*?)}|[\s\S]*?{([\s\S]*?)})/g;
+const enumRegex =
+  /\/\*\*[\s\S]*?@tsoaModel[\s\S]*?\*\/\s*export\s+enum\s+([A-Za-z0-9_]+)[\s\S]*?{([\s\S]*?)}/g;
+const interfaceRegex =
+  /\/\*\*[\s\S]*?@tsoaModel[\s\S]*?\*\/\s*export\s+(interface|type)\s+([A-Za-z0-9_]+)(?:\s+{([\s\S]*?)}|[\s\S]*?{([\s\S]*?)})/g;
 
 // Enhanced regex for property extraction from interfaces
-const propertyRegex = /\s*([A-Za-z0-9_]+)(\??)\s*:\s*([A-Za-z0-9_<>\[\]|&{},\s'"]+);/g;
+const propertyRegex =
+  /\s*([A-Za-z0-9_]+)(\??)\s*:\s*([A-Za-z0-9_<>\[\]|&{},\s'"]+);/g;
 
 try {
   // First check if directory exists
@@ -60,11 +63,11 @@ try {
 
   // List files in directory to debug
   const dirFiles = fs.readdirSync(typesDir);
-  console.log(`Files in API types directory: ${dirFiles.join(', ')}`);
-  
+  console.log(`Files in API types directory: ${dirFiles.join(", ")}`);
+
   // Find all type definition files
   const files = glob.sync(typesGlob);
-  
+
   if (files.length === 0) {
     console.log(`⚠️ No type files found with glob: ${typesGlob}`);
     // Continue anyway - we'll create an empty bootstrap file
@@ -72,63 +75,66 @@ try {
   } else {
     console.log(`Found ${files.length} API type files`);
   }
-  
+
   // Scan each file for @tsoaModel declarations
-  files.forEach(file => {
+  files.forEach((file) => {
     console.log(`Processing file: ${file}`);
-    const content = fs.readFileSync(file, 'utf8');
-    
+    const content = fs.readFileSync(file, "utf8");
+
     // Find enum definitions with enhanced regex to capture values
     let match;
     while ((match = enumRegex.exec(content)) !== null) {
       const enumName = match[1];
       const enumBody = match[2];
       console.log(`  Found enum: ${enumName}`);
-      
+
       // Extract enum values
       const enumValues = [];
       const valueRegex = /([A-Za-z0-9_]+)\s*=\s*['"]([^'"]+)['"]/g;
       let valueMatch;
-      
+
       while ((valueMatch = valueRegex.exec(enumBody)) !== null) {
         const name = valueMatch[1];
         const value = valueMatch[2];
         enumValues.push({ name, value });
       }
-      
+
       foundTypes.set(enumName, {
-        type: 'enum',
-        values: enumValues.length > 0 ? enumValues : [{ name: 'PLACEHOLDER', value: 'placeholder' }],
+        type: "enum",
+        values:
+          enumValues.length > 0
+            ? enumValues
+            : [{ name: "PLACEHOLDER", value: "placeholder" }],
       });
     }
-    
+
     // Find interface definitions with enhanced regex for property capture
     while ((match = interfaceRegex.exec(content)) !== null) {
       const interfaceType = match[1]; // 'interface' or 'type'
       const interfaceName = match[2];
-      const interfaceBody = match[3] || match[4] || '';
-      
+      const interfaceBody = match[3] || match[4] || "";
+
       console.log(`  Found interface: ${interfaceName}`);
-      
+
       // Extract interface properties
       const properties = [];
       let propertyMatch;
-      
+
       while ((propertyMatch = propertyRegex.exec(interfaceBody)) !== null) {
         const name = propertyMatch[1];
         const optional = !!propertyMatch[2]; // ? character indicates optional property
         const type = propertyMatch[3].trim();
-        
+
         properties.push({ name, type, optional });
       }
-      
+
       foundTypes.set(interfaceName, {
-        type: 'interface',
-        properties
+        type: "interface",
+        properties,
       });
     }
   });
-  
+
   // Generate type definition content
   let output = `/**
  * API Types (Bootstrap Version)
@@ -144,7 +150,7 @@ try {
 
   // Add placeholder definitions for each found type
   foundTypes.forEach((typeInfo, typeName) => {
-    if (typeInfo.type === 'enum') {
+    if (typeInfo.type === "enum") {
       output += `/**
  * Placeholder enum for ${typeName}
  * This will be replaced with the actual definition by sync-types.js
@@ -160,7 +166,7 @@ export enum ${typeName} {
         output += `  PLACEHOLDER = "placeholder",\n`;
       }
       output += `}\n\n`;
-    } else if (typeInfo.type === 'interface') {
+    } else if (typeInfo.type === "interface") {
       output += `/**
  * Placeholder interface for ${typeName}
  * This will be replaced with the actual definition by sync-types.js
@@ -170,7 +176,7 @@ export interface ${typeName} {
       // Add interface properties with proper types
       if (typeInfo.properties && typeInfo.properties.length > 0) {
         typeInfo.properties.forEach(({ name, type, optional }) => {
-          output += `  ${name}${optional ? '?' : ''}: ${type};\n`;
+          output += `  ${name}${optional ? "?" : ""}: ${type};\n`;
         });
       } else {
         output += `  [key: string]: any; // Placeholder property\n`;
@@ -199,29 +205,32 @@ export enum PlaceholderEnum {
 
   // Write the output
   fs.writeFileSync(outputPath, output);
-  console.log(`✅ Created bootstrap types file with ${foundTypes.size} placeholder definitions`);
-  
+  console.log(
+    `✅ Created bootstrap types file with ${foundTypes.size} placeholder definitions`,
+  );
+
   // Create API index file for TSOA type resolution
   createOrUpdateApiIndex();
-  
 } catch (error) {
-  console.error('❌ Error bootstrapping types:', error);
+  console.error("❌ Error bootstrapping types:", error);
   console.error(error.stack);
   process.exit(1);
 }
 
-// The critical additional step - create an index.ts in common/src/types/api 
+// The critical additional step - create an index.ts in common/src/types/api
 // that re-exports all types by scanning the directory
 function createOrUpdateApiIndex() {
-  console.log('🔄 Creating API index file to ensure TSOA can find all types...');
-  
+  console.log(
+    "🔄 Creating API index file to ensure TSOA can find all types...",
+  );
+
   try {
-    const apiDir = path.join(rootDir, 'common/src/types/api');
-    const apiIndexPath = path.join(apiDir, 'index.ts');
-    const apiFiles = fs.readdirSync(apiDir).filter(file => 
-      file.endsWith('.ts') && file !== 'index.ts'
-    );
-    
+    const apiDir = path.join(rootDir, "common/src/types/api");
+    const apiIndexPath = path.join(apiDir, "index.ts");
+    const apiFiles = fs
+      .readdirSync(apiDir)
+      .filter((file) => file.endsWith(".ts") && file !== "index.ts");
+
     let indexContent = `/**
  * API Types Index
  * 
@@ -233,18 +242,18 @@ function createOrUpdateApiIndex() {
  */
 
 `;
-    
+
     for (const file of apiFiles) {
-      const moduleName = file.replace('.ts', '');
+      const moduleName = file.replace(".ts", "");
       indexContent += `export * from './${moduleName}';\n`;
     }
-    
+
     fs.writeFileSync(apiIndexPath, indexContent);
     console.log(`✅ API index file created/updated at ${apiIndexPath}`);
-    
+
     return true;
   } catch (error) {
-    console.error('❌ Error creating API index file:', error);
+    console.error("❌ Error creating API index file:", error);
     return false;
   }
 }

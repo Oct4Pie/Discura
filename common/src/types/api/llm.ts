@@ -151,7 +151,7 @@ export interface LLMCompletionMessage {
  */
 export interface LLMCompletionRequestDto {
   model: string; // If provider is specified, this is the model_id.
-                // If provider is OPENROUTER or null/undefined, this is treated as a slug for OpenRouter.
+  // If provider is OPENROUTER or null/undefined, this is treated as a slug for OpenRouter.
   provider?: LLMProvider; // Optional: The specific LLMProvider to use
   messages: LLMCompletionMessage[];
   temperature?: number;

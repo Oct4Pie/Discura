@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AppearanceConfig } from './AppearanceConfig';
 import type { ImageGenerationConfig } from './ImageGenerationConfig';
 import type { KnowledgeBase } from './KnowledgeBase';
 import type { LLMProvider } from './LLMProvider';
@@ -21,5 +22,8 @@ export type BotConfiguration = {
     imageGeneration: ImageGenerationConfig;
     toolsEnabled: boolean;
     tools: Array<Tool>;
+    appearance?: AppearanceConfig;
+    visionModel: string;
+    visionProvider: string;
 };
 

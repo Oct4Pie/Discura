@@ -1,4 +1,4 @@
-import { SvgIcon } from '@mui/material';
+import { SvgIcon } from "@mui/material";
 
 export const Discord = (props: any) => (
   <SvgIcon {...props} viewBox="0 0 24 24">

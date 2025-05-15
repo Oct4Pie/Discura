@@ -1,11 +1,11 @@
 import {
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle
-} from '@mui/material';
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+} from "@mui/material";
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -23,14 +23,14 @@ const ConfirmDialog = ({
   title,
   message,
   content, // Support both message and content props
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText = "Confirm",
+  cancelText = "Cancel",
   onConfirm,
-  onCancel
+  onCancel,
 }: ConfirmDialogProps) => {
   // Use message if provided, otherwise use content
   const displayMessage = message || content;
-  
+
   return (
     <Dialog
       open={open}
@@ -40,8 +40,8 @@ const ConfirmDialog = ({
       PaperProps={{
         sx: {
           borderRadius: 2, // Custom border radius for dialog
-          overflow: 'hidden'
-        }
+          overflow: "hidden",
+        },
       }}
     >
       <DialogTitle id="confirm-dialog-title">{title}</DialogTitle>
@@ -51,21 +51,21 @@ const ConfirmDialog = ({
         </DialogContentText>
       </DialogContent>
       <DialogActions sx={{ px: 2.5, pb: 2 }}>
-        <Button 
-          onClick={onCancel} 
-          color="primary" 
+        <Button
+          onClick={onCancel}
+          color="primary"
           autoFocus
-          sx={{ 
-            borderRadius: 1 // Custom border radius for button
+          sx={{
+            borderRadius: 1, // Custom border radius for button
           }}
         >
           {cancelText}
         </Button>
-        <Button 
-          onClick={onConfirm} 
+        <Button
+          onClick={onConfirm}
           color="error"
-          sx={{ 
-            borderRadius: 1 // Custom border radius for button
+          sx={{
+            borderRadius: 1, // Custom border radius for button
           }}
         >
           {confirmText}

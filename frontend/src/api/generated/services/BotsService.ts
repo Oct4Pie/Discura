@@ -8,6 +8,7 @@ import type { DeleteBotResponseDto } from '../models/DeleteBotResponseDto';
 import type { GenerateBotInviteLinkResponseDto } from '../models/GenerateBotInviteLinkResponseDto';
 import type { GetAllBotsResponseDto } from '../models/GetAllBotsResponseDto';
 import type { GetBotResponseDto } from '../models/GetBotResponseDto';
+import type { MessageResponseDto } from '../models/MessageResponseDto';
 import type { StartBotResponseDto } from '../models/StartBotResponseDto';
 import type { StopBotResponseDto } from '../models/StopBotResponseDto';
 import type { TokenValidationResult } from '../models/TokenValidationResult';
@@ -213,6 +214,32 @@ export class BotsService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/bots/validate-token',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Force register slash commands for a bot in a specific server
+     *
+     * Manually triggers the registration of slash commands for a bot in a specific Discord server.
+     * This can help when commands aren't showing up due to propagation delays or other issues.
+     * @param id The unique identifier of the bot
+     * @param requestBody
+     * @returns MessageResponseDto Ok
+     * @throws ApiError
+     */
+    public static registerBotCommands(
+        id: string,
+        requestBody: {
+            guildId: string;
+        },
+    ): CancelablePromise<MessageResponseDto> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/bots/{id}/register-commands',
+            path: {
+                'id': id,
+            },
             body: requestBody,
             mediaType: 'application/json',
         });

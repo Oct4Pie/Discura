@@ -1,6 +1,6 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { Alert, Box, Button, Typography, Paper, alpha } from '@mui/material';
-import { ErrorOutline } from '@mui/icons-material';
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import { Alert, Box, Button, Typography, Paper, alpha } from "@mui/material";
+import { ErrorOutline } from "@mui/icons-material";
 
 interface Props {
   children: ReactNode;
@@ -23,7 +23,7 @@ class ErrorBoundary extends Component<Props, State> {
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
     };
   }
 
@@ -32,16 +32,16 @@ class ErrorBoundary extends Component<Props, State> {
     return {
       hasError: true,
       error,
-      errorInfo: null
+      errorInfo: null,
     };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // You can log the error to an error reporting service here
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
     this.setState({
       error,
-      errorInfo
+      errorInfo,
     });
   }
 
@@ -49,7 +49,7 @@ class ErrorBoundary extends Component<Props, State> {
     this.setState({
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
     });
   };
 
@@ -67,12 +67,13 @@ class ErrorBoundary extends Component<Props, State> {
           sx={{
             p: 3,
             borderRadius: 2,
-            border: (theme) => `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
+            border: (theme) =>
+              `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
             bgcolor: (theme) => alpha(theme.palette.error.main, 0.05),
-            my: 2
+            my: 2,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "flex-start", mb: 2 }}>
             <ErrorOutline color="error" sx={{ mr: 1, mt: 0.5 }} />
             <Typography variant="h6" color="error" fontWeight={500}>
               Something went wrong
@@ -80,10 +81,10 @@ class ErrorBoundary extends Component<Props, State> {
           </Box>
 
           <Alert severity="error" sx={{ mb: 2 }}>
-            {this.state.error?.message || 'An unexpected error occurred'}
+            {this.state.error?.message || "An unexpected error occurred"}
           </Alert>
 
-          {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
+          {process.env.NODE_ENV === "development" && this.state.errorInfo && (
             <Box sx={{ mt: 2, mb: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
                 Component Stack:
@@ -93,11 +94,13 @@ class ErrorBoundary extends Component<Props, State> {
                 sx={{
                   p: 2,
                   borderRadius: 1,
-                  bgcolor: (theme) => alpha(theme.palette.background.paper, 0.5),
-                  border: (theme) => `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                  fontSize: '0.8rem',
-                  overflow: 'auto',
-                  maxHeight: '200px'
+                  bgcolor: (theme) =>
+                    alpha(theme.palette.background.paper, 0.5),
+                  border: (theme) =>
+                    `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                  fontSize: "0.8rem",
+                  overflow: "auto",
+                  maxHeight: "200px",
                 }}
               >
                 {this.state.errorInfo.componentStack}

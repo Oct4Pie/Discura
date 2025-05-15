@@ -13,6 +13,7 @@ import {
   CustomProviderConfig as ApiCustomProviderConfig,
   ProviderRegistryConfiguration,
   CustomProviderConfig,
+  BotConfiguration,
 } from "@discura/common";
 
 // Import centralized provider constants from the common package
@@ -230,6 +231,55 @@ function calculateTokenCount(
 }
 
 /**
+ * Parse the LLM response text for XML image generation tags
+ * Supports both formats:
+ * 1. <generate_image prompt="cat"/>
+ * 2. <generate_image><prompt>cat</prompt></generate_image>
+ */
+function parseImageGenerationXml(text: string): {
+  generateImage: boolean;
+  imagePrompt?: string;
+} {
+  try {
+    // Check for self-closing tag format: <generate_image prompt="cat"/>
+    const selfClosingTagRegex =
+      /<generate_image\s+prompt\s*=\s*"([^"]*)"\s*\/?>/i;
+    const selfClosingMatch = text.match(selfClosingTagRegex);
+
+    if (selfClosingMatch && selfClosingMatch[1]) {
+      logger.info(
+        `Detected self-closing image generation tag with prompt: "${selfClosingMatch[1]}"`
+      );
+      return {
+        generateImage: true,
+        imagePrompt: selfClosingMatch[1].trim(),
+      };
+    }
+
+    // Check for nested tag format: <generate_image><prompt>cat</prompt></generate_image>
+    const nestedTagRegex =
+      /<generate_image>\s*<prompt>(.*?)<\/prompt>\s*<\/generate_image>/is;
+    const nestedMatch = text.match(nestedTagRegex);
+
+    if (nestedMatch && nestedMatch[1]) {
+      logger.info(
+        `Detected nested image generation tag with prompt: "${nestedMatch[1]}"`
+      );
+      return {
+        generateImage: true,
+        imagePrompt: nestedMatch[1].trim(),
+      };
+    }
+
+    // No image generation tag found
+    return { generateImage: false };
+  } catch (error) {
+    logger.error("Error parsing image generation XML:", error);
+    return { generateImage: false };
+  }
+}
+
+/**
  * Create a chat completion using Vercel AI SDK
  * This offers more flexibility and better integration with various providers
  */
@@ -267,28 +317,36 @@ export const createChatCompletionWithVercelAi = async (
     const vercelAiProviderId = effectiveProvider.toLowerCase();
     const vercelAiModelId = `${vercelAiProviderId}:${modelId}`;
 
-    logger.info(`Attempting to get model from Vercel AI SDK registry with ID: ${vercelAiModelId}`);
+    logger.info(
+      `Attempting to get model from Vercel AI SDK registry with ID: ${vercelAiModelId}`
+    );
 
     let modelInstance;
     try {
       // Using languageModel method from the Vercel AI SDK ProviderRegistry
       modelInstance = registry.languageModel(vercelAiModelId);
     } catch (error) {
-      logger.error(`Failed to get language model from registry: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(
+        `Failed to get language model from registry: ${error instanceof Error ? error.message : String(error)}`
+      );
       // If we can't get the model directly, try to inspect available providers
-      const availableProviders = registry.providers ? Object.keys(registry.providers) : [];
-      logger.debug(`Available providers in registry: ${availableProviders.join(', ')}`);
-      
+      const availableProviders = registry.providers
+        ? Object.keys(registry.providers)
+        : [];
+      logger.debug(
+        `Available providers in registry: ${availableProviders.join(", ")}`
+      );
+
       throw new Error(
         `Model ${vercelAiModelId} not configured or available in the Vercel AI SDK registry.`
       );
     }
-    
+
     if (!modelInstance) {
       logger.error(
         `Model ${vercelAiModelId} not found in Vercel AI SDK registry. ` +
-        `Effective provider from request: ${effectiveProvider}, Raw modelId from request: ${modelId}. ` +
-        `Ensure provider '${vercelAiProviderId}' is correctly registered and model '${modelId}' is available for it.`
+          `Effective provider from request: ${effectiveProvider}, Raw modelId from request: ${modelId}. ` +
+          `Ensure provider '${vercelAiProviderId}' is correctly registered and model '${modelId}' is available for it.`
       );
       throw new Error(
         `Model ${vercelAiModelId} not configured or available in the Vercel AI SDK registry.`
@@ -378,23 +436,36 @@ export const callLLM = async (request: {
   botId: string;
   prompt: string;
   systemPrompt?: string;
-  history?: Array<{ role: string; content: string }>;
+  history?: Array<{
+    role: string;
+    content: string;
+    username?: string;
+    timestamp?: number;
+  }>;
   userId: string;
   username: string;
   model?: string;
   provider?: LLMProvider;
+  imageUrls?: string[]; // Added parameter for image URLs
+  visionModel?: string; // Added parameter for vision model
 }): Promise<LLMResponse> => {
   try {
     // Enhanced logging for debugging
     logger.info(`[LLM Service] Starting LLM request for bot ${request.botId}`);
     logger.info(`[LLM Service] User: ${request.username} (${request.userId})`);
-    logger.info(`[LLM Service] Prompt: "${request.prompt.substring(0, 100)}${request.prompt.length > 100 ? '...' : ''}"`);
-    
+    logger.info(
+      `[LLM Service] Prompt: "${request.prompt.substring(0, 100)}${request.prompt.length > 100 ? "..." : ""}"`
+    );
+
     // Get bot configuration from database
-    logger.info(`[LLM Service] Fetching bot configuration from database for bot ${request.botId}`);
+    logger.info(
+      `[LLM Service] Fetching bot configuration from database for bot ${request.botId}`
+    );
     const bot = await BotAdapter.findById(request.botId);
     if (!bot || !bot.configuration) {
-      logger.error(`[LLM Service] Bot not found or missing configuration: ${request.botId}`);
+      logger.error(
+        `[LLM Service] Bot not found or missing configuration: ${request.botId}`
+      );
       return {
         text: "Sorry, I encountered an error with my configuration. Please try again later.",
       };
@@ -403,16 +474,133 @@ export const callLLM = async (request: {
     // Use provided parameters if available, otherwise use bot configuration
     const llmModel = request.model || bot.configuration.llmModel;
     const llmProvider = request.provider || bot.configuration.llmProvider;
-    
+
     logger.info(`[LLM Service] Using model: ${llmModel}`);
     logger.info(`[LLM Service] Using provider: ${llmProvider}`);
-    
+
     // Check API key
     if (!bot.configuration.apiKey) {
-      logger.warn(`[LLM Service] No API key configured for bot ${request.botId}`);
+      logger.warn(
+        `[LLM Service] No API key configured for bot ${request.botId}`
+      );
     }
 
-    // Prepare messages array for Vercel AI SDK
+    // Two-step approach for image handling:
+    // 1. Get image description from vision model if images are present
+    // 2. Send that description to the text model for final response
+    let enhancedPrompt = request.prompt;
+
+    // Process images with vision model if present
+    if (
+      request.imageUrls &&
+      request.imageUrls.length > 0 &&
+      request.visionModel
+    ) {
+      logger.info(
+        `[LLM Service] Processing ${request.imageUrls.length} images with vision model: ${request.visionModel}`
+      );
+
+      try {
+        // Prepare vision model messages
+        const visionMessages = [];
+
+        // Add a simple system prompt for the vision model
+        visionMessages.push({
+          role: "system",
+          content:
+            "You are a helpful assistant that describes images accurately and concisely.",
+        });
+
+        // Format vision request with multimodal content
+        const imageContents = await Promise.all(
+          request.imageUrls.map(async (url) => {
+            try {
+              logger.info(
+                `[LLM Service] Processing image URL: ${url.substring(0, 100)}${url.length > 100 ? "..." : ""}`
+              );
+              // Convert Discord CDN URL to base64 format for better compatibility with vision models
+              const base64Image = await downloadImageAsBase64(url);
+              return {
+                type: "image",
+                image: base64Image,
+              };
+            } catch (error) {
+              logger.error(
+                `[LLM Service] Failed to process image URL ${url}: ${error instanceof Error ? error.message : String(error)}`
+              );
+              // If we can't download a specific image, skip it rather than failing the whole request
+              return null;
+            }
+          })
+        );
+
+        // Filter out any null entries (failed downloads)
+        const validImageContents = imageContents.filter(
+          (item) => item !== null
+        );
+
+        // Create a properly formatted message with both text and images
+        const visionUserMessageContent = [
+          { type: "text", text: "Describe this image in detail." },
+          ...validImageContents,
+        ];
+
+        // Log the complete multimodal content structure
+        logger.info(
+          `[LLM Service] Vision request structure: ${JSON.stringify({
+            role: "user",
+            messageFormat: "with multimodal content",
+            contentTypes: visionUserMessageContent.map((part) => part.type),
+            imageCount: validImageContents.length,
+            originalImageCount: request.imageUrls.length,
+          })}`
+        );
+
+        visionMessages.push({
+          role: "user",
+          content: visionUserMessageContent,
+          name: request.username || undefined,
+        });
+
+        // Call vision model with image content
+        const visionCompletionRequest: LLMCompletionRequestDto = {
+          model: request.visionModel,
+          provider: llmProvider,
+          messages: visionMessages as any,
+          temperature: 0.5, // Lower temperature for more accurate descriptions
+          max_tokens: 500,
+          top_p: 1,
+          frequency_penalty: 0,
+          presence_penalty: 0,
+        };
+
+        logger.info(`[LLM Service] Calling vision model for image description`);
+        const visionCompletion = await createChatCompletion(
+          visionCompletionRequest,
+          request.userId
+        );
+
+        // Extract the image description from the vision model response
+        const imageDescription =
+          visionCompletion.choices[0]?.message?.content ||
+          "No description available";
+        logger.info(
+          `[LLM Service] Received image description: "${imageDescription.substring(0, 100)}${imageDescription.length > 100 ? "..." : ""}"`
+        );
+
+        // Enhance the prompt with the image description for the text model
+        enhancedPrompt = `${request.prompt}\n\n[Image description from ${request.username}: ${imageDescription}]`;
+        logger.info(`[LLM Service] Enhanced prompt with image description`);
+      } catch (visionError) {
+        logger.error(
+          `[LLM Service] Error processing image with vision model:`,
+          visionError
+        );
+        enhancedPrompt = `${request.prompt}\n\n[${request.username} shared an image, but I couldn't process it properly.]`;
+      }
+    }
+
+    // Prepare messages array for the text-based LLM
     const messages = [];
 
     // Add system message if available
@@ -421,28 +609,57 @@ export const callLLM = async (request: {
         role: "system",
         content: request.systemPrompt,
       });
-      logger.debug(`[LLM Service] Added system prompt (${request.systemPrompt.length} chars)`);
+      logger.debug(
+        `[LLM Service] Added system prompt (${request.systemPrompt.length} chars)`
+      );
     }
 
-    // Add history if available
+    // Add history if available with enhanced username formatting
     if (request.history && request.history.length > 0) {
-      messages.push(...request.history);
-      logger.debug(`[LLM Service] Added conversation history (${request.history.length} messages)`);
-    } else {
-      // If no history, just add the user's prompt
-      messages.push({
-        role: "user",
-        content: request.prompt,
-        name: request.username || undefined,
-      });
-      logger.debug(`[LLM Service] No history available, added single user prompt`);
+      // Format messages with usernames for better context
+      for (const historyItem of request.history) {
+        // For user messages, include username in content for context
+        if (historyItem.role === "user" && historyItem.username) {
+          const formattedMessage = {
+            role: "user",
+            content: historyItem.content,
+            name: historyItem.username, // Use the username for the 'name' field
+          };
+          messages.push(formattedMessage);
+        }
+        // For assistant messages, identify as the bot
+        else if (historyItem.role === "assistant") {
+          messages.push({
+            role: "assistant",
+            content: historyItem.content,
+            name: bot.name || "Bot",
+          });
+        }
+        // For any other role (like system), keep as is
+        else {
+          messages.push({
+            role: historyItem.role,
+            content: historyItem.content,
+          });
+        }
+      }
+      logger.debug(
+        `[LLM Service] Added formatted conversation history (${request.history.length} messages)`
+      );
     }
+
+    // Add the user message with the enhanced prompt that includes image descriptions if available
+    messages.push({
+      role: "user",
+      content: enhancedPrompt,
+      name: request.username || undefined,
+    });
 
     // Use Vercel AI SDK via createChatCompletion
     const completionRequest: LLMCompletionRequestDto = {
-      model: llmModel,
-      provider: llmProvider, // Explicitly pass the provider from bot configuration
-      messages,
+      model: llmModel, // Always use text model for final response
+      provider: llmProvider,
+      messages: messages as any,
       temperature: 0.7,
       max_tokens: 1000,
       top_p: 1,
@@ -450,90 +667,148 @@ export const callLLM = async (request: {
       presence_penalty: 0,
     };
 
+    // Add image generation function if enabled in bot configuration
+    const enhancedRequest = addImageGenerationFunction(
+      completionRequest,
+      bot.configuration
+    );
+
     // Call the Vercel AI SDK integration
     try {
-      logger.info(`[LLM Service] Calling LLM API with ${messages.length} messages`);
+      logger.info(
+        `[LLM Service] Calling LLM API with ${messages.length} messages` +
+          (bot.configuration?.imageGeneration?.enabled
+            ? " and image generation capability"
+            : "")
+      );
       const startTime = Date.now();
-      
+
       const completion = await createChatCompletion(
-        completionRequest,
+        enhancedRequest,
         request.userId
       );
-      
+
       const endTime = Date.now();
-      logger.info(`[LLM Service] LLM API response received in ${endTime - startTime}ms`);
+      logger.info(
+        `[LLM Service] LLM API response received in ${endTime - startTime}ms`
+      );
+
+      // Check for function/tool calls in the response
+      // We need to cast the message type since tool_calls might come from certain LLM providers
+      // but isn't included in our standard LLMCompletionMessage interface
+      const message = completion.choices[0]?.message as any;
+      if (message?.tool_calls && message.tool_calls.length > 0) {
+        logger.info(
+          `[LLM Service] Found ${message.tool_calls.length} tool calls in response`
+        );
+
+        // Process function calls using our helper function
+        const processedResponse = processToolCalls(completion);
+        logger.info(
+          `[LLM Service] Processed response: ${JSON.stringify(processedResponse)}`
+        );
+        return processedResponse;
+      }
 
       // Extract the assistant's message
       const assistantMessage = completion.choices[0]?.message;
       if (!assistantMessage || !assistantMessage.content) {
-        logger.error(`[LLM Service] No valid response content received from LLM API`);
-        logger.debug(`[LLM Service] Raw completion: ${JSON.stringify(completion)}`);
+        logger.error(
+          `[LLM Service] No valid response content received from LLM API`
+        );
+        logger.debug(
+          `[LLM Service] Raw completion: ${JSON.stringify(completion)}`
+        );
         throw new Error("No valid response received from LLM");
       }
 
-      logger.info(`[LLM Service] LLM response: "${assistantMessage.content.substring(0, 100)}${assistantMessage.content.length > 100 ? '...' : ''}"`);
+      logger.info(
+        `[LLM Service] LLM response: "${assistantMessage.content.substring(0, 100)}${assistantMessage.content.length > 100 ? "..." : ""}"`
+      );
 
-      // Check if the response indicates image generation is needed
-      // This is a simple heuristic - in a production system, you would
-      // use proper function/tool calling
-      const shouldGenerateImage =
-        assistantMessage.content.includes("![") || // Markdown image syntax
-        assistantMessage.content.toLowerCase().includes("generate an image") ||
-        assistantMessage.content.toLowerCase().includes("create an image");
+      // Check for XML image generation tags - this works with any LLM
+      const xmlImageResult = parseImageGenerationXml(assistantMessage.content);
+      if (xmlImageResult.generateImage && xmlImageResult.imagePrompt) {
+        logger.info(
+          `[LLM Service] Image generation requested via XML tag with prompt: "${xmlImageResult.imagePrompt}"`
+        );
 
-      let imagePrompt = null;
-      if (shouldGenerateImage) {
-        // Simple extraction of image description
-        const pattern =
-          /!\[.*?\]\((.+?)\)|generate an image of (.+?)(?:\.|$)|create an image of (.+?)(?:\.|$)/i;
-        const match = assistantMessage.content.match(pattern);
-        if (match) {
-          imagePrompt = match[1] || match[2] || match[3];
-        } else {
-          // Fall back to using the user's prompt for image generation
-          imagePrompt = request.prompt;
-        }
-        logger.info(`[LLM Service] Image generation requested with prompt: "${imagePrompt}"`);
+        // Return the response with the XML tags removed and image generation info
+        return {
+          // Replace both tag formats with empty string to clean the response
+          text: assistantMessage.content
+            .replace(/<generate_image\s+prompt\s*=\s*"[^"]*"\s*\/?>/gi, "")
+            .replace(
+              /<generate_image>\s*<prompt>.*?<\/prompt>\s*<\/generate_image>/gis,
+              ""
+            )
+            .trim(),
+          generateImage: true,
+          imagePrompt: xmlImageResult.imagePrompt,
+        };
       }
 
+      // Return the text response without image generation
       return {
         text: assistantMessage.content,
-        generateImage: shouldGenerateImage,
-        imagePrompt: imagePrompt || undefined,
       };
     } catch (error) {
-      logger.error(`[LLM Service] Error generating completion with Vercel AI SDK:`, error);
-      logger.error(`[LLM Service] Model: ${llmModel}, Provider: ${llmProvider}`);
-      logger.error(`[LLM Service] Request details: Bot ID: ${request.botId}, User ID: ${request.userId}`);
-      
+      // ...existing code for error handling...
+      logger.error(
+        `[LLM Service] Error generating completion with Vercel AI SDK:`,
+        error
+      );
+      logger.error(
+        `[LLM Service] Model: ${llmModel}, Provider: ${llmProvider}`
+      );
+      logger.error(
+        `[LLM Service] Request details: Bot ID: ${request.botId}, User ID: ${request.userId}`
+      );
+
       // Check for specific error types
       if (error instanceof Error) {
         // Check for common API errors
         const errorMsg = error.message.toLowerCase();
         if (errorMsg.includes("rate limit") || errorMsg.includes("429")) {
-          logger.warn(`[LLM Service] Rate limit hit with provider ${llmProvider}`);
+          logger.warn(
+            `[LLM Service] Rate limit hit with provider ${llmProvider}`
+          );
           return {
             text: "Sorry, I'm receiving too many requests right now. Please try again in a moment.",
           };
-        } else if (errorMsg.includes("authentication") || errorMsg.includes("api key") || errorMsg.includes("401")) {
-          logger.warn(`[LLM Service] Authentication error with provider ${llmProvider}`);
+        } else if (
+          errorMsg.includes("authentication") ||
+          errorMsg.includes("api key") ||
+          errorMsg.includes("401")
+        ) {
+          logger.warn(
+            `[LLM Service] Authentication error with provider ${llmProvider}`
+          );
           return {
             text: "Sorry, I'm having trouble connecting to my AI service due to an authentication issue. Please contact the bot administrator.",
           };
-        } else if (errorMsg.includes("timeout") || errorMsg.includes("timed out")) {
-          logger.warn(`[LLM Service] Request timeout with provider ${llmProvider}`);
+        } else if (
+          errorMsg.includes("timeout") ||
+          errorMsg.includes("timed out")
+        ) {
+          logger.warn(
+            `[LLM Service] Request timeout with provider ${llmProvider}`
+          );
           return {
             text: "Sorry, my AI service is taking too long to respond. Please try again later.",
           };
         }
       }
-      
+
       return {
         text: "Sorry, I encountered an error connecting to my AI service. Please try again later.",
       };
     }
   } catch (error) {
-    logger.error(`[LLM Service] Error calling LLM for bot ${request.botId}:`, error);
+    logger.error(
+      `[LLM Service] Error calling LLM for bot ${request.botId}:`,
+      error
+    );
     return {
       text: "Sorry, I encountered an error connecting to my AI service. Please try again later.",
     };
@@ -643,7 +918,9 @@ export const removeCustomProvider = async (
 
     config.providers[LLMProvider.CUSTOM].custom_providers = config.providers[
       LLMProvider.CUSTOM
-    ].custom_providers!.filter((p) => p.name.toLowerCase() !== providerName.toLowerCase());
+    ].custom_providers!.filter(
+      (p) => p.name.toLowerCase() !== providerName.toLowerCase()
+    );
 
     const removed =
       config.providers[LLMProvider.CUSTOM].custom_providers!.length <
@@ -1396,5 +1673,70 @@ async function fetchModelsAndPopulateCache(
         logger.error(`Error fetching models for provider ${provider}:`, error);
       }
     }
+  }
+}
+
+/**
+ * Function to add the image generation function to the model options if supported and enabled
+ */
+function addImageGenerationFunction(
+  request: LLMCompletionRequestDto,
+  botConfig?: BotConfiguration
+): LLMCompletionRequestDto {
+  // XML approach doesn't need function definitions, so just return the original request
+  return request;
+}
+
+/**
+ * Function to process an LLM response for potential function calls
+ */
+function processToolCalls(response: LLMCompletionResponseDto): LLMResponse {
+  // XML approach doesn't need function call processing, so just return the text response
+  const text = response.choices[0]?.message?.content || "";
+  return { text };
+}
+
+/**
+ * Convert a URL to base64 by downloading the image
+ * This helps with vision models that don't handle Discord CDN URLs properly
+ */
+async function downloadImageAsBase64(url: string): Promise<string> {
+  try {
+    // Log the URL being processed (truncated for security/brevity)
+    const urlObj = new URL(url);
+    logger.info(
+      `[LLM Service] Downloading image from: ${urlObj.origin}${urlObj.pathname.substring(0, 50)}${urlObj.pathname.length > 50 ? "..." : ""}`
+    );
+
+    // Download the image with proper timeout and limits
+    const response = await axios.get(url, {
+      responseType: "arraybuffer",
+      timeout: 10000, // 10 second timeout
+      maxContentLength: 10 * 1024 * 1024, // 10MB size limit
+      maxBodyLength: 10 * 1024 * 1024, // 10MB size limit
+    });
+
+    // Validate content type
+    const contentType = response.headers["content-type"];
+    if (!contentType || !contentType.startsWith("image/")) {
+      throw new Error(`Invalid content type: ${contentType}`);
+    }
+
+    // Convert to base64
+    const base64 = Buffer.from(response.data, "binary").toString("base64");
+    const dataUrl = `data:${contentType};base64,${base64}`;
+
+    logger.info(
+      `[LLM Service] Successfully converted image to base64 (${Math.round(base64.length / 1024)}KB, ${contentType})`
+    );
+
+    return dataUrl;
+  } catch (error) {
+    logger.error(
+      `[LLM Service] Error downloading image: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+    throw new Error(
+      `Failed to download image: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 }
